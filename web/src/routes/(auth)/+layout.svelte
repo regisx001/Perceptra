@@ -14,39 +14,46 @@
 <div class="grid min-h-svh w-full lg:grid-cols-2">
 	<!-- Left / Interactive Authentication Column -->
 	<div class="flex flex-col justify-between p-6 sm:p-10 lg:p-12">
-		<!-- Header: Brand mark, Back to Home & Language switcher -->
+		<!-- Header: Back to Home + Brand mark on the left, Language switcher on the right -->
 		<header class="flex items-center justify-between gap-4">
-			<a
-				href="/"
-				class="group inline-flex items-center gap-2.5 font-medium tracking-tight text-foreground transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-			>
-				<div
-					class="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs transition-transform duration-150 ease-out group-hover:scale-[1.03] group-active:scale-[0.97]"
+			<div class="flex items-center gap-3">
+				<a
+					href="/"
+					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/70 bg-background/80 px-2.5 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
+					aria-label={m.auth_back_home()}
 				>
-					<GalleryVerticalEndIcon class="size-4.5" />
-				</div>
-				<span class="font-semibold text-sm sm:text-base"
-					>CBIR Studio</span
+					<ArrowLeftIcon class="size-4" />
+					<span class="hidden sm:inline">{m.auth_back_home()}</span>
+				</a>
+
+				<a
+					href="/"
+					class="group inline-flex items-center transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+					aria-label="Home"
 				>
-			</a>
+					<img
+						src="/logo-black.png"
+						alt="Logo"
+						class="h-12 w-auto object-contain transition-transform duration-150 ease-out group-hover:scale-105 group-active:scale-95 dark:hidden"
+					/>
+					<img
+						src="/logo-beige.png"
+						alt="Logo"
+						class="hidden h-12 w-auto object-contain transition-transform duration-150 ease-out group-hover:scale-105 group-active:scale-95 dark:block"
+					/>
+				</a>
+			</div>
 
 			<div class="flex items-center gap-2">
 				<button
 					type="button"
 					onclick={() => locale.toggle()}
-					class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/80 bg-background/80 px-2.5 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
+					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background/80 px-2.5 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
 					aria-label="Toggle language"
 				>
 					<GlobeIcon class="size-3.5" />
 					<span>{locale.current.toUpperCase()}</span>
 				</button>
-				<a
-					href="/"
-					class="inline-flex h-8 items-center gap-1.5 rounded-md border border-transparent px-2.5 text-xs font-medium text-muted-foreground transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
-				>
-					<ArrowLeftIcon class="size-3.5" />
-					<span class="hidden sm:inline">{m.auth_back_home()}</span>
-				</a>
 			</div>
 		</header>
 

@@ -11,7 +11,19 @@
 
 <main class="max-w-2xl mx-auto p-8 space-y-6">
 	<header class="flex items-center justify-between">
-		<h1 class="text-3xl font-bold tracking-tight">{m.app_title()}</h1>
+		<div class="flex items-center gap-3">
+			<img
+				src="/logo-black.png"
+				alt="Studio Logo"
+				class="h-10 w-auto object-contain dark:hidden"
+			/>
+			<img
+				src="/logo-beige.png"
+				alt="Studio Logo"
+				class="hidden h-10 w-auto object-contain dark:block"
+			/>
+			<h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{m.app_title()}</h1>
+		</div>
 		<div class="flex items-center gap-2">
 			<button
 				type="button"
