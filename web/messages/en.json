@@ -1,0 +1,8 @@
+{
+  "$schema": "https://inlang.com/schema/inlang-message-format",
+  "app_title": "Content-Based Image Retrieval",
+  "welcome": "Welcome to SvelteKit",
+  "description": "Search and retrieve images by visual similarity.",
+  "search_button": "Search",
+  "example_message": "Hello world {username}"
+}
