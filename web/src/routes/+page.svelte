@@ -1,25 +1,35 @@
 <script lang="ts">
 	import * as m from '#lib/paraglide/messages.js';
-	import { getLocale, setLocale } from '#lib/paraglide/runtime.js';
+	import { useLocale } from '#lib/i18n.svelte.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import LogInIcon from '@lucide/svelte/icons/log-in';
+	import UserPlusIcon from '@lucide/svelte/icons/user-plus';
+	import GlobeIcon from '@lucide/svelte/icons/globe';
 
-	let currentLocale = $derived(getLocale());
-
-	function toggleLocale() {
-		const nextLocale = currentLocale === 'en' ? 'de' : 'en';
-		setLocale(nextLocale);
-	}
+	const locale = useLocale();
 </script>
 
 <main class="max-w-2xl mx-auto p-8 space-y-6">
 	<header class="flex items-center justify-between">
 		<h1 class="text-3xl font-bold tracking-tight">{m.app_title()}</h1>
-		<button
-			type="button"
-			onclick={toggleLocale}
-			class="px-3 py-1.5 text-sm font-medium border rounded-md shadow-sm hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-		>
-			Locale: {currentLocale.toUpperCase()}
-		</button>
+		<div class="flex items-center gap-2">
+			<button
+				type="button"
+				onclick={() => locale.toggle()}
+				class="inline-flex h-8 items-center gap-1.5 px-3 text-xs font-medium border rounded-md shadow-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+			>
+				<GlobeIcon class="size-3.5" />
+				<span>{locale.current.toUpperCase()}</span>
+			</button>
+			<Button variant="outline" size="sm" href="/login" class="gap-1.5">
+				<LogInIcon class="size-3.5" />
+				<span>{m.auth_sign_in_link()}</span>
+			</Button>
+			<Button size="sm" href="/register" class="gap-1.5">
+				<UserPlusIcon class="size-3.5" />
+				<span>{m.auth_sign_up_link()}</span>
+			</Button>
+		</div>
 	</header>
 
 	<p class="text-neutral-600 dark:text-neutral-400">
@@ -31,12 +41,9 @@
 		<p>{m.example_message({ username: 'Visitor' })}</p>
 	</div>
 
-	<div>
-		<button
-			type="button"
-			class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-		>
+	<div class="flex items-center gap-3">
+		<Button>
 			{m.search_button()}
-		</button>
+		</Button>
 	</div>
 </main>
