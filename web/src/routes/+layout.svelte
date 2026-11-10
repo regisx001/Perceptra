@@ -1,6 +1,7 @@
 <script lang="ts">
 	import './layout.css';
 	import type { LayoutProps } from './$types';
+	import ProgressBar from '#lib/components/progress-bar.svelte';
 
 	let { children }: LayoutProps = $props();
 </script>
@@ -19,5 +20,7 @@
 	<link rel="icon" href="/favicon.ico" sizes="any" />
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 </svelte:head>
+
+<ProgressBar />
 
 {@render children()}

@@ -114,6 +114,7 @@
 	--radius-lg: calc(var(--radius) * 1.5);
 	--radius-xl: calc(var(--radius) * 2);
 	--radius-2xl: calc(var(--radius) * 2.5);
+	--container-doc: 48rem;
 }
 
 @layer base {

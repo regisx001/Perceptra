@@ -10,6 +10,11 @@
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 	import * as m from "#lib/paraglide/messages.js";
+	import { auth } from "#lib/auth.js";
+	import { progress } from "#lib/progress.svelte.js";
+	import { goto } from "$app/navigation";
+	import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
+	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 	import type { HTMLFormAttributes } from "svelte/elements";
 
 	let {
@@ -22,13 +27,28 @@
 	let email = $state("");
 	let password = $state("");
 	let isSubmitting = $state(false);
+	let isSuccess = $state(false);
+	let errorMessage = $state<string | null>(null);
 
-	function handleSubmit(e: SubmitEvent) {
+	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
+		errorMessage = null;
 		isSubmitting = true;
-		setTimeout(() => {
+		progress.start();
+
+		try {
+			await auth.login(email, password);
+			isSuccess = true;
+			progress.done();
+			// Brief delay to allow the user to see the success state
+			setTimeout(async () => {
+				await goto("/");
+			}, 900);
+		} catch (err: any) {
+			progress.done();
 			isSubmitting = false;
-		}, 600);
+			errorMessage = err?.message || "Failed to sign in. Please verify your credentials.";
+		}
 	}
 </script>
 
@@ -47,6 +67,21 @@
 		</p>
 	</div>
 
+	{#if isSuccess}
+		<div
+			class="flex items-center justify-center gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in zoom-in-95 duration-200"
+		>
+			<CheckCircle2Icon class="size-4 shrink-0 text-emerald-500" />
+			<span>{m.auth_login_success()}</span>
+		</div>
+	{/if}
+
+	{#if errorMessage}
+		<div class="rounded-md bg-destructive/15 p-3 text-sm text-destructive border border-destructive/20 text-center font-medium animate-in fade-in duration-150">
+			{errorMessage}
+		</div>
+	{/if}
+
 	<FieldGroup>
 		<Field>
 			<FieldLabel for="email-{id}">{m.auth_email_label()}</FieldLabel>
@@ -56,6 +91,7 @@
 				autocomplete="email"
 				placeholder={m.auth_email_placeholder()}
 				bind:value={email}
+				disabled={isSubmitting || isSuccess}
 				required
 			/>
 		</Field>
@@ -75,16 +111,25 @@
 				type="password"
 				autocomplete="current-password"
 				bind:value={password}
+				disabled={isSubmitting || isSuccess}
 				required
 			/>
 		</Field>
 
 		<Button
 			type="submit"
-			class="w-full mt-1"
-			disabled={isSubmitting}
+			class={cn("w-full mt-1 transition-all duration-200", isSuccess && "bg-emerald-600 hover:bg-emerald-600 text-white")}
+			disabled={isSubmitting || isSuccess}
 		>
-			{isSubmitting ? '...' : m.auth_signin_button()}
+			{#if isSuccess}
+				<CheckCircle2Icon class="size-4 animate-in zoom-in duration-200 me-2" />
+				Success!
+			{:else if isSubmitting}
+				<Loader2Icon class="size-4 animate-spin me-2" />
+				Signing in...
+			{:else}
+				{m.auth_signin_button()}
+			{/if}
 		</Button>
 
 		<FieldSeparator class="my-2">{m.auth_or_continue_with()}</FieldSeparator>
@@ -93,6 +138,7 @@
 			variant="outline"
 			type="button"
 			class="w-full gap-2"
+			disabled={isSubmitting || isSuccess}
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"

@@ -10,6 +10,11 @@
 	import { Input } from "#lib/components/ui/input/index.js";
 	import { cn, type WithElementRef } from "#lib/utils.js";
 	import * as m from "#lib/paraglide/messages.js";
+	import { auth } from "#lib/auth.js";
+	import { progress } from "#lib/progress.svelte.js";
+	import { goto } from "$app/navigation";
+	import CheckCircle2Icon from "@lucide/svelte/icons/check-circle-2";
+	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 	import type { HTMLFormAttributes } from "svelte/elements";
 
 	let {
@@ -23,13 +28,39 @@
 	let password = $state("");
 	let confirmPassword = $state("");
 	let isSubmitting = $state(false);
+	let isSuccess = $state(false);
+	let errorMessage = $state<string | null>(null);
 
-	function handleSubmit(e: SubmitEvent) {
+	async function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
+		errorMessage = null;
+
+		if (password !== confirmPassword) {
+			errorMessage = "Passwords do not match.";
+			return;
+		}
+
+		if (password.length < 6) {
+			errorMessage = "Password must be at least 6 characters long.";
+			return;
+		}
+
 		isSubmitting = true;
-		setTimeout(() => {
+		progress.start();
+
+		try {
+			await auth.register(email, password);
+			isSuccess = true;
+			progress.done();
+			// Brief delay to allow the user to see the success state
+			setTimeout(async () => {
+				await goto("/");
+			}, 900);
+		} catch (err: any) {
+			progress.done();
 			isSubmitting = false;
-		}, 600);
+			errorMessage = err?.message || "Registration failed. Please try again.";
+		}
 	}
 </script>
 
@@ -48,6 +79,21 @@
 		</p>
 	</div>
 
+	{#if isSuccess}
+		<div
+			class="flex items-center justify-center gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 animate-in fade-in zoom-in-95 duration-200"
+		>
+			<CheckCircle2Icon class="size-4 shrink-0 text-emerald-500" />
+			<span>{m.auth_register_success()}</span>
+		</div>
+	{/if}
+
+	{#if errorMessage}
+		<div class="rounded-md bg-destructive/15 p-3 text-sm text-destructive border border-destructive/20 text-center font-medium animate-in fade-in duration-150">
+			{errorMessage}
+		</div>
+	{/if}
+
 	<FieldGroup>
 		<Field>
 			<FieldLabel for="reg-email-{id}">{m.auth_email_label()}</FieldLabel>
@@ -57,6 +103,7 @@
 				autocomplete="email"
 				placeholder={m.auth_email_placeholder()}
 				bind:value={email}
+				disabled={isSubmitting || isSuccess}
 				required
 			/>
 		</Field>
@@ -68,6 +115,7 @@
 				type="password"
 				autocomplete="new-password"
 				bind:value={password}
+				disabled={isSubmitting || isSuccess}
 				required
 			/>
 		</Field>
@@ -79,16 +127,25 @@
 				type="password"
 				autocomplete="new-password"
 				bind:value={confirmPassword}
+				disabled={isSubmitting || isSuccess}
 				required
 			/>
 		</Field>
 
 		<Button
 			type="submit"
-			class="w-full mt-1"
-			disabled={isSubmitting}
+			class="w-full mt-1 gap-2"
+			disabled={isSubmitting || isSuccess}
 		>
-			{isSubmitting ? '...' : m.auth_signup_button()}
+			{#if isSubmitting}
+				<Loader2Icon class="size-4 animate-spin" />
+				<span>{m.auth_signup_button()}</span>
+			{:else if isSuccess}
+				<CheckCircle2Icon class="size-4" />
+				<span>{m.auth_signup_button()}</span>
+			{:else}
+				{m.auth_signup_button()}
+			{/if}
 		</Button>
 
 		<FieldSeparator class="my-2">{m.auth_or_continue_with()}</FieldSeparator>

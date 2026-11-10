@@ -1,30 +1,31 @@
-# gunicorn.conf.py
+import os
 
-bind = "0.0.0.0:7000"
+# Server socket
+bind = os.getenv("GUNICORN_BIND", "0.0.0.0:7000")
 
-# Number of worker processes
-workers = 4
-
-# Threads per worker
-threads = 2
-
-# Worker class
+# Worker processes & threads
+workers = int(os.getenv("GUNICORN_WORKERS", 2))
+threads = int(os.getenv("GUNICORN_THREADS", 4))
 worker_class = "gthread"
 
-# Request timeout
-timeout = 120
+# Request timeouts
+timeout = int(os.getenv("GUNICORN_TIMEOUT", 120))
+graceful_timeout = int(os.getenv("GUNICORN_GRACEFUL_TIMEOUT", 30))
 
-# Graceful shutdown timeout
-graceful_timeout = 30
-
-# Maximum requests handled by a worker before restarting
+# Worker recycling
 max_requests = 1000
 max_requests_jitter = 100
 
-# Logging
+# Logging - '-' writes directly to stdout/stderr
 accesslog = "-"
 errorlog = "-"
-loglevel = "info"
+loglevel = os.getenv("LOG_LEVEL", "info").lower()
 
-# Avoid loading the application before workers are forked
+# Detailed access log format: client_ip, timestamp, request line, status code, response length, latency in ms
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s %(D)sµs "%(a)s"'
+
+# Avoid preloading in dev so changes and workers initialize cleanly
 preload_app = False
+
+# Capture stdout/stderr from print and application logs into gunicorn error log
+capture_output = True

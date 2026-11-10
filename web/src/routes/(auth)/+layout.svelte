@@ -2,6 +2,9 @@
 	import type { LayoutProps } from "./$types";
 	import * as m from "#lib/paraglide/messages.js";
 	import { useLocale } from "#lib/i18n.svelte.js";
+	import { auth } from "#lib/auth.js";
+	import { goto } from "$app/navigation";
+	import { onMount } from "svelte";
 	import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
@@ -9,6 +12,15 @@
 	let { children }: LayoutProps = $props();
 
 	const locale = useLocale();
+	let isChecking = $state(true);
+
+	onMount(async () => {
+		if (auth.isAuthenticated()) {
+			await goto("/", { replaceState: true });
+		} else {
+			isChecking = false;
+		}
+	});
 </script>
 
 <div class="grid min-h-svh w-full lg:grid-cols-2">
@@ -62,7 +74,9 @@
 			class="my-auto flex w-full flex-col items-center justify-center py-8"
 		>
 			<div class="w-full max-w-[380px]">
-				{@render children()}
+				{#if !isChecking}
+					{@render children()}
+				{/if}
 			</div>
 		</main>
 
