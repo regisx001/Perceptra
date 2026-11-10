@@ -7,11 +7,15 @@ class TestConfig:
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    STORAGE_PROTOCOL = "file"
 
 
 @pytest.fixture
-def app():
-    app = create_app(config_class=TestConfig)
+def app(tmp_path):
+    class AppTestConfig(TestConfig):
+        STORAGE_BASE_PATH = str(tmp_path / "storage")
+
+    app = create_app(config_class=AppTestConfig)
 
     with app.app_context():
         db.create_all()
