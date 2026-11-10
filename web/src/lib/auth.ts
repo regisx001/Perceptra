@@ -15,6 +15,7 @@ export interface AuthResponse {
 class AuthService {
 	private tokenKey = 'cbir_auth_token';
 	private userKey = 'cbir_auth_user';
+	public apiBase = '/api/v1';
 
 	getToken(): string | null {
 		if (typeof window === 'undefined') return null;
@@ -49,7 +50,7 @@ class AuthService {
 	}
 
 	async register(email: string, password: string): Promise<AuthResponse> {
-		const res = await fetch('/api/auth/register', {
+		const res = await fetch(`${this.apiBase}/auth/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ email, password }),
@@ -65,7 +66,7 @@ class AuthService {
 	}
 
 	async login(email: string, password: string): Promise<AuthResponse> {
-		const res = await fetch('/api/auth/login', {
+		const res = await fetch(`${this.apiBase}/auth/login`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ email, password }),
@@ -87,7 +88,7 @@ class AuthService {
 			return null;
 		}
 		try {
-			const res = await fetch('/api/auth/me', {
+			const res = await fetch(`${this.apiBase}/auth/me`, {
 				headers: {
 					Authorization: `Bearer ${token}`,
 				},

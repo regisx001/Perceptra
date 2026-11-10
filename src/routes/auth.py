@@ -10,7 +10,7 @@ from flask_jwt_extended import (
 from src.extensions import db
 from src.models.user import User
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
+auth_bp = Blueprint("auth", __name__)
 
 EMAIL_REGEX = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
 

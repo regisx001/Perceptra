@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn } from './utils.js';
+import { cn } from '#lib/utils.js';
 
 describe('utils (cn)', () => {
 	it('merges class names correctly', () => {

@@ -14,7 +14,7 @@ from src.services.file_service import (
     UnsupportedFormatError,
 )
 
-files_bp = Blueprint("files", __name__, url_prefix="/api/files")
+files_bp = Blueprint("files", __name__)
 
 
 def get_file_service() -> FileService:

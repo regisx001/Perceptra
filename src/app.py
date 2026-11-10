@@ -59,13 +59,35 @@ def create_app(config_class=Config):
     bcrypt.init_app(app)
     jwt.init_app(app)
 
-    # Register blueprints
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(files_bp)
+    # Register API v1 Blueprints
+    app.register_blueprint(auth_bp, url_prefix="/api/v1/auth", name="auth_v1")
+    app.register_blueprint(files_bp, url_prefix="/api/v1/files", name="files_v1")
+
+    # Backwards compatibility: alias to default active version (v1)
+    app.register_blueprint(auth_bp, url_prefix="/api/auth", name="auth_default")
+    app.register_blueprint(files_bp, url_prefix="/api/files", name="files_default")
 
     @app.route("/")
     def index():
-        return {"status": "ok", "message": "Backend initialized with SQLAlchemy, Flask-Migrate, and Auth"}
+        return {
+            "status": "ok",
+            "message": "Backend initialized with SQLAlchemy, Flask-Migrate, and Auth",
+            "version": "1.0.0",
+            "active_api_versions": ["v1"],
+            "endpoints": {
+                "v1": "/api/v1",
+            },
+        }
+
+    @app.route("/api/version")
+    @app.route("/api/v1/version")
+    def api_version():
+        return {
+            "api_version": "v1",
+            "version": "1.0.0",
+            "supported_versions": ["v1"],
+            "status": "active",
+        }
 
     app.logger.info("Flask application initialized successfully.")
     return app
