@@ -60,12 +60,8 @@ def create_app(config_class=Config):
     jwt.init_app(app)
 
     # Register API v1 Blueprints
-    app.register_blueprint(auth_bp, url_prefix="/api/v1/auth", name="auth_v1")
-    app.register_blueprint(files_bp, url_prefix="/api/v1/files", name="files_v1")
-
-    # Backwards compatibility: alias to default active version (v1)
-    app.register_blueprint(auth_bp, url_prefix="/api/auth", name="auth_default")
-    app.register_blueprint(files_bp, url_prefix="/api/files", name="files_default")
+    app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(files_bp, url_prefix="/api/v1/files")
 
     @app.route("/")
     def index():
@@ -79,7 +75,6 @@ def create_app(config_class=Config):
             },
         }
 
-    @app.route("/api/version")
     @app.route("/api/v1/version")
     def api_version():
         return {

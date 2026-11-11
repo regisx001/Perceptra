@@ -37,11 +37,14 @@ def test_api_version_endpoints(client):
     assert data_v1["api_version"] == "v1"
     assert data_v1["status"] == "active"
 
-    # Test alias /api/version
-    res_alias = client.get("/api/version")
-    assert res_alias.status_code == 200
-    assert res_alias.get_json() == data_v1
+    # Verify non-versioned /api/version is not found (404)
+    res_non_versioned = client.get("/api/version")
+    assert res_non_versioned.status_code == 404
 
-    # Verify auth and files are accessible via /api/v1
+    # Verify non-versioned /api/auth/login is not found (404)
+    res_non_versioned_auth = client.post("/api/auth/login", json={"email": "test@test.com", "password": "123"})
+    assert res_non_versioned_auth.status_code == 404
+
+    # Verify auth is accessible via /api/v1
     reg_res = client.post("/api/v1/auth/login", json={"email": "nonexistent@test.com", "password": "123"})
     assert reg_res.status_code == 401

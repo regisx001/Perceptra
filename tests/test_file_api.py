@@ -8,7 +8,7 @@ def test_api_upload_single_image(client):
         "file": (io.BytesIO(img_data), "photo.png"),
         "folder": "gallery",
     }
-    resp = client.post("/api/files/upload", data=data, content_type="multipart/form-data")
+    resp = client.post("/api/v1/files/upload", data=data, content_type="multipart/form-data")
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["success"] is True
@@ -21,28 +21,28 @@ def test_api_upload_single_image(client):
     storage_path = file_info["storage_path"]
 
     # Test Download
-    dl_resp = client.get(f"/api/files/download/{storage_path}")
+    dl_resp = client.get(f"/api/v1/files/download/{storage_path}")
     assert dl_resp.status_code == 200
     assert dl_resp.data == img_data
 
     # Test Stream
-    stream_resp = client.get(f"/api/files/stream/{storage_path}")
+    stream_resp = client.get(f"/api/v1/files/stream/{storage_path}")
     assert stream_resp.status_code == 200
     assert stream_resp.data == img_data
 
     # Test Delete
-    del_resp = client.delete(f"/api/files/delete/{storage_path}")
+    del_resp = client.delete(f"/api/v1/files/delete/{storage_path}")
     assert del_resp.status_code == 200
 
     # Confirm deleted
-    assert client.get(f"/api/files/download/{storage_path}").status_code == 404
+    assert client.get(f"/api/v1/files/download/{storage_path}").status_code == 404
 
 
 def test_api_upload_invalid_file(client):
     data = {
         "file": (io.BytesIO(b"not an image"), "bad.png"),
     }
-    resp = client.post("/api/files/upload", data=data, content_type="multipart/form-data")
+    resp = client.post("/api/v1/files/upload", data=data, content_type="multipart/form-data")
     assert resp.status_code == 400
     assert "error" in resp.get_json()
 
@@ -57,14 +57,14 @@ def test_api_upload_batch_and_delete_batch(client):
             (io.BytesIO(img2), "img2.jpg"),
         ]
     }
-    resp = client.post("/api/files/upload-batch", data=data, content_type="multipart/form-data")
+    resp = client.post("/api/v1/files/upload-batch", data=data, content_type="multipart/form-data")
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["uploaded_count"] == 2
     paths = [f["storage_path"] for f in body["files"]]
 
     # Batch delete
-    del_resp = client.post("/api/files/delete-batch", json={"storage_paths": paths})
+    del_resp = client.post("/api/v1/files/delete-batch", json={"storage_paths": paths})
     assert del_resp.status_code == 200
     del_results = del_resp.get_json()["results"]
     assert all(del_results.values())

@@ -14,9 +14,9 @@ def test_user_password_hashing(db_session):
 
 
 def test_auth_register_and_login(client):
-    # Register
+    # Register via /api/v1/auth/register
     reg_res = client.post(
-        "/api/auth/register",
+        "/api/v1/auth/register",
         json={"email": "newuser@example.com", "password": "password123"},
     )
     assert reg_res.status_code == 201
@@ -27,14 +27,14 @@ def test_auth_register_and_login(client):
 
     # Duplicate registration
     dup_res = client.post(
-        "/api/auth/register",
+        "/api/v1/auth/register",
         json={"email": "newuser@example.com", "password": "password123"},
     )
     assert dup_res.status_code == 409
 
-    # Login
+    # Login via /api/v1/auth/login
     login_res = client.post(
-        "/api/auth/login",
+        "/api/v1/auth/login",
         json={"email": "newuser@example.com", "password": "password123"},
     )
     assert login_res.status_code == 200
@@ -42,9 +42,9 @@ def test_auth_register_and_login(client):
     assert login_data["success"] is True
     token = login_data["access_token"]
 
-    # Access protected route /me
+    # Access protected route /api/v1/auth/me
     me_res = client.get(
-        "/api/auth/me",
+        "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert me_res.status_code == 200
@@ -53,9 +53,9 @@ def test_auth_register_and_login(client):
 
 def test_auth_invalid_credentials(client):
     # Missing fields
-    res = client.post("/api/auth/login", json={"email": ""})
+    res = client.post("/api/v1/auth/login", json={"email": ""})
     assert res.status_code == 400
 
     # Nonexistent user
-    res = client.post("/api/auth/login", json={"email": "unknown@example.com", "password": "pwd"})
+    res = client.post("/api/v1/auth/login", json={"email": "unknown@example.com", "password": "pwd"})
     assert res.status_code == 401
