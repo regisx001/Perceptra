@@ -24,13 +24,14 @@
 {#if !isChecking}
 	<Sidebar.Provider
 		style="--sidebar-width: calc(var(--spacing) * 72); --header-height: calc(var(--spacing) * 14);"
+		class="h-svh overflow-hidden"
 	>
 		<AppSidebar variant="inset" />
-		<Sidebar.Inset>
+		<Sidebar.Inset class="h-full max-h-svh flex flex-col overflow-hidden">
 			<SiteHeader />
-			<main class="flex flex-1 flex-col">
+			<div class="flex-1 min-h-0 overflow-y-auto">
 				{@render children()}
-			</main>
+			</div>
 		</Sidebar.Inset>
 	</Sidebar.Provider>
 {:else}

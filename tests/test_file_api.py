@@ -1,5 +1,12 @@
 import io
-from tests.test_file_service import create_sample_image
+from PIL import Image
+
+
+def create_sample_image(format="PNG", size=(64, 64), color="red") -> bytes:
+    buf = io.BytesIO()
+    img = Image.new("RGB", size, color=color)
+    img.save(buf, format=format)
+    return buf.getvalue()
 
 
 def test_api_upload_single_image(client):
@@ -48,14 +55,15 @@ def test_api_upload_invalid_file(client):
 
 
 def test_api_upload_batch_and_delete_batch(client):
-    img1 = create_sample_image("PNG", size=(32, 32))
-    img2 = create_sample_image("JPEG", size=(48, 48))
+    img1 = create_sample_image("PNG", color="blue")
+    img2 = create_sample_image("JPEG", color="green")
 
     data = {
         "files": [
             (io.BytesIO(img1), "img1.png"),
             (io.BytesIO(img2), "img2.jpg"),
-        ]
+        ],
+        "folder": "batch_test",
     }
     resp = client.post("/api/v1/files/upload-batch", data=data, content_type="multipart/form-data")
     assert resp.status_code == 201
@@ -66,5 +74,6 @@ def test_api_upload_batch_and_delete_batch(client):
     # Batch delete
     del_resp = client.post("/api/v1/files/delete-batch", json={"storage_paths": paths})
     assert del_resp.status_code == 200
-    del_results = del_resp.get_json()["results"]
-    assert all(del_results.values())
+    results = del_resp.get_json()["results"]
+    for path in paths:
+        assert results[path] == "deleted"

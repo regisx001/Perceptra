@@ -1,17 +1,21 @@
-from src.services.file_service import (
-    FileService,
-    FileServiceError,
-    FileNotFoundError,
-    InvalidFileError,
-    StoredFileMetadata,
-    UnsupportedFormatError,
+from src.services.storage import (
+    InvalidStorageKeyError,
+    LocalStorage,
+    Storage,
+    StorageBackend,
+    StorageDeleteError,
+    StorageError,
+    StorageNotFoundError,
+    StorageWriteError,
 )
 
 __all__ = [
-    "FileService",
-    "FileServiceError",
-    "FileNotFoundError",
-    "InvalidFileError",
-    "StoredFileMetadata",
-    "UnsupportedFormatError",
+    "Storage",
+    "LocalStorage",
+    "StorageBackend",
+    "StorageError",
+    "StorageNotFoundError",
+    "StorageWriteError",
+    "StorageDeleteError",
+    "InvalidStorageKeyError",
 ]

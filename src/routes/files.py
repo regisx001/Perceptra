@@ -1,4 +1,6 @@
+import hashlib
 import io
+import mimetypes
 from flask import (
     Blueprint,
     Response,
@@ -7,27 +9,38 @@ from flask import (
     request,
     send_file,
 )
-from src.services.file_service import (
-    FileService,
-    FileNotFoundError,
-    InvalidFileError,
-    UnsupportedFormatError,
+from PIL import Image, UnidentifiedImageError
+
+from src.services.storage import (
+    InvalidStorageKeyError,
+    Storage,
+    StorageNotFoundError,
 )
 
 files_bp = Blueprint("files", __name__)
 
 
-def get_file_service() -> FileService:
-    """Helper to instantiate FileService using current app configuration."""
+def get_storage() -> Storage:
+    """Helper to instantiate Storage service using current app configuration."""
     cfg = current_app.config
     protocol = cfg.get("STORAGE_PROTOCOL", "file")
     base_path = cfg.get("STORAGE_BASE_PATH", "storage")
-    allowed_extensions = cfg.get("ALLOWED_EXTENSIONS")
-    return FileService(
-        base_path=base_path,
-        protocol=protocol,
-        allowed_extensions=allowed_extensions,
-    )
+    return Storage(root_dir=base_path, protocol=protocol)
+
+
+def validate_and_inspect_image(stream: io.BytesIO):
+    """Inspects and validates an image file stream using Pillow."""
+    try:
+        stream.seek(0)
+        with Image.open(stream) as img:
+            img.verify()
+            width, height = img.size
+            img_format = img.format or "UNKNOWN"
+            stream.seek(0)
+            return True, width, height, img_format
+    except (UnidentifiedImageError, OSError, ValueError):
+        stream.seek(0)
+        return False, None, None, None
 
 
 @files_bp.route("/upload", methods=["POST"])
@@ -47,30 +60,49 @@ def upload_file():
     folder = request.form.get("folder", "uploads")
     validate_image = request.form.get("validate_image", "true").lower() in {"true", "1", "yes"}
 
-    service = get_file_service()
+    raw_bytes = uploaded.read()
+    if not raw_bytes:
+        return jsonify({"error": "Uploaded file is empty"}), 400
+
+    original_filename = uploaded.filename
+    ext = ("." + original_filename.rsplit(".", 1)[-1].lower()) if "." in original_filename else ""
+
+    allowed_exts = current_app.config.get("ALLOWED_EXTENSIONS")
+    if allowed_exts:
+        clean_ext = ext.lstrip(".").lower()
+        if clean_ext not in [e.lower() for e in allowed_exts]:
+            return jsonify({"error": f"File extension '{clean_ext}' is not allowed"}), 400
+
+    is_img, width, height, img_fmt = False, None, None, None
+    if validate_image:
+        is_img, width, height, img_fmt = validate_and_inspect_image(io.BytesIO(raw_bytes))
+        if not is_img:
+            return jsonify({"error": "Invalid or corrupted image file"}), 400
+
+    sha256_hash = hashlib.sha256(raw_bytes).hexdigest()
+    content_type = uploaded.content_type or mimetypes.guess_type(original_filename)[0] or "application/octet-stream"
+
+    storage = get_storage()
     try:
-        meta = service.save_file(
-            file_data=uploaded.stream,
-            filename=uploaded.filename,
-            subfolder=folder,
-            validate_image=validate_image,
+        storage_key = storage.save(
+            file=raw_bytes,
+            directory=folder,
+            extension=ext or ".bin",
         )
         return jsonify({
             "success": True,
             "file": {
-                "storage_path": meta.storage_path,
-                "original_filename": meta.original_filename,
-                "content_type": meta.content_type,
-                "size_bytes": meta.size_bytes,
-                "sha256_hash": meta.sha256_hash,
-                "is_image": meta.is_image,
-                "width": meta.width,
-                "height": meta.height,
-                "format": meta.image_format,
+                "storage_path": storage_key,
+                "original_filename": original_filename,
+                "content_type": content_type,
+                "size_bytes": len(raw_bytes),
+                "sha256_hash": sha256_hash,
+                "is_image": is_img,
+                "width": width,
+                "height": height,
+                "format": img_fmt,
             }
         }), 201
-    except (InvalidFileError, UnsupportedFormatError) as e:
-        return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"Internal server error: {e}"}), 500
 
@@ -88,7 +120,8 @@ def upload_batch():
     folder = request.form.get("folder", "uploads")
     validate_image = request.form.get("validate_image", "true").lower() in {"true", "1", "yes"}
 
-    service = get_file_service()
+    storage = get_storage()
+    allowed_exts = current_app.config.get("ALLOWED_EXTENSIONS")
     results = []
     errors = []
 
@@ -96,22 +129,42 @@ def upload_batch():
         if not uploaded.filename:
             continue
         try:
-            meta = service.save_file(
-                file_data=uploaded.stream,
-                filename=uploaded.filename,
-                subfolder=folder,
-                validate_image=validate_image,
+            raw_bytes = uploaded.read()
+            if not raw_bytes:
+                raise ValueError("Uploaded file is empty")
+
+            original_filename = uploaded.filename
+            ext = ("." + original_filename.rsplit(".", 1)[-1].lower()) if "." in original_filename else ""
+
+            if allowed_exts:
+                clean_ext = ext.lstrip(".").lower()
+                if clean_ext not in [e.lower() for e in allowed_exts]:
+                    raise ValueError(f"File extension '{clean_ext}' is not allowed")
+
+            is_img, width, height, img_fmt = False, None, None, None
+            if validate_image:
+                is_img, width, height, img_fmt = validate_and_inspect_image(io.BytesIO(raw_bytes))
+                if not is_img:
+                    raise ValueError("Invalid or corrupted image file")
+
+            sha256_hash = hashlib.sha256(raw_bytes).hexdigest()
+            content_type = uploaded.content_type or mimetypes.guess_type(original_filename)[0] or "application/octet-stream"
+
+            storage_key = storage.save(
+                file=raw_bytes,
+                directory=folder,
+                extension=ext or ".bin",
             )
             results.append({
-                "storage_path": meta.storage_path,
-                "original_filename": meta.original_filename,
-                "content_type": meta.content_type,
-                "size_bytes": meta.size_bytes,
-                "sha256_hash": meta.sha256_hash,
-                "is_image": meta.is_image,
-                "width": meta.width,
-                "height": meta.height,
-                "format": meta.image_format,
+                "storage_path": storage_key,
+                "original_filename": original_filename,
+                "content_type": content_type,
+                "size_bytes": len(raw_bytes),
+                "sha256_hash": sha256_hash,
+                "is_image": is_img,
+                "width": width,
+                "height": height,
+                "format": img_fmt,
             })
         except Exception as e:
             errors.append({"filename": uploaded.filename, "error": str(e)})
@@ -131,17 +184,17 @@ def download_file(filepath: str):
     Query parameter: as_attachment=true/false (defaults to false for inline display)
     """
     as_attachment = request.args.get("as_attachment", "false").lower() in {"true", "1", "yes"}
-    service = get_file_service()
+    storage = get_storage()
 
     try:
-        content = service.read_bytes(filepath)
+        content = storage.read_bytes(filepath)
         filename = filepath.rsplit("/", 1)[-1]
         return send_file(
             io.BytesIO(content),
             as_attachment=as_attachment,
             download_name=filename,
         )
-    except FileNotFoundError:
+    except (StorageNotFoundError, InvalidStorageKeyError):
         return jsonify({"error": f"File not found: {filepath}"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -150,11 +203,11 @@ def download_file(filepath: str):
 @files_bp.route("/stream/<path:filepath>", methods=["GET"])
 def stream_file(filepath: str):
     """
-    Stream a file from storage (useful for large files / image serving).
+    Stream a file from storage.
     """
-    service = get_file_service()
+    storage = get_storage()
     try:
-        if not service.exists(filepath):
+        if not storage.exists(filepath):
             return jsonify({"error": f"File not found: {filepath}"}), 404
 
         mime_type = "application/octet-stream"
@@ -163,20 +216,20 @@ def stream_file(filepath: str):
             mime_type = f"image/{'jpeg' if ext == 'jpg' else ext}"
 
         return Response(
-            service.stream_file(filepath),
+            storage.stream(filepath),
             mimetype=mime_type,
         )
-    except FileNotFoundError:
+    except (StorageNotFoundError, InvalidStorageKeyError):
         return jsonify({"error": f"File not found: {filepath}"}), 404
 
 
 @files_bp.route("/delete/<path:filepath>", methods=["DELETE"])
 def delete_file(filepath: str):
     """Delete a single file from storage."""
-    service = get_file_service()
-    deleted = service.delete_file(filepath)
-    if not deleted:
+    storage = get_storage()
+    if not storage.exists(filepath):
         return jsonify({"error": f"File not found: {filepath}"}), 404
+    storage.delete(filepath)
     return jsonify({"success": True, "message": f"Deleted {filepath}"}), 200
 
 
@@ -188,6 +241,12 @@ def delete_batch():
     if not isinstance(paths, list) or not paths:
         return jsonify({"error": "storage_paths list is required"}), 400
 
-    service = get_file_service()
-    results = service.delete_batch(paths)
+    storage = get_storage()
+    results = {}
+    for path in paths:
+        if storage.exists(path):
+            storage.delete(path)
+            results[path] = "deleted"
+        else:
+            results[path] = "not_found"
     return jsonify({"success": True, "results": results}), 200

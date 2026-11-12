@@ -34,12 +34,11 @@
 						<Sidebar.MenuButton
 							isActive={isCurrent(item.url)}
 							tooltipContent={item.title}
-							class="rounded-lg"
 						>
 							{#snippet child({ props })}
-								<a href={item.url} {...props} class="flex items-center gap-2.5 w-full">
+								<a href={item.url} {...props}>
 									{#if item.icon}
-										<item.icon class="size-4 shrink-0" />
+										<item.icon />
 									{/if}
 									<span>{item.title}</span>
 								</a>

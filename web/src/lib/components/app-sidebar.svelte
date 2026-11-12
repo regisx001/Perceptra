@@ -3,6 +3,8 @@
 	import DatabaseIcon from "@tabler/icons-svelte/icons/database";
 	import AdjustmentsHorizontalIcon from "@tabler/icons-svelte/icons/adjustments-horizontal";
 	import ColorSwatchIcon from "@tabler/icons-svelte/icons/color-swatch";
+	import LayoutDashboardIcon from "@tabler/icons-svelte/icons/layout-dashboard";
+	import UploadIcon from "@tabler/icons-svelte/icons/upload";
 	import HelpIcon from "@tabler/icons-svelte/icons/help";
 	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
@@ -21,6 +23,18 @@
 			email: currentUser?.email || "researcher@perceptra.local",
 			avatar: "/favicon-light-32x32.png",
 		},
+		navMain: [
+			{
+				title: "Overview",
+				url: "/dashboard",
+				icon: LayoutDashboardIcon,
+			},
+			{
+				title: "Upload Images",
+				url: "/dashboard/upload",
+				icon: UploadIcon,
+			},
+		],
 		descriptors: [
 			{
 				name: "Color Descriptors",
@@ -90,7 +104,7 @@
 	</Sidebar.Header>
 
 	<Sidebar.Content>
-		<NavMain />
+		<NavMain items={sidebarData.navMain} />
 		<NavDocuments items={sidebarData.descriptors} />
 		<NavSecondary items={sidebarData.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
