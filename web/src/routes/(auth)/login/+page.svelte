@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Sign In - CBIR Studio</title>
+	<title>Sign In - Perceptra</title>
 </svelte:head>
 
 <LoginForm />

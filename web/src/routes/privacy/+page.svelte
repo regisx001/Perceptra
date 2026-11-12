@@ -42,7 +42,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.privacy_title()} | CBIR Studio</title>
+	<title>{m.privacy_title()} | Perceptra</title>
 </svelte:head>
 
 <div class="min-h-svh bg-background text-foreground antialiased">
@@ -137,7 +137,7 @@
 
 		<!-- Footer -->
 		<footer class="mt-14 flex flex-col items-center justify-between gap-4 border-t border-border/70 pt-8 text-xs text-muted-foreground sm:flex-row">
-			<p>CBIR Studio &bull; {m.app_title()}</p>
+			<p>Perceptra &bull; {m.app_title()}</p>
 			<div class="flex items-center gap-4">
 				<a href="/terms" class="underline underline-offset-4 hover:text-foreground">
 					{m.auth_terms_of_service()}

@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Register - CBIR Studio</title>
+	<title>Register - Perceptra</title>
 </svelte:head>
 
 <RegisterForm />
