@@ -102,9 +102,100 @@ The exact mathematical formulation and feature-weight estimation strategy must f
 | Numerical Computing | NumPy |
 | Texture Analysis | scikit-image |
 | Similarity Computation | scikit-learn |
-| Data Storage | Database technology to be determined |
+| Data Storage | SQLite / PostgreSQL (via SQLAlchemy & Flask-Migrate) |
 
-The database technology will be selected during the design phase based on the application's requirements for image metadata, categories, extracted visual descriptors, and retrieval operations.
+## Getting Started & Setup
+
+### Prerequisites
+
+- **Python**: `>= 3.13`
+- **Package Manager**: [`uv`](https://docs.astral.sh/uv/) (recommended) or `python3 -m venv` + `pip`
+- **Frontend** (optional, for web UI): [Bun](https://bun.sh/) or [Node.js](https://nodejs.org/) (`>= 18`)
+
+---
+
+### Backend Setup & Database Initialization
+
+1. **Clone the repository and enter the directory**:
+   ```bash
+   git clone <repo-url>
+   cd Perceptra
+   ```
+
+2. **Configure environment variables**:
+   Copy `.env.example` to create your local `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+   *(Update `SECRET_KEY`, `JWT_SECRET_KEY`, or `DATABASE_URL` as needed. By default, it uses SQLite at `sqlite:///app.db`).*
+
+3. **Install dependencies**:
+   Using `uv`:
+   ```bash
+   uv sync
+   ```
+   *(Or using pip in a virtual environment: `pip install -e .`)*
+
+4. **Initialize and upgrade the database**:
+   Run the database migrations to create the required tables:
+   ```bash
+   uv run perceptra db upgrade
+   # or simply:
+   uv run db-upgrade
+   ```
+
+   > **Note on database schema changes**:
+   > - Create a new migration after editing models:
+   >   ```bash
+   >   uv run perceptra db migrate -m "Describe migration"
+   >   # or:
+   >   uv run db-migrate -m "Describe migration"
+   >   ```
+   > - Apply new migrations:
+   >   ```bash
+   >   uv run perceptra db upgrade
+   >   ```
+
+5. **Start the backend server**:
+   - **Development mode**:
+     ```bash
+     uv run perceptra dev
+     # or: uv run dev
+     ```
+   - **Production mode (Gunicorn)**:
+     ```bash
+     uv run perceptra serve
+     # or: uv run start
+     ```
+
+6. **Run backend tests**:
+   ```bash
+   uv run pytest
+   ```
+
+---
+
+### Frontend Setup (`web`)
+
+1. **Navigate to the web directory**:
+   ```bash
+   cd web
+   ```
+
+2. **Install frontend dependencies**:
+   ```bash
+   bun install
+   # or: npm install
+   ```
+
+3. **Start the development server**:
+   ```bash
+   bun run dev
+   # or: npm run dev
+   ```
+   The frontend will be available at `http://localhost:5173`.
+
+---
 
 ## Expected Results
 

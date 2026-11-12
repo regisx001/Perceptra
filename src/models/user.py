@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from src.extensions import db, bcrypt
 
@@ -5,7 +6,7 @@ from src.extensions import db, bcrypt
 class User(db.Model):
     __tablename__ = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(
