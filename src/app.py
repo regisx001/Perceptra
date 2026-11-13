@@ -7,6 +7,7 @@ from src.config import Config
 from src.extensions import db, migrate, bcrypt, jwt
 from src.models import dummy, user, category, image, image_feature
 from src.routes.auth import auth_bp
+from src.routes.categories import categories_bp
 from src.routes.files import files_bp
 
 
@@ -61,6 +62,7 @@ def create_app(config_class=Config):
 
     # Register API v1 Blueprints
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
+    app.register_blueprint(categories_bp, url_prefix="/api/v1/categories")
     app.register_blueprint(files_bp, url_prefix="/api/v1/files")
 
     @app.route("/")

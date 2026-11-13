@@ -5,6 +5,7 @@
 	import ColorSwatchIcon from "@tabler/icons-svelte/icons/color-swatch";
 	import LayoutDashboardIcon from "@tabler/icons-svelte/icons/layout-dashboard";
 	import UploadIcon from "@tabler/icons-svelte/icons/upload";
+	import FolderTreeIcon from "@tabler/icons-svelte/icons/folder";
 	import HelpIcon from "@tabler/icons-svelte/icons/help";
 	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
@@ -33,6 +34,11 @@
 				title: "Upload Images",
 				url: "/dashboard/upload",
 				icon: UploadIcon,
+			},
+			{
+				title: "Categories",
+				url: "/dashboard/categories",
+				icon: FolderTreeIcon,
 			},
 		],
 		descriptors: [
