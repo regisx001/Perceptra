@@ -257,7 +257,7 @@
 							type="button"
 							variant="outline"
 							size="sm"
-							class="mt-4 h-9 px-4 rounded-md font-medium text-xs sm:text-sm shadow-xs"
+							class="mt-4 h-9 px-4 rounded-md font-semibold text-xs sm:text-sm shadow-xs"
 							onclick={(e) => {
 								e.stopPropagation();
 								fileInputRef?.click();
@@ -426,7 +426,7 @@
 				<Button
 					variant="outline"
 					size="sm"
-					class="h-8 text-xs font-medium"
+					class="h-8 text-xs font-semibold"
 					onclick={clearQueue}
 					disabled={queue.length === 0 || isUploading}
 				>
@@ -434,7 +434,7 @@
 				</Button>
 				<Button
 					size="sm"
-					class="h-8 gap-1.5 text-xs font-medium shadow-xs"
+					class="h-8 gap-1.5 text-xs font-semibold shadow-xs"
 					onclick={startUpload}
 					disabled={queue.length === 0 || isUploading || queue.every(i => i.status === 'Completed')}
 				>

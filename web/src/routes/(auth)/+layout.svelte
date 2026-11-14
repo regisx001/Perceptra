@@ -8,6 +8,7 @@
 	import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import ThemeToggle from "#lib/components/theme-toggle.svelte";
 
 	let { children }: LayoutProps = $props();
 
@@ -31,7 +32,7 @@
 			<div class="flex items-center gap-3">
 				<a
 					href="/"
-					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/70 bg-background/80 px-2.5 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
+					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/70 bg-background/80 px-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
 					aria-label={m.auth_back_home()}
 				>
 					<ArrowLeftIcon class="size-4" />
@@ -57,10 +58,11 @@
 			</div>
 
 			<div class="flex items-center gap-2">
+				<ThemeToggle />
 				<button
 					type="button"
 					onclick={() => locale.toggle()}
-					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background/80 px-2.5 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
+					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/80 bg-background/80 px-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
 					aria-label="Toggle language"
 				>
 					<GlobeIcon class="size-3.5" />

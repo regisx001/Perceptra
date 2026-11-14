@@ -579,7 +579,7 @@
 			<Button
 				variant="outline"
 				size="sm"
-				class="gap-1.5 font-medium shadow-2xs"
+				class="gap-1.5 font-semibold shadow-2xs"
 				onclick={collapseAll}
 			>
 				<FoldVerticalIcon class="size-3.5" />
@@ -588,7 +588,7 @@
 
 			<Button
 				size="sm"
-				class="gap-1.5 font-medium shadow-xs"
+				class="gap-1.5 font-semibold shadow-xs"
 				onclick={() => {
 					newCategoryParentId = "root";
 					newCategoryName = "";
@@ -933,7 +933,7 @@
 								<Button
 									variant="outline"
 									size="sm"
-									class="h-7 gap-1.5 text-xs font-medium px-3 shadow-2xs hover:bg-muted"
+									class="h-7 gap-1.5 text-xs font-semibold px-3 shadow-2xs hover:bg-muted"
 									onclick={loadMoreImages}
 									disabled={isLoadingMore}
 								>

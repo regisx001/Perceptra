@@ -1,21 +1,12 @@
 <script lang="ts">
-	import UserCircleIcon from "@tabler/icons-svelte/icons/user-circle";
-	import DotsVerticalIcon from "@tabler/icons-svelte/icons/dots-vertical";
 	import LogoutIcon from "@tabler/icons-svelte/icons/logout";
-	import DatabaseIcon from "@tabler/icons-svelte/icons/database";
-	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
-	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import * as Avatar from "#lib/components/ui/avatar/index.js";
-	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
 	import { auth } from "#lib/auth.js";
-	import { useLocale } from "#lib/i18n.svelte.js";
 	import { goto } from "$app/navigation";
+	import * as m from "#lib/paraglide/messages.js";
 
 	let { user }: { user: { name: string; email: string; avatar: string } } = $props();
-
-	const locale = useLocale();
-	const sidebar = Sidebar.useSidebar();
 
 	async function handleLogout() {
 		auth.clearSession();
@@ -25,82 +16,36 @@
 
 <Sidebar.Menu>
 	<Sidebar.MenuItem>
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-				{#snippet child({ props })}
-					<Sidebar.MenuButton
-						{...props}
-						size="lg"
-						class="rounded-lg data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-					>
-						<Avatar.Root class="size-8 rounded-full border">
-							<Avatar.Image src={user.avatar} alt={user.name} />
-							<Avatar.Fallback class="rounded-full font-semibold text-xs bg-muted">
-								{user.name.substring(0, 2).toUpperCase()}
-							</Avatar.Fallback>
-						</Avatar.Root>
-						<div class="grid flex-1 text-start text-xs leading-tight">
-							<span class="truncate font-semibold text-foreground text-sm">{user.name}</span>
-							<span class="truncate text-muted-foreground text-[11px]">
-								{user.email}
-							</span>
-						</div>
-						<DotsVerticalIcon class="ms-auto size-4 text-muted-foreground" />
-					</Sidebar.MenuButton>
-				{/snippet}
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content
-				class="w-(--bits-dropdown-menu-anchor-width) min-w-56 rounded-lg"
-				side={sidebar.isMobile ? "bottom" : "right"}
-				align="end"
-				sideOffset={4}
+		<div
+			class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start transition-colors hover:bg-sidebar-accent/50"
+		>
+			<a
+				href="/settings"
+				class="flex flex-1 items-center gap-2.5 min-w-0 group"
+				title={m.nav_settings()}
 			>
-				<DropdownMenu.Label class="p-0 font-normal">
-					<div class="flex items-center gap-2 px-2 py-2 text-start text-sm">
-						<Avatar.Root class="size-8 rounded-full border">
-							<Avatar.Image src={user.avatar} alt={user.name} />
-							<Avatar.Fallback class="rounded-full font-semibold text-xs">
-								{user.name.substring(0, 2).toUpperCase()}
-							</Avatar.Fallback>
-						</Avatar.Root>
-						<div class="grid flex-1 text-start text-xs leading-tight">
-							<span class="truncate font-medium">{user.name}</span>
-							<span class="truncate text-muted-foreground text-[11px]">
-								{user.email}
-							</span>
-						</div>
-					</div>
-				</DropdownMenu.Label>
-				<DropdownMenu.Separator />
-				<DropdownMenu.Group>
-					<DropdownMenu.Item class="rounded-md">
-						<UserCircleIcon class="size-4" />
-						Profile & API Keys
-					</DropdownMenu.Item>
-					<DropdownMenu.Item class="rounded-md">
-						<DatabaseIcon class="size-4" />
-						Dataset Storage
-					</DropdownMenu.Item>
-					<DropdownMenu.Item class="rounded-md">
-						<SettingsIcon class="size-4" />
-						Preferences
-					</DropdownMenu.Item>
-					<DropdownMenu.Item onclick={() => locale.toggle()} class="rounded-md justify-between">
-						<div class="flex items-center gap-2">
-							<GlobeIcon class="size-4" />
-							<span>Language</span>
-						</div>
-						<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-							{locale.current}
-						</span>
-					</DropdownMenu.Item>
-				</DropdownMenu.Group>
-				<DropdownMenu.Separator />
-				<DropdownMenu.Item onclick={handleLogout} class="rounded-md text-destructive focus:text-destructive">
-					<LogoutIcon class="size-4" />
-					Log out
-				</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
+				<Avatar.Root class="size-8 rounded-full border shrink-0">
+					<Avatar.Image src={user.avatar} alt={user.name} />
+					<Avatar.Fallback class="rounded-full font-semibold text-xs bg-muted">
+						{user.name.substring(0, 2).toUpperCase()}
+					</Avatar.Fallback>
+				</Avatar.Root>
+				<div class="grid flex-1 text-start text-xs leading-tight min-w-0">
+					<span class="truncate font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{user.name}</span>
+					<span class="truncate text-muted-foreground text-[11px]" title={user.email}>
+						{user.email}
+					</span>
+				</div>
+			</a>
+			<button
+				type="button"
+				onclick={handleLogout}
+				title={m.auth_logout()}
+				class="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/10 transition-colors shrink-0 cursor-pointer"
+				aria-label={m.auth_logout()}
+			>
+				<LogoutIcon class="size-4" />
+			</button>
+		</div>
 	</Sidebar.MenuItem>
 </Sidebar.Menu>

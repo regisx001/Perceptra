@@ -6,6 +6,7 @@
 	import TrendingUpIcon from "@tabler/icons-svelte/icons/trending-up";
 	import * as Card from "#lib/components/ui/card/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 </script>
 
 <div
@@ -16,7 +17,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<DatabaseIcon class="size-4 text-primary" />
-				Indexed Images
+				{m.dashboard_stat_indexed_images()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				10,000
@@ -30,9 +31,9 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				GHIM-10K Reference Dataset
+				{m.dashboard_stat_indexed_images_sub()}
 			</div>
-			<div class="text-muted-foreground">20 semantic categories indexed</div>
+			<div class="text-muted-foreground">{m.dashboard_stat_indexed_images_desc()}</div>
 		</Card.Footer>
 	</Card.Root>
 
@@ -41,7 +42,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<BoltIcon class="size-4 text-primary" />
-				Feature Descriptors
+				{m.dashboard_stat_descriptors()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				512-D
@@ -54,9 +55,9 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				Color Moments + GLCM + LBP
+				{m.dashboard_stat_descriptors_sub()}
 			</div>
-			<div class="text-muted-foreground">Z-score normalized & calibrated</div>
+			<div class="text-muted-foreground">{m.dashboard_stat_descriptors_desc()}</div>
 		</Card.Footer>
 	</Card.Root>
 
@@ -65,7 +66,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<TargetIcon class="size-4 text-primary" />
-				Precision Score (mAP)
+				{m.dashboard_stat_map()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				84.2%
@@ -79,9 +80,9 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				Top-20 Nearest Neighbors
+				{m.dashboard_stat_map_sub()}
 			</div>
-			<div class="text-muted-foreground">Cosine & Mahalanobis metrics</div>
+			<div class="text-muted-foreground">{m.dashboard_stat_map_desc()}</div>
 		</Card.Footer>
 	</Card.Root>
 
@@ -90,7 +91,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<RefreshDotIcon class="size-4 text-primary" />
-				Avg Query Latency
+				{m.dashboard_stat_latency()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				18.4 ms
@@ -103,9 +104,9 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				Real-time Similarity Ranking
+				{m.dashboard_stat_latency_sub()}
 			</div>
-			<div class="text-muted-foreground">Descriptor extraction + vector search</div>
+			<div class="text-muted-foreground">{m.dashboard_stat_latency_desc()}</div>
 		</Card.Footer>
 	</Card.Root>
 </div>

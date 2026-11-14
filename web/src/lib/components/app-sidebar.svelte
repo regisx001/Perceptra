@@ -11,11 +11,8 @@
 	import NavUser from "./nav-user.svelte";
 	import { auth } from "#lib/auth.js";
 	import * as m from "#lib/paraglide/messages.js";
-	import { useLocale } from "#lib/i18n.svelte.js";
-	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import type { ComponentProps } from "svelte";
 
-	const locale = useLocale();
 	const currentUser = auth.getUser();
 
 	let navMain = $derived([
@@ -41,24 +38,25 @@
 		},
 	]);
 
+	let navSecondary = $derived([
+		{
+			title: m.nav_settings(),
+			url: "/settings",
+			icon: SettingsIcon,
+		},
+		{
+			title: m.nav_docs(),
+			url: "/docs",
+			icon: HelpIcon,
+		},
+	]);
+
 	const sidebarData = {
 		user: {
 			name: currentUser?.email ? currentUser.email.split("@")[0] : "Researcher",
 			email: currentUser?.email || "researcher@perceptra.local",
 			avatar: "/favicon-light-32x32.png",
 		},
-		navSecondary: [
-			{
-				title: "System Settings",
-				url: "/settings",
-				icon: SettingsIcon,
-			},
-			{
-				title: "Evaluation Documentation",
-				url: "/docs",
-				icon: HelpIcon,
-			},
-		],
 	};
 
 	let { ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
@@ -95,25 +93,10 @@
 
 	<Sidebar.Content>
 		<NavMain items={navMain} />
-		<NavSecondary items={sidebarData.navSecondary} class="mt-auto" />
+		<NavSecondary items={navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 
-	<Sidebar.Footer class="border-t border-sidebar-border p-2 space-y-1">
-		<Sidebar.Menu>
-			<Sidebar.MenuItem>
-				<Sidebar.MenuButton
-					onclick={() => locale.toggle()}
-					title={`Switch language (Current: ${locale.current.toUpperCase()})`}
-					class="w-full text-xs font-medium text-muted-foreground hover:text-foreground"
-				>
-					<GlobeIcon class="size-4" />
-					<span class="flex-1 text-start">Language</span>
-					<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground">
-						{locale.current}
-					</span>
-				</Sidebar.MenuButton>
-			</Sidebar.MenuItem>
-		</Sidebar.Menu>
+	<Sidebar.Footer class="border-t border-sidebar-border p-2">
 		<NavUser user={sidebarData.user} />
 	</Sidebar.Footer>
 </Sidebar.Root>

@@ -2,6 +2,8 @@
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
 	import { Separator } from "#lib/components/ui/separator/index.js";
 	import { useHeaderPortal } from "#lib/header-portal.svelte.js";
+	import ThemeToggle from "#lib/components/theme-toggle.svelte";
+	import * as m from "#lib/paraglide/messages.js";
 
 	const portal = useHeaderPortal();
 </script>
@@ -16,14 +18,15 @@
 		<div class="flex items-center gap-2">
 			<span class="text-sm font-semibold tracking-tight text-foreground">Perceptra</span>
 			<span class="text-xs text-muted-foreground">/</span>
-			<span class="text-xs text-muted-foreground font-medium">Dashboard</span>
+			<span class="text-xs text-muted-foreground font-medium">{m.nav_dashboard()}</span>
 		</div>
 	</div>
 
-	<!-- Injected Controls from Active Page (Search, Filters, Actions) -->
+	<!-- Injected Controls from Active Page (Search, Filters, Actions) + Global Theme Toggle -->
 	<div class="flex items-center gap-2.5 ms-auto">
 		{#if portal?.content}
 			{@render portal.content()}
 		{/if}
+		<ThemeToggle />
 	</div>
 </header>

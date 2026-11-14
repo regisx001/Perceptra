@@ -215,19 +215,19 @@
 		<Button
 			variant="outline"
 			size="sm"
-			class="h-8 gap-1.5 px-2.5 text-xs shadow-2xs font-medium"
+			class="h-8 gap-1.5 px-2.5 text-xs shadow-2xs font-semibold"
 			onclick={() => fetchImages(true)}
-			title="Refresh image gallery"
+			title={m.images_refresh_tooltip()}
 		>
 			<RefreshCwIcon class="size-3.5 {isLoading ? 'animate-spin' : ''}" />
-			<span class="hidden sm:inline">Refresh</span>
+			<span class="hidden sm:inline">{m.images_refresh()}</span>
 		</Button>
 
 		<!-- Upload Images CTA -->
 		<Button
 			href="/dashboard/upload"
 			size="sm"
-			class="h-8 gap-1.5 px-3 text-xs font-medium shadow-xs"
+			class="h-8 gap-1.5 px-3 text-xs font-semibold shadow-xs"
 		>
 			<PlusIcon class="size-3.5" />
 			<span class="hidden sm:inline">{m.upload_title()}</span>
@@ -348,7 +348,7 @@
 					<Button
 						variant="outline"
 						size="sm"
-						class="gap-2 text-xs font-medium px-4 shadow-2xs hover:bg-muted"
+						class="gap-2 text-xs font-semibold px-4 shadow-2xs hover:bg-muted"
 						onclick={loadMore}
 						disabled={isLoadingMore}
 					>

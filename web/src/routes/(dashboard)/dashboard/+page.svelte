@@ -7,6 +7,7 @@
 	import PhotoPlusIcon from "@tabler/icons-svelte/icons/photo-plus";
 	import RefreshDotIcon from "@tabler/icons-svelte/icons/refresh-dot";
 	import SlidersIcon from "@tabler/icons-svelte/icons/adjustments";
+	import * as m from "#lib/paraglide/messages.js";
 </script>
 
 <svelte:head>
@@ -19,21 +20,21 @@
 		<div class="flex flex-col gap-2 px-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
 			<div>
 				<h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-					Retrieval Intelligence & Index Overview
+					{m.dashboard_overview_title()}
 				</h1>
 				<p class="text-xs text-muted-foreground sm:text-sm">
-					Monitor descriptor indexing, query vector distributions, and relevance feedback convergence across GHIM-10K.
+					{m.dashboard_overview_subtitle()}
 				</p>
 			</div>
 
 			<div class="flex items-center gap-2 pt-2 sm:pt-0">
 				<Button variant="outline" size="sm" class="h-8 gap-1.5 text-xs">
 					<RefreshDotIcon class="size-3.5" />
-					<span>Sync Shards</span>
+					<span>{m.dashboard_sync_shards()}</span>
 				</Button>
 				<Button size="sm" href="/search" class="h-8 gap-1.5 text-xs shadow-xs">
 					<PhotoPlusIcon class="size-3.5" />
-					<span>New Visual Query</span>
+					<span>{m.nav_new_visual_query()}</span>
 				</Button>
 			</div>
 		</div>
