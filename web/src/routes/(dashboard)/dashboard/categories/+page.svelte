@@ -11,6 +11,8 @@
 	import * as FileTree from "#lib/components/ui/file-tree/index.js";
 	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import { categoryService, type CategoryItem } from "#lib/categories.js";
+	import { imageService, type ImageItem } from "#lib/images.js";
+	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
 	import FolderIcon from "@lucide/svelte/icons/folder";
 	import FolderTreeIcon from "@lucide/svelte/icons/folder-tree";
 	import SearchIcon from "@lucide/svelte/icons/search";
@@ -22,8 +24,6 @@
 	import ImagesIcon from "@lucide/svelte/icons/images";
 	import HelpCircleIcon from "@lucide/svelte/icons/help-circle";
 	import FoldVerticalIcon from "@lucide/svelte/icons/fold-vertical";
-	import MoveIcon from "@lucide/svelte/icons/move";
-	import BanIcon from "@lucide/svelte/icons/ban";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
@@ -43,103 +43,61 @@
 		resolution?: string;
 	}
 
-	// Dynamic API category data with initial fallback
-	let categoryTree = $state<CategoryNode[]>([
-		{
-			id: "nature",
-			name: "Nature",
-			count: 4210,
-			children: [
-				{
-					id: "nature-landscapes",
-					name: "Landscapes",
-					count: 2410,
-					parentId: "nature",
-					children: [
-						{
-							id: "nature-landscapes-mountains",
-							name: "Mountains",
-							count: 850,
-							parentId: "nature-landscapes"
-						},
-						{
-							id: "nature-landscapes-lakes",
-							name: "Lakes",
-							count: 620,
-							parentId: "nature-landscapes"
-						},
-						{
-							id: "nature-landscapes-forests",
-							name: "Forests",
-							count: 940,
-							parentId: "nature-landscapes"
-						}
-					]
-				},
-				{
-					id: "nature-wildlife",
-					name: "Wildlife",
-					count: 1800,
-					parentId: "nature",
-					children: [
-						{
-							id: "nature-wildlife-mammals",
-							name: "Mammals",
-							count: 980,
-							parentId: "nature-wildlife"
-						},
-						{
-							id: "nature-wildlife-birds",
-							name: "Birds",
-							count: 820,
-							parentId: "nature-wildlife"
-						}
-					]
-				}
-			]
-		},
-		{
-			id: "architecture",
-			name: "Architecture",
-			count: 2340,
-			children: [
-				{
-					id: "architecture-buildings",
-					name: "Buildings",
-					count: 1420,
-					parentId: "architecture"
-				},
-				{
-					id: "architecture-bridges",
-					name: "Bridges",
-					count: 920,
-					parentId: "architecture"
-				}
-			]
-		},
-		{
-			id: "historical",
-			name: "Historical",
-			count: 1871,
-			children: [
-				{
-					id: "historical-monuments",
-					name: "Monuments",
-					count: 1100,
-					parentId: "historical"
-				},
-				{
-					id: "historical-artifacts",
-					name: "Artifacts",
-					count: 771,
-					parentId: "historical"
-				}
-			]
-		}
-	]);
-
+	// Category tree state initialized empty and loaded from backend API
+	let categoryTree = $state<CategoryNode[]>([]);
 	let isLoading = $state(false);
+	let isLoadingImages = $state(false);
 	let errorMessage = $state<string | null>(null);
+
+	// Real images loaded from backend ImageService with pagination
+	let realImages = $state<AssignedImage[]>([]);
+	let uncategorizedCount = $state(0);
+	let categorizedImagesCount = $state(0);
+
+	// Pagination & Infinite Scroll State (Loads 50 images per batch, prefetches at halfway mark)
+	const PAGE_SIZE = 50;
+	let currentPage = $state(1);
+	let totalImagePages = $state(1);
+	let totalCategoryImages = $state(0);
+	let isLoadingMore = $state(false);
+	let loadMoreTriggerRef = $state<HTMLElement | null>(null);
+
+	// Index of the image near the halfway point of the current batch
+	let halfwayIndex = $derived(
+		Math.max(0, realImages.length - Math.floor(PAGE_SIZE / 2))
+	);
+
+	// Action to trigger preloading when scrolling near the halfway point of the loaded batch
+	function halfwayObserver(node: HTMLElement, isTarget: boolean) {
+		let observer: IntersectionObserver | null = null;
+
+		function setup(target: boolean) {
+			observer?.disconnect();
+			observer = null;
+			if (!target || currentPage >= totalImagePages) return;
+
+			observer = new IntersectionObserver(
+				(entries) => {
+					if (entries[0]?.isIntersecting && !isLoadingImages && !isLoadingMore && currentPage < totalImagePages) {
+						loadMoreImages();
+					}
+				},
+				{ rootMargin: "300px" }
+			);
+			observer.observe(node);
+		}
+
+		setup(isTarget);
+
+		return {
+			update(newTarget: boolean) {
+				setup(newTarget);
+			},
+			destroy() {
+				observer?.disconnect();
+			}
+		};
+	}
 
 	// Convert API categories into CategoryNodes
 	function mapApiItemToNode(item: CategoryItem): CategoryNode {
@@ -162,13 +120,99 @@
 				if (!selectedCategoryId || selectedCategoryId === "nature-landscapes-mountains") {
 					selectedCategoryId = categoryTree[0]?.id ?? "uncategorized";
 				}
+			} else {
+				categoryTree = [];
+				selectedCategoryId = "uncategorized";
 			}
+			await refreshImageStats();
 		} catch (err: any) {
-			console.warn("Categories API unavailable, falling back to local dataset:", err.message);
+			console.warn("Categories API unavailable:", err.message);
 		} finally {
 			isLoading = false;
 		}
 	}
+
+	async function refreshImageStats() {
+		try {
+			const uncatRes = await imageService.listImages({ uncategorized: true, per_page: 1 });
+			uncategorizedCount = uncatRes.pagination?.total ?? 0;
+
+			const allRes = await imageService.listImages({ per_page: 1 });
+			const totalAll = allRes.pagination?.total ?? 0;
+			categorizedImagesCount = Math.max(0, totalAll - uncategorizedCount);
+		} catch (err: any) {
+			console.warn("Could not load image stats:", err.message);
+		}
+	}
+
+	async function loadImagesForCategory(categoryId: string | null, reset = true) {
+		try {
+			if (reset) {
+				isLoadingImages = true;
+				currentPage = 1;
+				realImages = [];
+			} else {
+				isLoadingMore = true;
+			}
+
+			const isUncategorized = categoryId === "uncategorized" || !categoryId;
+			const targetPage = reset ? 1 : currentPage + 1;
+
+			const res = await imageService.listImages({
+				category_id: isUncategorized ? undefined : categoryId,
+				uncategorized: isUncategorized ? true : undefined,
+				page: targetPage,
+				per_page: PAGE_SIZE
+			});
+
+			const mappedImages: AssignedImage[] = res.images.map((img) => ({
+				id: img.id,
+				filename: img.filename,
+				url: imageService.getImageFileUrl(img.id),
+				resolution: img.width && img.height ? `${img.width}x${img.height}` : undefined
+			}));
+
+			if (reset) {
+				realImages = mappedImages;
+			} else {
+				realImages = [...realImages, ...mappedImages];
+			}
+
+			currentPage = res.pagination.page;
+			totalImagePages = res.pagination.pages;
+			totalCategoryImages = res.pagination.total;
+		} catch (err: any) {
+			console.warn("Failed to load category images:", err.message);
+			if (reset) realImages = [];
+		} finally {
+			isLoadingImages = false;
+			isLoadingMore = false;
+		}
+	}
+
+	async function loadMoreImages() {
+		if (isLoadingMore || isLoadingImages || currentPage >= totalImagePages) return;
+		await loadImagesForCategory(selectedCategoryId, false);
+	}
+
+	// Setup IntersectionObserver for auto "infinite scroll" when scrolling near bottom
+	$effect(() => {
+		if (!loadMoreTriggerRef) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const first = entries[0];
+				if (first.isIntersecting && !isLoadingImages && !isLoadingMore && currentPage < totalImagePages) {
+					loadMoreImages();
+				}
+			},
+			{ rootMargin: "200px" }
+		);
+
+		observer.observe(loadMoreTriggerRef);
+		return () => {
+			observer.disconnect();
+		};
+	});
 
 	onMount(() => {
 		loadCategories();
@@ -192,12 +236,14 @@
 
 	// State for search and navigation
 	let categorySearch = $state("");
-	let selectedCategoryId = $state<string>("nature-landscapes-mountains");
-	let expandedNodes = $state<Record<string, boolean>>({
-		nature: true,
-		"nature-landscapes": true,
-		architecture: false,
-		historical: false
+	let selectedCategoryId = $state<string>("");
+	let expandedNodes = $state<Record<string, boolean>>({});
+
+	// Reactively reload images whenever selectedCategoryId changes
+	$effect(() => {
+		if (selectedCategoryId) {
+			loadImagesForCategory(selectedCategoryId);
+		}
 	});
 
 	// Dialogs state
@@ -214,61 +260,7 @@
 	let targetParentId = $state<string>("root");
 	let isSubmitting = $state(false);
 
-	// Unassigned and image counts
-	let uncategorizedCount = $state(1579);
-	let imageSearchQuery = $state("");
-
-	// Mock placeholder images for the selected folder
-	let placeholderImages = $state<AssignedImage[]>([
-		{
-			id: "img-1",
-			filename: "ghim_nature_peak.jpg",
-			url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-2",
-			filename: "ghim_nature_peak.jpg",
-			url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-3",
-			filename: "ghim_nature_peak.jpg",
-			url: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-4",
-			filename: "ghim_snow_cap.jpg",
-			url: "https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-5",
-			filename: "ghim_snow_cap.jpg",
-			url: "https://images.unsplash.com/photo-1542332213-31f87348057f?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-6",
-			filename: "ghim_mountain_fog.jpg",
-			url: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-7",
-			filename: "ghim_summit_dawn.jpg",
-			url: "https://images.unsplash.com/photo-1517824806704-9040b037703b?w=400&auto=format&fit=crop&q=80"
-		},
-		{
-			id: "img-8",
-			filename: "ghim_ridge_trail.jpg",
-			url: "https://images.unsplash.com/photo-1454447299186-c3445e99e7bb?w=400&auto=format&fit=crop&q=80"
-		}
-	]);
-
-	let filteredImages = $derived(
-		imageSearchQuery.trim() === ""
-			? placeholderImages
-			: placeholderImages.filter((img) =>
-					img.filename.toLowerCase().includes(imageSearchQuery.toLowerCase())
-				)
-	);
+	let filteredImages = $derived(realImages);
 
 	// Find node details and ancestry path
 	function findNodeAndPath(
@@ -324,10 +316,13 @@
 	// KPI calculations
 	let totalFolders = $derived(getAllCategories(categoryTree).length);
 	let rootFoldersCount = $derived(categoryTree.length);
-	let categorizedImagesCount = 8421;
 	let totalImagesCount = $derived(categorizedImagesCount + uncategorizedCount);
-	let categorizedPercentage = $derived(Math.round((categorizedImagesCount / totalImagesCount) * 100));
-	let uncategorizedPercentage = $derived(100 - categorizedPercentage);
+	let categorizedPercentage = $derived(
+		totalImagesCount > 0 ? Math.round((categorizedImagesCount / totalImagesCount) * 100) : 0
+	);
+	let uncategorizedPercentage = $derived(
+		totalImagesCount > 0 ? 100 - categorizedPercentage : 0
+	);
 
 	// Add Category logic with API consumption
 	async function handleCreateCategory() {
@@ -709,9 +704,9 @@
 
 	<!-- Main Two-Column Layout: Categories Sidebar & Details View -->
 	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-		<!-- Left Column: Category Hierarchy Tree (4 cols) -->
-		<div class="lg:col-span-4">
-			<Card.Root class="border border-border/80 bg-card/60 shadow-xs backdrop-blur-xs">
+		<!-- Left Column: Category Hierarchy Tree (4 cols) - Sticky & Visible -->
+		<div class="lg:col-span-4 lg:sticky lg:top-6 self-start z-10">
+			<Card.Root class="border border-border/80 bg-card/80 shadow-xs backdrop-blur-md">
 				<Card.Header class="pb-3 pt-5 px-4 sm:px-5">
 					<Card.Title class="text-base font-semibold tracking-tight">
 						{m.categories_tree_title()}
@@ -728,7 +723,7 @@
 
 				<Card.Content class="p-2 sm:p-3 space-y-1">
 					<!-- FileTree Root -->
-					<div class="max-h-[500px] overflow-y-auto pr-1">
+					<div class="max-h-[calc(100vh-280px)] min-h-[220px] overflow-y-auto pr-1">
 						<FileTree.Root bind:selectedId={selectedCategoryId}>
 							{#each categoryTree as rootNode (rootNode.id)}
 								{@render renderTreeNode(rootNode)}
@@ -759,23 +754,23 @@
 		</div>
 
 		<!-- Right Column: Details & Assigned Images (8 cols) -->
-		<div class="lg:col-span-8 space-y-6">
+		<div class="lg:col-span-8 space-y-3.5">
 			<!-- Selected Category Banner & Controls -->
-			<Card.Root class="border border-border/80 bg-card/60 shadow-xs backdrop-blur-xs p-5 space-y-4">
-				<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<Card.Root class="border border-border/80 bg-card/60 shadow-xs backdrop-blur-xs px-3.5 py-2.5 sm:px-4 sm:py-3 space-y-2">
+				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<!-- Breadcrumb Category Path -->
 					<div class="flex items-center gap-1.5 flex-wrap">
 						{#if selectedCategoryId === "uncategorized"}
-							<span class="text-base sm:text-lg font-bold tracking-tight text-foreground">
+							<span class="text-sm sm:text-base font-semibold tracking-tight text-foreground">
 								{m.categories_uncategorized_collection()}
 							</span>
 						{:else}
 							{#each breadcrumbs as crumb, i}
-								<span class="text-base sm:text-lg font-bold tracking-tight {i === breadcrumbs.length - 1 ? 'text-foreground' : 'text-muted-foreground'}">
+								<span class="text-sm sm:text-base font-semibold tracking-tight {i === breadcrumbs.length - 1 ? 'text-foreground' : 'text-muted-foreground'}">
 									{crumb.name}
 								</span>
 								{#if i < breadcrumbs.length - 1}
-									<span class="text-muted-foreground text-sm font-normal">&gt;</span>
+									<span class="text-muted-foreground text-xs font-normal">&gt;</span>
 								{/if}
 							{/each}
 
@@ -805,7 +800,7 @@
 							<Button
 								variant="outline"
 								size="sm"
-								class="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+								class="h-7 gap-1.5 px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
 								onclick={(e) => promptDeleteCategory(activeNode, e)}
 							>
 								<Trash2Icon class="size-3" />
@@ -817,11 +812,11 @@
 
 				<!-- Subcategory Pills / Quick actions -->
 				{#if activeNode}
-					<div class="flex items-center gap-2 flex-wrap pt-1">
+					<div class="flex items-center gap-1.5 flex-wrap">
 						{#each currentSubcategories as sub (sub.id)}
 							<button
 								type="button"
-								class="flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/40 hover:bg-muted px-2.5 py-1 text-xs text-foreground transition-colors"
+								class="flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/40 hover:bg-muted px-2 py-0.5 text-xs text-foreground transition-colors"
 								onclick={() => selectCategory(sub.id)}
 							>
 								<span>{sub.name}</span>
@@ -832,7 +827,7 @@
 						<Button
 							variant="outline"
 							size="sm"
-							class="h-8 gap-1 px-2.5 text-xs border-dashed"
+							class="h-6 gap-1 px-2 text-[11px] border-dashed"
 							onclick={() => openAddSubcategoryDialog(activeNode.id)}
 						>
 							<PlusIcon class="size-3" />
@@ -842,71 +837,137 @@
 				{/if}
 			</Card.Root>
 
-			<!-- Assigned Images Gallery Card -->
+			<!-- Assigned Images Gallery Card (Preview Only) -->
 			<Card.Root class="border border-border/80 bg-card/60 shadow-xs backdrop-blur-xs">
-				<Card.Header class="pb-3 pt-5 px-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<Card.Header class="px-4 py-3 pb-2 flex flex-row items-center justify-between border-b border-border/40">
 					<div class="flex items-center gap-2">
-						<Card.Title class="text-base font-semibold tracking-tight">
+						<Card.Title class="text-sm sm:text-base font-semibold tracking-tight">
 							{m.categories_assigned_images_title()}
 						</Card.Title>
-						<span class="text-xs text-muted-foreground font-mono">
-							({activeNode ? activeNode.count.toLocaleString() : uncategorizedCount.toLocaleString()})
+						<Badge variant="secondary" class="font-mono text-xs px-2 py-0.5">
+							{activeNode ? activeNode.count.toLocaleString() : uncategorizedCount.toLocaleString()}
+						</Badge>
+					</div>
+					{#if activeNode}
+						<span class="text-xs text-muted-foreground font-medium truncate max-w-48">
+							{activeNode.name}
 						</span>
-					</div>
-
-					<div class="flex items-center gap-2">
-						<!-- Image search box -->
-						<div class="relative w-44 sm:w-56">
-							<SearchIcon class="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-							<Input
-								placeholder={m.categories_search_images_placeholder()}
-								bind:value={imageSearchQuery}
-								class="pl-8 text-xs bg-background/50"
-							/>
-						</div>
-
-						<Button variant="outline" size="sm" class="gap-1.5 text-xs">
-							<MoveIcon class="size-3" />
-							<span>{m.categories_move_btn()}</span>
-						</Button>
-
-						<Button variant="outline" size="sm" class="gap-1.5 text-xs text-muted-foreground hover:text-destructive">
-							<BanIcon class="size-3" />
-							<span>{m.categories_unassign_btn()}</span>
-						</Button>
-					</div>
+					{/if}
 				</Card.Header>
 
-				<Card.Content class="p-6">
-					<!-- Visual Grid of Assigned Images -->
-					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-						{#each filteredImages as img (img.id)}
-							<div class="group relative flex flex-col rounded-lg border border-border/70 bg-card overflow-hidden shadow-2xs hover:shadow-xs hover:border-primary/40 transition-all">
-								<div class="aspect-4/3 w-full overflow-hidden bg-muted">
-									<img
-										src={img.url}
-										alt={img.filename}
-										class="size-full object-cover group-hover:scale-105 transition-transform duration-300"
-										loading="lazy"
-									/>
+				<Card.Content class="p-3.5 sm:p-4">
+					{#if isLoadingImages}
+						<!-- Loading Skeleton Grid -->
+						<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3">
+							{#each Array(10) as _, i}
+								<div class="flex flex-col rounded-lg border border-border/60 overflow-hidden shadow-2xs">
+									<Skeleton class="aspect-4/3 w-full" />
+									<div class="p-1.5 px-2 bg-background/60">
+										<Skeleton class="h-3 w-3/4 rounded-xs" />
+									</div>
 								</div>
-								<div class="p-2 bg-background/80 backdrop-blur-xs">
-									<p class="truncate text-[11px] font-medium text-foreground" title={img.filename}>
-										{img.filename}
-									</p>
-								</div>
-							</div>
-						{/each}
-					</div>
-
-					<!-- Placeholder Notice for Live Backend Sync -->
-					<div class="mt-6 flex items-center justify-between rounded-lg border border-dashed border-border/80 p-3 bg-muted/20 text-xs text-muted-foreground">
-						<div class="flex items-center gap-2">
-							<ImageIcon class="size-4 opacity-60" />
-							<span>Showing 8 of {activeNode ? activeNode.count.toLocaleString() : uncategorizedCount.toLocaleString()} indexed image records.</span>
+							{/each}
 						</div>
-						<span class="text-[11px] font-mono opacity-80">GHIM-10K Shard A</span>
-					</div>
+					{:else if filteredImages.length === 0}
+						<!-- Empty State -->
+						<div class="flex flex-col items-center justify-center p-8 text-center text-muted-foreground rounded-lg border border-dashed border-border/70 bg-muted/10">
+							<div class="mb-2.5 rounded-full bg-muted/60 p-2.5 text-muted-foreground/80">
+								<ImageIcon class="size-6 stroke-1" />
+							</div>
+							<p class="text-sm font-semibold text-foreground">
+								{m.categories_empty_images()}
+							</p>
+							<p class="text-xs mt-0.5 max-w-sm text-muted-foreground">
+								{m.categories_empty_images_desc()}
+							</p>
+							<Button
+								href="/dashboard/upload"
+								variant="outline"
+								size="sm"
+								class="mt-3 h-7 gap-1.5 text-xs shadow-2xs"
+							>
+								<PlusIcon class="size-3" />
+								<span>{m.upload_title()}</span>
+							</Button>
+						</div>
+					{:else}
+						<!-- Visual Grid of Assigned Images from Backend -->
+						<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-3">
+							{#each filteredImages as img, index (img.id)}
+								<div
+									class="group relative flex flex-col rounded-lg border border-border/70 bg-card overflow-hidden shadow-2xs hover:shadow-xs hover:border-primary/40 transition-all"
+									use:halfwayObserver={index === halfwayIndex}
+								>
+									<div class="aspect-4/3 w-full overflow-hidden bg-muted relative">
+										<img
+											src={img.url}
+											alt={img.filename}
+											class="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+											loading="lazy"
+											onerror={(e) => {
+												const target = e.currentTarget as HTMLImageElement;
+												target.style.display = 'none';
+												target.nextElementSibling?.classList.remove('hidden');
+											}}
+										/>
+										<div class="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-center text-muted-foreground bg-muted/60">
+											<ImageIcon class="size-5 opacity-40 mb-1" />
+											<span class="text-[10px] truncate max-w-full font-mono">{img.filename}</span>
+										</div>
+									</div>
+									<div class="p-1.5 px-2 bg-background/80 backdrop-blur-xs">
+										<p class="truncate text-[11px] font-medium text-foreground" title={img.filename}>
+											{img.filename}
+										</p>
+									</div>
+								</div>
+							{/each}
+						</div>
+
+						<!-- Load More / Infinite Scroll Section -->
+						{#if currentPage < totalImagePages}
+							<div
+								bind:this={loadMoreTriggerRef}
+								class="pt-3 pb-1 flex flex-col items-center justify-center gap-1.5"
+							>
+								<Button
+									variant="outline"
+									size="sm"
+									class="h-7 gap-1.5 text-xs font-medium px-3 shadow-2xs hover:bg-muted"
+									onclick={loadMoreImages}
+									disabled={isLoadingMore}
+								>
+									{#if isLoadingMore}
+										<Loader2Icon class="size-3 animate-spin" />
+										<span>{m.categories_loading_more()}</span>
+									{:else}
+										<PlusIcon class="size-3" />
+										<span>{m.categories_load_more()}</span>
+									{/if}
+								</Button>
+								<span class="text-[10px] text-muted-foreground font-mono">
+									{filteredImages.length} / {totalCategoryImages} images
+								</span>
+							</div>
+						{:else if filteredImages.length > PAGE_SIZE}
+							<div class="pt-3 pb-1 text-center text-[10px] text-muted-foreground font-mono">
+								{m.categories_all_loaded({ total: totalCategoryImages })}
+							</div>
+						{/if}
+
+						<!-- Live Image Count Summary -->
+						<div class="mt-3 flex items-center justify-between rounded-md border border-dashed border-border/70 py-1.5 px-3 bg-muted/20 text-[11px] text-muted-foreground">
+							<div class="flex items-center gap-2">
+								<ImageIcon class="size-3.5 opacity-60" />
+								<span>{m.categories_showing_images({ count: filteredImages.length, total: activeNode ? activeNode.count : uncategorizedCount })}</span>
+							</div>
+							{#if activeNode}
+								<span class="font-mono text-[10px] opacity-80">{activeNode.name}</span>
+							{:else}
+								<span class="font-mono text-[10px] opacity-80">Uncategorized</span>
+							{/if}
+						</div>
+					{/if}
 				</Card.Content>
 			</Card.Root>
 		</div>
@@ -1082,7 +1143,7 @@
 				{m.categories_dialog_cancel()}
 			</AlertDialog.Cancel>
 			<AlertDialog.Action
-				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+				variant="destructive"
 				onclick={confirmDeleteCategory}
 				disabled={isSubmitting}
 			>

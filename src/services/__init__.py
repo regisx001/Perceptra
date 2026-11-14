@@ -1,3 +1,11 @@
+from src.services.image_service import (
+    ImageService,
+    ImageServiceError,
+    InvalidImageError,
+    ResourceNotFoundError,
+    SUPPORTED_IMAGE_FORMATS,
+    ValidatedImageMetadata,
+)
 from src.services.storage import (
     InvalidStorageKeyError,
     LocalStorage,
@@ -18,4 +26,10 @@ __all__ = [
     "StorageWriteError",
     "StorageDeleteError",
     "InvalidStorageKeyError",
+    "ImageService",
+    "ImageServiceError",
+    "InvalidImageError",
+    "ResourceNotFoundError",
+    "SUPPORTED_IMAGE_FORMATS",
+    "ValidatedImageMetadata",
 ]

@@ -11,7 +11,7 @@
 	<!-- Light theme tab: dark/flat-black icon -->
 	<link
 		rel="icon"
-		href="/favicon-dark.ico"
+		href="/favicon-light.ico"
 		sizes="any"
 		media="(prefers-color-scheme: light)"
 	/>
@@ -26,7 +26,7 @@
 	<!-- Dark theme tab: beige icon for high contrast -->
 	<link
 		rel="icon"
-		href="/favicon-light.ico"
+		href="/favicon-dark.ico"
 		sizes="any"
 		media="(prefers-color-scheme: dark)"
 	/>
@@ -39,8 +39,8 @@
 	/>
 
 	<!-- Default fallback and Apple Touch icon -->
-	<link rel="icon" href="/favicon.ico" sizes="any" />
-	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+	<!-- <link rel="icon" href="/favicon.ico" sizes="any" />
+	<link rel="apple-touch-icon" href="/apple-touch-icon.png" /> -->
 </svelte:head>
 
 <ProgressBar />

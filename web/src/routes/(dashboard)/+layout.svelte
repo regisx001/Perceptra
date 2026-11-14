@@ -6,9 +6,12 @@
 	import { auth } from "#lib/auth.js";
 	import { goto } from "$app/navigation";
 	import { onMount } from "svelte";
+	import { createHeaderPortal } from "#lib/header-portal.svelte.js";
 
 	let { children }: LayoutProps = $props();
 	let isChecking = $state(true);
+
+	createHeaderPortal();
 
 	onMount(async () => {
 		// Mock/Session auth validation: in dev mock mode we can either let user through or redirect if strict

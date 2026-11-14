@@ -1,11 +1,9 @@
 <script lang="ts">
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
-	import { Button } from "#lib/components/ui/button/index.js";
 	import { Separator } from "#lib/components/ui/separator/index.js";
-	import { useLocale } from "#lib/i18n.svelte.js";
-	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import { useHeaderPortal } from "#lib/header-portal.svelte.js";
 
-	const locale = useLocale();
+	const portal = useHeaderPortal();
 </script>
 
 <header
@@ -22,17 +20,10 @@
 		</div>
 	</div>
 
-	<div class="flex items-center gap-2">
-		<!-- Language Switcher -->
-		<Button
-			variant="outline"
-			size="sm"
-			class="h-8 gap-1.5 px-2.5 text-xs font-medium"
-			onclick={() => locale.set(locale.current === "en" ? "fr" : "en")}
-			aria-label="Toggle language"
-		>
-			<GlobeIcon class="size-3.5" />
-			<span class="uppercase">{locale.current}</span>
-		</Button>
+	<!-- Injected Controls from Active Page (Search, Filters, Actions) -->
+	<div class="flex items-center gap-2.5 ms-auto">
+		{#if portal?.content}
+			{@render portal.content()}
+		{/if}
 	</div>
 </header>

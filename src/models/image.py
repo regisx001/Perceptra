@@ -13,6 +13,9 @@ class Image(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     storage_key = db.Column(db.String(500), unique=True, nullable=False, index=True)
     source_type = db.Column(db.String(20), nullable=False, default="dataset")  # 'dataset', 'upload', 'derived'
+    processing_status = db.Column(
+        db.String(20), nullable=False, default="pending"
+    )  # 'pending', 'processing', 'indexed', 'failed'
     mime_type = db.Column(db.String(100), nullable=False)
     file_size = db.Column(db.Integer, nullable=False)
     width = db.Column(db.Integer, nullable=False)
@@ -39,6 +42,7 @@ class Image(db.Model):
             "filename": self.filename,
             "storage_key": self.storage_key,
             "source_type": self.source_type,
+            "processing_status": self.processing_status,
             "mime_type": self.mime_type,
             "file_size": self.file_size,
             "width": self.width,

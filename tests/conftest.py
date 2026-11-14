@@ -7,6 +7,8 @@ class TestConfig:
     TESTING = True
     SECRET_KEY = "test-secret-key-that-is-at-least-32-bytes-long!"
     JWT_SECRET_KEY = "test-jwt-secret-key-that-is-at-least-32-bytes-long!"
+    JWT_TOKEN_LOCATION = ["headers", "query_string"]
+    JWT_QUERY_STRING_NAME = "token"
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STORAGE_PROTOCOL = "file"

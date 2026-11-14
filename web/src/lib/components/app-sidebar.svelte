@@ -1,22 +1,45 @@
 <script lang="ts">
-	import ChartBarIcon from "@tabler/icons-svelte/icons/chart-bar";
-	import DatabaseIcon from "@tabler/icons-svelte/icons/database";
-	import AdjustmentsHorizontalIcon from "@tabler/icons-svelte/icons/adjustments-horizontal";
-	import ColorSwatchIcon from "@tabler/icons-svelte/icons/color-swatch";
+	import PhotoIcon from "@tabler/icons-svelte/icons/photo";
 	import LayoutDashboardIcon from "@tabler/icons-svelte/icons/layout-dashboard";
 	import UploadIcon from "@tabler/icons-svelte/icons/upload";
 	import FolderTreeIcon from "@tabler/icons-svelte/icons/folder";
 	import HelpIcon from "@tabler/icons-svelte/icons/help";
 	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
-	import NavDocuments from "./nav-documents.svelte";
 	import NavMain from "./nav-main.svelte";
 	import NavSecondary from "./nav-secondary.svelte";
 	import NavUser from "./nav-user.svelte";
 	import { auth } from "#lib/auth.js";
+	import * as m from "#lib/paraglide/messages.js";
+	import { useLocale } from "#lib/i18n.svelte.js";
+	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import type { ComponentProps } from "svelte";
 
+	const locale = useLocale();
 	const currentUser = auth.getUser();
+
+	let navMain = $derived([
+		{
+			title: m.nav_overview(),
+			url: "/dashboard",
+			icon: LayoutDashboardIcon,
+		},
+		{
+			title: m.nav_images(),
+			url: "/dashboard/images",
+			icon: PhotoIcon,
+		},
+		{
+			title: m.nav_upload_images(),
+			url: "/dashboard/upload",
+			icon: UploadIcon,
+		},
+		{
+			title: m.nav_categories(),
+			url: "/dashboard/categories",
+			icon: FolderTreeIcon,
+		},
+	]);
 
 	const sidebarData = {
 		user: {
@@ -24,45 +47,6 @@
 			email: currentUser?.email || "researcher@perceptra.local",
 			avatar: "/favicon-light-32x32.png",
 		},
-		navMain: [
-			{
-				title: "Overview",
-				url: "/dashboard",
-				icon: LayoutDashboardIcon,
-			},
-			{
-				title: "Upload Images",
-				url: "/dashboard/upload",
-				icon: UploadIcon,
-			},
-			{
-				title: "Categories",
-				url: "/dashboard/categories",
-				icon: FolderTreeIcon,
-			},
-		],
-		descriptors: [
-			{
-				name: "Color Descriptors",
-				url: "/descriptors/color",
-				icon: ColorSwatchIcon,
-			},
-			{
-				name: "Texture (GLCM & LBP)",
-				url: "/descriptors/texture",
-				icon: AdjustmentsHorizontalIcon,
-			},
-			{
-				name: "GHIM-10K Index Shards",
-				url: "/descriptors/indexes",
-				icon: DatabaseIcon,
-			},
-			{
-				name: "Retrieval Benchmarks",
-				url: "/descriptors/benchmarks",
-				icon: ChartBarIcon,
-			},
-		],
 		navSecondary: [
 			{
 				title: "System Settings",
@@ -110,12 +94,26 @@
 	</Sidebar.Header>
 
 	<Sidebar.Content>
-		<NavMain items={sidebarData.navMain} />
-		<NavDocuments items={sidebarData.descriptors} />
+		<NavMain items={navMain} />
 		<NavSecondary items={sidebarData.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 
-	<Sidebar.Footer class="border-t border-sidebar-border p-2">
+	<Sidebar.Footer class="border-t border-sidebar-border p-2 space-y-1">
+		<Sidebar.Menu>
+			<Sidebar.MenuItem>
+				<Sidebar.MenuButton
+					onclick={() => locale.toggle()}
+					title={`Switch language (Current: ${locale.current.toUpperCase()})`}
+					class="w-full text-xs font-medium text-muted-foreground hover:text-foreground"
+				>
+					<GlobeIcon class="size-4" />
+					<span class="flex-1 text-start">Language</span>
+					<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground">
+						{locale.current}
+					</span>
+				</Sidebar.MenuButton>
+			</Sidebar.MenuItem>
+		</Sidebar.Menu>
 		<NavUser user={sidebarData.user} />
 	</Sidebar.Footer>
 </Sidebar.Root>

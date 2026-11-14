@@ -47,6 +47,8 @@ describe('Categories Page i18n & Client Service Tests', () => {
 			expect(m.categories_menu_rename()).toBe('Rename');
 			expect(m.categories_menu_move()).toBe('Move Folder');
 			expect(m.categories_menu_delete()).toBe('Delete');
+			expect(m.categories_empty_images()).toBe('No images in this category');
+			expect(m.categories_showing_images({ count: 5, total: 10 })).toBe('Showing 5 of 10 images');
 		});
 
 		it('renders all categories messages correctly in French', () => {
@@ -82,6 +84,8 @@ describe('Categories Page i18n & Client Service Tests', () => {
 			expect(m.categories_menu_rename()).toBe('Renommer');
 			expect(m.categories_menu_move()).toBe('Déplacer le dossier');
 			expect(m.categories_menu_delete()).toBe('Supprimer');
+			expect(m.categories_empty_images()).toBe('Aucune image dans cette catégorie');
+			expect(m.categories_showing_images({ count: 5, total: 10 })).toBe('Affichage de 5 sur 10 images');
 		});
 	});
 

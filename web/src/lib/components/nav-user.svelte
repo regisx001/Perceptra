@@ -4,14 +4,17 @@
 	import LogoutIcon from "@tabler/icons-svelte/icons/logout";
 	import DatabaseIcon from "@tabler/icons-svelte/icons/database";
 	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
+	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import * as Avatar from "#lib/components/ui/avatar/index.js";
 	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
 	import { auth } from "#lib/auth.js";
+	import { useLocale } from "#lib/i18n.svelte.js";
 	import { goto } from "$app/navigation";
 
 	let { user }: { user: { name: string; email: string; avatar: string } } = $props();
 
+	const locale = useLocale();
 	const sidebar = Sidebar.useSidebar();
 
 	async function handleLogout() {
@@ -81,6 +84,15 @@
 					<DropdownMenu.Item class="rounded-md">
 						<SettingsIcon class="size-4" />
 						Preferences
+					</DropdownMenu.Item>
+					<DropdownMenu.Item onclick={() => locale.toggle()} class="rounded-md justify-between">
+						<div class="flex items-center gap-2">
+							<GlobeIcon class="size-4" />
+							<span>Language</span>
+						</div>
+						<span class="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+							{locale.current}
+						</span>
 					</DropdownMenu.Item>
 				</DropdownMenu.Group>
 				<DropdownMenu.Separator />

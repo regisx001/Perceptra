@@ -21,6 +21,8 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwt-secret-key-change-in-production")
     JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 86400))  # seconds
+    JWT_TOKEN_LOCATION = ["headers", "query_string"]
+    JWT_QUERY_STRING_NAME = "token"
 
     # Storage configuration using fsspec
     STORAGE_PROTOCOL = os.getenv("STORAGE_PROTOCOL", "file")
