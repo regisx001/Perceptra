@@ -47,6 +47,34 @@ describe('Image Transformation Studio Tests', () => {
 			expect(computedWidth).toBe(2190);
 		});
 
+		it('computes general 2D affine expanded dimensions correctly', () => {
+			const width = 1000;
+			const height = 500;
+			// Scale 1.5 in X, 2.0 in Y, shearX 0.5
+			const a = 1.5;
+			const b = 0.5;
+			const c = 0;
+			const d = 0;
+			const e = 2.0;
+			const f = 0;
+
+			const corners = [
+				[0, 0],
+				[width, 0],
+				[0, height],
+				[width, height]
+			];
+			const transX = corners.map(([x, y]) => a * x + b * y + c);
+			const transY = corners.map(([x, y]) => d * x + e * y + f);
+			const computedWidth = Math.ceil(Math.max(...transX) - Math.min(...transX));
+			const computedHeight = Math.ceil(Math.max(...transY) - Math.min(...transY));
+
+			// Max X is 1.5*1000 + 0.5*500 = 1500 + 250 = 1750
+			expect(computedWidth).toBe(1750);
+			// Max Y is 2.0*500 = 1000
+			expect(computedHeight).toBe(1000);
+		});
+
 		it('computes rotate dimensions with expand toggle', () => {
 			const width = 1000;
 			const height = 1000;

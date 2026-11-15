@@ -4,7 +4,6 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Card from "#lib/components/ui/card/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import { Badge } from "#lib/components/ui/badge/index.js";
 	import * as AlertDialog from "#lib/components/ui/alert-dialog/index.js";
 	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
 	import { imageService, type ImageItem } from "#lib/images.js";
@@ -29,7 +28,7 @@
 		dimensions?: string;
 	}
 
-	const PAGE_SIZE = 24;
+	const PAGE_SIZE = 25;
 	let images = $state<GalleryImage[]>([]);
 	let categories = $state<CategoryItem[]>([]);
 	let categoryMap = $state<Record<string, string>>({});
@@ -241,9 +240,9 @@
 	<header class="flex flex-col gap-1">
 		<div class="flex items-center gap-2.5">
 			<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{m.images_title()}</h1>
-			<Badge variant="secondary" class="font-mono text-xs px-2.5 py-0.5">
+			<span class="inline-flex items-center font-mono text-xs px-2.5 py-0.5 rounded-full bg-secondary border border-border/80 text-secondary-foreground font-medium">
 				{m.images_total_counter({ count: totalImages })}
-			</Badge>
+			</span>
 		</div>
 		<p class="text-xs sm:text-sm text-muted-foreground">
 			{m.images_subtitle()}
@@ -251,14 +250,14 @@
 	</header>
 
 	<!-- Images Grid -->
-	<Card.Root class="border border-border/80 bg-card/60 backdrop-blur-xs shadow-xs p-6">
+	<Card.Root class="border border-border/80 bg-card/60 backdrop-blur-xs shadow-xs p-5 sm:p-6">
 		{#if isLoading}
-			<!-- Loading Skeleton -->
-			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-				{#each Array(12) as _, i}
+			<!-- Loading Skeleton (2 rows of 5) -->
+			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4.5 sm:gap-5">
+				{#each Array(10) as _, i}
 					<div class="flex flex-col rounded-lg border border-border/60 overflow-hidden shadow-2xs">
 						<Skeleton class="aspect-4/3 w-full" />
-						<div class="p-2 space-y-1 bg-background/60">
+						<div class="p-2.5 space-y-1 bg-background/60">
 							<Skeleton class="h-3 w-3/4 rounded-xs" />
 						</div>
 					</div>
@@ -287,8 +286,8 @@
 				</Button>
 			</div>
 		{:else}
-			<!-- Render Image Cards -->
-			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+			<!-- Render Image Cards: 5 images per row on desktop -->
+			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4.5 sm:gap-5">
 				{#each filteredImages as img (img.id)}
 					<div class="group relative flex flex-col rounded-lg border border-border/70 bg-card overflow-hidden shadow-2xs hover:shadow-xs hover:border-primary/40 transition-all">
 						<!-- Image Thumbnail with fallback -->
@@ -312,36 +311,36 @@
 							<!-- Floating Action Buttons -->
 							<a
 								href="/dashboard/transform?image_id={img.id}"
-								class="absolute top-1.5 left-1.5 size-6 rounded-md bg-background/80 hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs"
+								class="absolute top-2 left-2 size-7 rounded-md bg-background/85 hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer"
 								title="Transform in Studio"
 							>
-								<Wand2Icon class="size-3" />
+								<Wand2Icon class="size-3.5" />
 							</a>
 
 							<!-- Floating Delete Button -->
 							<button
 								type="button"
-								class="absolute top-1.5 right-1.5 size-6 rounded-md bg-background/80 hover:bg-destructive hover:text-destructive-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs"
+								class="absolute top-2 right-2 size-7 rounded-md bg-background/85 hover:bg-destructive hover:text-destructive-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer"
 								onclick={(e) => promptDelete(img, e)}
 								title="Delete Image"
 							>
-								<Trash2Icon class="size-3" />
+								<Trash2Icon class="size-3.5" />
 							</button>
 						</div>
 
 						<!-- Card Details -->
-						<div class="p-2 bg-background/80 backdrop-blur-xs flex flex-col gap-0.5">
-							<p class="truncate text-[11px] font-medium text-foreground" title={img.filename}>
+						<div class="p-2.5 bg-background/80 backdrop-blur-xs flex flex-col gap-1">
+							<p class="truncate text-xs font-semibold text-foreground" title={img.filename}>
 								{img.filename}
 							</p>
-							<div class="flex items-center justify-between text-[10px] text-muted-foreground">
-								<span class="truncate max-w-[80px]">
+							<div class="flex items-center justify-between text-[11px] text-muted-foreground">
+								<span class="truncate max-w-[120px]">
 									{img.categoryId && categoryMap[img.categoryId]
 										? categoryMap[img.categoryId]
 										: "Uncategorized"}
 								</span>
 								{#if img.dimensions}
-									<span class="font-mono opacity-80">{img.dimensions}</span>
+									<span class="font-mono text-[10px] opacity-80">{img.dimensions}</span>
 								{/if}
 							</div>
 						</div>

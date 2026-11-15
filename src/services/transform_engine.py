@@ -56,6 +56,59 @@ def _parse_fill_color(color_str: str, has_alpha: bool) -> Tuple[int, ...]:
     return rgba[:3]
 
 
+def _parse_affine_matrix(params: dict[str, Any]) -> Tuple[float, float, float, float, float, float]:
+    """Parse affine transformation coefficients [a, b, c, d, e, f]."""
+    if "matrix" in params:
+        m = params["matrix"]
+        if not isinstance(m, (list, tuple)) or len(m) != 6:
+            raise InvalidTransformParamsError("Affine 'matrix' must be a list or tuple of 6 numbers [a, b, c, d, e, f].")
+        try:
+            return tuple(float(v) for v in m)  # type: ignore[return-value]
+        except (ValueError, TypeError) as exc:
+            raise InvalidTransformParamsError("Affine matrix elements must be numbers.") from exc
+
+    if any(k in params for k in ("a", "b", "c", "d", "e", "f")):
+        try:
+            a = float(params.get("a", 1.0))
+            b = float(params.get("b", 0.0))
+            c = float(params.get("c", 0.0))
+            d = float(params.get("d", 0.0))
+            e = float(params.get("e", 1.0))
+            f = float(params.get("f", 0.0))
+            return (a, b, c, d, e, f)
+        except (ValueError, TypeError) as exc:
+            raise InvalidTransformParamsError("Affine parameters a, b, c, d, e, f must be numbers.") from exc
+
+    if any(k in params for k in ("scale_x", "scale_y", "rotation", "shear_x", "shear_y", "translation_x", "translation_y")):
+        try:
+            sx = float(params.get("scale_x", 1.0))
+            sy = float(params.get("scale_y", 1.0))
+            angle = float(params.get("rotation", 0.0))
+            shx = float(params.get("shear_x", 0.0))
+            shy = float(params.get("shear_y", 0.0))
+            tx = float(params.get("translation_x", 0.0))
+            ty = float(params.get("translation_y", 0.0))
+        except (ValueError, TypeError) as exc:
+            raise InvalidTransformParamsError("Decomposed affine parameters must be numbers.") from exc
+
+        rad = math.radians(angle)
+        cos_a = math.cos(rad)
+        sin_a = math.sin(rad)
+        m00 = sx
+        m01 = shx * sy
+        m10 = shy * sx
+        m11 = sy
+        a = cos_a * m00 - sin_a * m10
+        b = cos_a * m01 - sin_a * m11
+        d = sin_a * m00 + cos_a * m10
+        e = sin_a * m01 + cos_a * m11
+        c = tx
+        f = ty
+        return (a, b, c, d, e, f)
+
+    return (1.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+
+
 class TransformEngine:
     """
     Stateless processing engine for geometric image transformations.
@@ -81,9 +134,9 @@ class TransformEngine:
             raise InvalidTransformParamsError("Width and height must be positive integers.")
 
         op = (operation or "").strip().lower()
-        if op not in {"crop", "resize", "rotate", "flip", "shear"}:
+        if op not in {"crop", "resize", "rotate", "flip", "shear", "affine"}:
             raise InvalidTransformParamsError(
-                f"Unsupported operation '{operation}'. Supported operations: crop, resize, rotate, flip, shear."
+                f"Unsupported operation '{operation}'. Supported operations: crop, resize, rotate, flip, shear, affine."
             )
 
         if not isinstance(params, dict):
@@ -245,6 +298,37 @@ class TransformEngine:
                 )
             return new_w, new_h
 
+        elif op == "affine":
+            a, b, c, d, e, f = _parse_affine_matrix(params)
+            det = a * e - b * d
+            if abs(det) < 1e-7:
+                raise InvalidTransformParamsError("Singular affine transformation matrix (determinant is zero or near zero).")
+
+            expand = bool(params.get("expand", True))
+            if not expand:
+                return width, height
+
+            corners = [
+                (0.0, 0.0),
+                (float(width), 0.0),
+                (0.0, float(height)),
+                (float(width), float(height)),
+            ]
+            trans_corners = [(a * x + b * y + c, d * x + e * y + f) for (x, y) in corners]
+            min_x = min(pt[0] for pt in trans_corners)
+            max_x = max(pt[0] for pt in trans_corners)
+            min_y = min(pt[1] for pt in trans_corners)
+            max_y = max(pt[1] for pt in trans_corners)
+
+            new_w = max(1, int(math.ceil(max_x - min_x)))
+            new_h = max(1, int(math.ceil(max_y - min_y)))
+
+            if new_w > cls.MAX_DIMENSION or new_h > cls.MAX_DIMENSION:
+                raise InvalidTransformParamsError(
+                    f"Resulting affine canvas ({new_w}x{new_h}) exceeds maximum allowed dimension ({cls.MAX_DIMENSION}px)."
+                )
+            return new_w, new_h
+
         raise InvalidTransformParamsError(f"Unknown operation: {op}")
 
     @classmethod
@@ -258,9 +342,9 @@ class TransformEngine:
             raise InvalidTransformParamsError("Image data cannot be empty.")
 
         op = (operation or "").strip().lower()
-        if op not in {"crop", "resize", "rotate", "flip", "shear"}:
+        if op not in {"crop", "resize", "rotate", "flip", "shear", "affine"}:
             raise InvalidTransformParamsError(
-                f"Unsupported operation '{operation}'. Supported operations: crop, resize, rotate, flip, shear."
+                f"Unsupported operation '{operation}'. Supported operations: crop, resize, rotate, flip, shear, affine."
             )
 
         try:
@@ -292,6 +376,8 @@ class TransformEngine:
                 transformed = cls._flip(img, params)
             elif op == "shear":
                 transformed = cls._shear(img, params, detected_format)
+            elif op == "affine":
+                transformed = cls._affine(img, params, detected_format)
             else:
                 raise InvalidTransformParamsError(f"Unknown operation: {op}")
 
@@ -538,6 +624,69 @@ class TransformEngine:
             (new_w, new_h),
             PILImage.Transform.AFFINE,
             (a, b, c, d, e, f),
+            resample=PILImage.Resampling.BICUBIC,
+            fillcolor=fill_color,
+        )
+
+    @classmethod
+    def _affine(cls, img: PILImage.Image, params: dict[str, Any], fmt: str) -> PILImage.Image:
+        a, b, c, d, e, f = _parse_affine_matrix(params)
+        det = a * e - b * d
+        if abs(det) < 1e-7:
+            raise InvalidTransformParamsError("Singular affine transformation matrix (determinant is zero or near zero).")
+
+        expand = bool(params.get("expand", True))
+        fill_color_str = params.get("fill_color", "#FFFFFF")
+
+        has_alpha = (fmt != "JPEG" and img.mode in ("RGBA", "LA", "P"))
+        fill_color = _parse_fill_color(fill_color_str, has_alpha)
+
+        w, h = img.size
+
+        if expand:
+            corners = [
+                (0.0, 0.0),
+                (float(w), 0.0),
+                (0.0, float(h)),
+                (float(w), float(h)),
+            ]
+            trans_corners = [(a * x + b * y + c, d * x + e * y + f) for (x, y) in corners]
+            min_x = min(pt[0] for pt in trans_corners)
+            max_x = max(pt[0] for pt in trans_corners)
+            min_y = min(pt[1] for pt in trans_corners)
+            max_y = max(pt[1] for pt in trans_corners)
+
+            new_w = max(1, int(math.ceil(max_x - min_x)))
+            new_h = max(1, int(math.ceil(max_y - min_y)))
+
+            if new_w > cls.MAX_DIMENSION or new_h > cls.MAX_DIMENSION:
+                raise InvalidTransformParamsError(
+                    f"Resulting affine canvas ({new_w}x{new_h}) exceeds maximum allowed dimension ({cls.MAX_DIMENSION}px)."
+                )
+
+            x_off = min_x
+            y_off = min_y
+        else:
+            new_w = w
+            new_h = h
+            x_off = 0.0
+            y_off = 0.0
+
+        # Invert affine mapping from output canvas (X, Y) back to source image (x, y)
+        a_pil = e / det
+        b_pil = -b / det
+        c_pil = (e * (x_off - c) - b * (y_off - f)) / det
+        d_pil = -d / det
+        e_pil = a / det
+        f_pil = (-d * (x_off - c) + a * (y_off - f)) / det
+
+        mode = "RGBA" if has_alpha else "RGB"
+        working_img = img.convert(mode)
+
+        return working_img.transform(
+            (new_w, new_h),
+            PILImage.Transform.AFFINE,
+            (a_pil, b_pil, c_pil, d_pil, e_pil, f_pil),
             resample=PILImage.Resampling.BICUBIC,
             fillcolor=fill_color,
         )

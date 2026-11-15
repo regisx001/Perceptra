@@ -8,32 +8,35 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Card from "#lib/components/ui/card/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
-	import { Badge } from "#lib/components/ui/badge/index.js";
 	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import * as Select from "#lib/components/ui/select/index.js";
+	import { Badge } from "#lib/components/ui/badge/index.js";
+	import HeaderActionPortal from "#lib/components/header-action-portal.svelte";
 
 	// Icons
-	import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
-	import RotateCwIcon from "@lucide/svelte/icons/rotate-cw";
-	import Columns2Icon from "@lucide/svelte/icons/columns-2";
-	import SparklesIcon from "@lucide/svelte/icons/sparkles";
-	import PencilIcon from "@lucide/svelte/icons/pencil";
-	import ScanIcon from "@lucide/svelte/icons/scan";
 	import CropIcon from "@lucide/svelte/icons/crop";
-	import ZoomInIcon from "@lucide/svelte/icons/zoom-in";
-	import ZoomOutIcon from "@lucide/svelte/icons/zoom-out";
 	import Maximize2Icon from "@lucide/svelte/icons/maximize-2";
+	import RotateCwIcon from "@lucide/svelte/icons/rotate-cw";
+	import RotateCcwIcon from "@lucide/svelte/icons/rotate-ccw";
+	import SlidersHorizontalIcon from "@lucide/svelte/icons/sliders-horizontal";
+	import RectangleHorizontalIcon from "@lucide/svelte/icons/rectangle-horizontal";
+	import TriangleIcon from "@lucide/svelte/icons/triangle";
+	import Undo2Icon from "@lucide/svelte/icons/undo-2";
+	import Redo2Icon from "@lucide/svelte/icons/redo-2";
+	import MinusIcon from "@lucide/svelte/icons/minus";
+	import PlusIcon from "@lucide/svelte/icons/plus";
+	import CrosshairIcon from "@lucide/svelte/icons/crosshair";
+	import ScanIcon from "@lucide/svelte/icons/scan";
+	import MaximizeIcon from "@lucide/svelte/icons/maximize";
+	import LinkIcon from "@lucide/svelte/icons/link";
+	import UnlinkIcon from "@lucide/svelte/icons/unlink";
+	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+	import UploadCloudIcon from "@lucide/svelte/icons/upload-cloud";
+	import DownloadIcon from "@lucide/svelte/icons/download";
+	import Loader2Icon from "@lucide/svelte/icons/loader-2";
+	import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
 	import FlipHorizontalIcon from "@lucide/svelte/icons/flip-horizontal";
 	import FlipVerticalIcon from "@lucide/svelte/icons/flip-vertical";
-	import CheckIcon from "@lucide/svelte/icons/check";
-	import Loader2Icon from "@lucide/svelte/icons/loader-2";
-	import ImageIcon from "@lucide/svelte/icons/image";
-	import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
-	import CodeIcon from "@lucide/svelte/icons/code";
-	import SlidersIcon from "@lucide/svelte/icons/sliders";
-	import DownloadIcon from "@lucide/svelte/icons/download";
-	import EyeIcon from "@lucide/svelte/icons/eye";
-	import MoveIcon from "@lucide/svelte/icons/move";
-	import CrosshairIcon from "@lucide/svelte/icons/crosshair";
 
 	// State
 	let user = $state(auth.getUser());
@@ -46,31 +49,48 @@
 	// User Images & Categories
 	let userImages = $state<ImageItem[]>([]);
 	let categories = $state<CategoryItem[]>([]);
-	let isImagePickerOpen = $state(false);
+	let isUploadDialogOpen = $state(false);
 	let showParamsDialog = $state(false);
+
+	// Upload Dialog State
+	let uploadFile = $state<File | null>(null);
+	let uploadPreviewUrl = $state<string | null>(null);
+	let uploadCategoryId = $state<string>("");
+	let isUploadingImage = $state(false);
+	let uploadError = $state<string | null>(null);
+	let uploadProgress = $state<number>(0);
+	let isDraggingFile = $state(false);
+	let uploadFileInputRef: HTMLInputElement | null = null;
 
 	// Currently Active Image
 	let currentImage = $state<ImageItem | null>(null);
 	let currentImageUrl = $state<string>("/images/auth-hero.jpg");
-	let originalWidth = $state<number>(1920);
-	let originalHeight = $state<number>(1080);
-	let originalFilename = $state<string>("ghim_nature_peak.jpg");
+	let originalWidth = $state<number>(2048);
+	let originalHeight = $state<number>(1365);
+	let originalFileSize = $state<number>(1420580);
+	let originalMimeType = $state<string>("image/jpeg");
+	let originalFilename = $state<string>("chair_01.jpg");
 	let imageEl = $state<HTMLImageElement | null>(null);
 
-	// Active Transform Operation (NO OPERATION SELECTED BY DEFAULT)
-	type TransformOp = "crop" | "resize" | "rotate" | "flip" | "shear";
-	let activeTab = $state<TransformOp | null>(null);
+	// Active Transform Operation - Concept 2 defaults to "crop"
+	type TransformOp =
+		| "crop"
+		| "resize"
+		| "rotate"
+		| "flip"
+		| "shear"
+		| "affine";
+	let activeTab = $state<TransformOp>("crop");
 
-	// Preview & Comparison Controls
-	let isComparing = $state(false);
+	// Preview Controls
 	let zoomLevel = $state<number>(74);
-	let activePreset = $state<string>("Free");
+	let activePreset = $state<string>("1:1 (Square)");
 
-	// 1. Interactive Crop Parameters (iLoveIMG Style)
-	let cropX = $state<number>(120);
-	let cropY = $state<number>(100);
-	let cropWidth = $state<number>(600);
-	let cropHeight = $state<number>(450);
+	// 1. Interactive Crop Parameters (8-point control system)
+	let cropX = $state<number>(512);
+	let cropY = $state<number>(240);
+	let cropWidth = $state<number>(1024);
+	let cropHeight = $state<number>(1024);
 	let showRuleOfThirds = $state<boolean>(true);
 
 	// Interactive Crop Drag State
@@ -78,16 +98,34 @@
 	let dragStartPointer = { x: 0, y: 0 };
 	let dragStartCrop = { x: 0, y: 0, w: 0, h: 0 };
 
+	// History Stack for Snappy Undo / Redo
+	let cropHistory = $state<{ x: number; y: number; w: number; h: number }[]>([
+		{ x: 512, y: 240, w: 1024, h: 1024 },
+	]);
+	let cropHistoryIndex = $state(0);
+
 	// 2. Shear Parameters
 	let shearX = $state<number>(0.25);
 	let shearY = $state<number>(0.0);
 	let shearExpand = $state<boolean>(true);
 	let shearBgColor = $state<string>("#FFFFFF");
 
+	// 2b. Affine Parameters [a, b, c, d, e, f]
+	// [ x' ]   [ a  b ] [ x ]   [ c ]
+	// [ y' ] = [ d  e ] [ y ] + [ f ]
+	let affineA = $state<number>(1.0); // Scale X
+	let affineB = $state<number>(0.0); // Shear X
+	let affineC = $state<number>(0.0); // Translation X (px)
+	let affineD = $state<number>(0.0); // Shear Y
+	let affineE = $state<number>(1.0); // Scale Y
+	let affineF = $state<number>(0.0); // Translation Y (px)
+	let affineExpand = $state<boolean>(true);
+	let affineBgColor = $state<string>("#FFFFFF");
+
 	// 3. Resize Parameters
 	let resizeScale = $state<number>(1.0);
-	let resizeWidth = $state<number>(1280);
-	let resizeHeight = $state<number>(960);
+	let resizeWidth = $state<number>(1024);
+	let resizeHeight = $state<number>(1024);
 	let keepAspectRatio = $state<boolean>(true);
 
 	// 4. Rotate Parameters
@@ -99,7 +137,7 @@
 	let flipDirection = $state<"horizontal" | "vertical">("horizontal");
 
 	// Saved Info
-	let derivedFilename = $state<string>("ghim_nature_peak_transformed.jpg");
+	let derivedFilename = $state<string>("chair_01_cropped.jpg");
 	let selectedCategoryId = $state<string>("");
 
 	// Helpers
@@ -107,52 +145,165 @@
 		return Math.max(min, Math.min(max, val));
 	}
 
+	function formatFileSize(bytes: number): string {
+		if (!bytes || bytes <= 0) return "0 B";
+		const k = 1024;
+		if (bytes < k) return `${bytes} B`;
+		if (bytes < k * k) return `${(bytes / k).toFixed(1)} KB`;
+		return `${(bytes / (k * k)).toFixed(1)} MB`;
+	}
+
+	let displayFormat = $derived.by(() => {
+		if (originalMimeType && originalMimeType.includes("/")) {
+			const sub = originalMimeType.split("/")[1];
+			return sub.toUpperCase();
+		}
+		if (originalFilename.includes(".")) {
+			return originalFilename.split(".").pop()?.toUpperCase() || "IMAGE";
+		}
+		return "JPEG";
+	});
+
+	let estimatedDerivedBytes = $derived.by(() => {
+		if (!originalWidth || !originalHeight || originalWidth <= 0 || originalHeight <= 0) {
+			return 0;
+		}
+		const originalPixels = originalWidth * originalHeight;
+		const outputPixels = computedOutputWidth * computedOutputHeight;
+		const ratio = outputPixels / originalPixels;
+
+		if (originalFileSize > 0) {
+			return Math.max(512, Math.round(originalFileSize * ratio));
+		}
+		return Math.max(512, Math.round(outputPixels * 0.25));
+	});
+
+	function pushCropHistory() {
+		if (cropHistoryIndex < cropHistory.length - 1) {
+			cropHistory = cropHistory.slice(0, cropHistoryIndex + 1);
+		}
+		cropHistory.push({ x: cropX, y: cropY, w: cropWidth, h: cropHeight });
+		if (cropHistory.length > 40) cropHistory.shift();
+		cropHistoryIndex = cropHistory.length - 1;
+	}
+
+	function undoCrop() {
+		if (cropHistoryIndex > 0) {
+			cropHistoryIndex--;
+			const s = cropHistory[cropHistoryIndex];
+			cropX = s.x;
+			cropY = s.y;
+			cropWidth = s.w;
+			cropHeight = s.h;
+		}
+	}
+
+	function redoCrop() {
+		if (cropHistoryIndex < cropHistory.length - 1) {
+			cropHistoryIndex++;
+			const s = cropHistory[cropHistoryIndex];
+			cropX = s.x;
+			cropY = s.y;
+			cropWidth = s.w;
+			cropHeight = s.h;
+		}
+	}
+
 	// Computed dynamic output dimensions
 	let computedOutputWidth = $derived.by(() => {
-		if (!activeTab) return originalWidth;
-		if (activeTab === "shear") {
+		if (!activeTab || activeTab === "crop") {
+			return Math.min(originalWidth, Math.max(1, Math.round(cropWidth)));
+		} else if (activeTab === "shear") {
 			if (!shearExpand) return originalWidth;
 			const corners = [
 				[0, 0],
 				[originalWidth, 0],
 				[0, originalHeight],
-				[originalWidth, originalHeight]
+				[originalWidth, originalHeight],
 			];
 			const transX = corners.map(([x, y]) => x + shearX * y);
-			return Math.max(1, Math.round(Math.max(...transX) - Math.min(...transX)));
-		} else if (activeTab === "crop") {
-			return Math.min(originalWidth, Math.max(1, Math.round(cropWidth)));
+			return Math.max(
+				1,
+				Math.round(Math.max(...transX) - Math.min(...transX)),
+			);
+		} else if (activeTab === "affine") {
+			if (!affineExpand) return originalWidth;
+			const corners = [
+				[0, 0],
+				[originalWidth, 0],
+				[0, originalHeight],
+				[originalWidth, originalHeight],
+			];
+			const transX = corners.map(
+				([x, y]) => affineA * x + affineB * y + affineC,
+			);
+			return Math.max(
+				1,
+				Math.round(Math.max(...transX) - Math.min(...transX)),
+			);
 		} else if (activeTab === "resize") {
 			return Math.max(1, Math.round(resizeWidth));
 		} else if (activeTab === "rotate") {
 			if (!rotateExpand || rotateAngle === 0) return originalWidth;
 			const rad = Math.abs(rotateAngle) * (Math.PI / 180);
-			return Math.max(1, Math.round(originalWidth * Math.abs(Math.cos(rad)) + originalHeight * Math.abs(Math.sin(rad))));
+			return Math.max(
+				1,
+				Math.round(
+					originalWidth * Math.abs(Math.cos(rad)) +
+						originalHeight * Math.abs(Math.sin(rad)),
+				),
+			);
 		} else {
 			return originalWidth;
 		}
 	});
 
 	let computedOutputHeight = $derived.by(() => {
-		if (!activeTab) return originalHeight;
-		if (activeTab === "shear") {
+		if (!activeTab || activeTab === "crop") {
+			return Math.min(
+				originalHeight,
+				Math.max(1, Math.round(cropHeight)),
+			);
+		} else if (activeTab === "shear") {
 			if (!shearExpand) return originalHeight;
 			const corners = [
 				[0, 0],
 				[originalWidth, 0],
 				[0, originalHeight],
-				[originalWidth, originalHeight]
+				[originalWidth, originalHeight],
 			];
 			const transY = corners.map(([x, y]) => shearY * x + y);
-			return Math.max(1, Math.round(Math.max(...transY) - Math.min(...transY)));
-		} else if (activeTab === "crop") {
-			return Math.min(originalHeight, Math.max(1, Math.round(cropHeight)));
+			return Math.max(
+				1,
+				Math.round(Math.max(...transY) - Math.min(...transY)),
+			);
+		} else if (activeTab === "affine") {
+			if (!affineExpand) return originalHeight;
+			const corners = [
+				[0, 0],
+				[originalWidth, 0],
+				[0, originalHeight],
+				[originalWidth, originalHeight],
+			];
+			const transY = corners.map(
+				([x, y]) => affineD * x + affineE * y + affineF,
+			);
+			return Math.max(
+				1,
+				Math.round(Math.max(...transY) - Math.min(...transY)),
+			);
 		} else if (activeTab === "resize") {
 			return Math.max(1, Math.round(resizeHeight));
 		} else if (activeTab === "rotate") {
 			if (!rotateExpand || rotateAngle === 0) return originalHeight;
 			const rad = Math.abs(rotateAngle) * (Math.PI / 180);
-			return Math.max(1, Math.round(originalWidth * Math.abs(Math.sin(rad)) + originalHeight * Math.abs(Math.cos(rad))));
+			return Math.max(
+				1,
+				Math.round(
+					originalWidth * Math.abs(Math.sin(rad)) +
+						originalHeight * Math.abs(Math.cos(rad)),
+				),
+			);
 		} else {
 			return originalHeight;
 		}
@@ -161,55 +312,70 @@
 	// Dynamic derived filename generator
 	$effect(() => {
 		const stem = originalFilename.replace(/\.[^/.]+$/, "");
-		const ext = originalFilename.includes(".") ? "." + originalFilename.split(".").pop() : ".jpg";
-		if (!activeTab) {
-			derivedFilename = `${stem}_transformed${ext}`;
+		const ext = originalFilename.includes(".")
+			? "." + originalFilename.split(".").pop()
+			: ".jpg";
+		if (activeTab === "crop") {
+			derivedFilename = `${stem}_cropped${ext}`;
 		} else if (activeTab === "shear") {
 			derivedFilename = `${stem}_sheared${ext}`;
-		} else if (activeTab === "crop") {
-			derivedFilename = `${stem}_cropped${ext}`;
+		} else if (activeTab === "affine") {
+			derivedFilename = `${stem}_affine${ext}`;
 		} else if (activeTab === "resize") {
 			derivedFilename = `${stem}_resized${ext}`;
 		} else if (activeTab === "rotate") {
 			derivedFilename = `${stem}_rotated${ext}`;
 		} else if (activeTab === "flip") {
 			derivedFilename = `${stem}_flipped_${flipDirection}${ext}`;
+		} else {
+			derivedFilename = `${stem}_transformed${ext}`;
 		}
 	});
 
 	// Active Params Object for API payload
 	let activeParamsJson = $derived.by(() => {
-		if (!activeTab) {
-			return {};
+		if (activeTab === "crop") {
+			return {
+				x: Math.max(0, Math.floor(cropX)),
+				y: Math.max(0, Math.floor(cropY)),
+				width: Math.max(1, Math.floor(cropWidth)),
+				height: Math.max(1, Math.floor(cropHeight)),
+			};
 		} else if (activeTab === "shear") {
 			return {
 				shear_x: Number(shearX),
 				shear_y: Number(shearY),
 				expand: shearExpand,
-				bg_color: shearBgColor
+				bg_color: shearBgColor,
 			};
-		} else if (activeTab === "crop") {
+		} else if (activeTab === "affine") {
 			return {
-				x: Math.max(0, Math.floor(cropX)),
-				y: Math.max(0, Math.floor(cropY)),
-				width: Math.max(1, Math.floor(cropWidth)),
-				height: Math.max(1, Math.floor(cropHeight))
+				matrix: [
+					Number(affineA),
+					Number(affineB),
+					Number(affineC),
+					Number(affineD),
+					Number(affineE),
+					Number(affineF),
+				],
+				expand: affineExpand,
+				bg_color: affineBgColor,
 			};
 		} else if (activeTab === "resize") {
 			return {
 				width: Math.max(1, Math.floor(resizeWidth)),
 				height: Math.max(1, Math.floor(resizeHeight)),
-				keep_aspect_ratio: keepAspectRatio
+				keep_aspect_ratio: keepAspectRatio,
 			};
 		} else if (activeTab === "rotate") {
 			return {
 				angle: Number(rotateAngle),
 				expand: rotateExpand,
-				bg_color: rotateBgColor
+				bg_color: rotateBgColor,
 			};
 		} else {
 			return {
-				direction: flipDirection
+				direction: flipDirection,
 			};
 		}
 	});
@@ -218,14 +384,17 @@
 		try {
 			const [imgList, catList] = await Promise.allSettled([
 				imageService.listImages({ per_page: 50 }),
-				categoryService.getCategories({ tree: true })
+				categoryService.getCategories({ tree: true }),
 			]);
 
 			if (catList.status === "fulfilled") {
 				categories = catList.value;
 			}
 
-			if (imgList.status === "fulfilled" && imgList.value.images.length > 0) {
+			if (
+				imgList.status === "fulfilled" &&
+				imgList.value.images.length > 0
+			) {
 				userImages = imgList.value.images;
 				const queryImageId = page.url.searchParams.get("image_id");
 				const found = queryImageId
@@ -236,9 +405,9 @@
 					selectImage(found);
 				}
 			} else {
-				originalFilename = "ghim_nature_peak.jpg";
-				originalWidth = 1920;
-				originalHeight = 1080;
+				originalFilename = "chair_01.jpg";
+				originalWidth = 2048;
+				originalHeight = 1365;
 				currentImageUrl = "/images/auth-hero.jpg";
 				resetCropToCenter();
 			}
@@ -258,13 +427,18 @@
 			document.body.style.cursor = "";
 			document.body.style.userSelect = "";
 		}
+		if (uploadPreviewUrl) {
+			URL.revokeObjectURL(uploadPreviewUrl);
+		}
 	});
 
 	function selectImage(img: ImageItem) {
 		currentImage = img;
 		originalFilename = img.filename;
-		originalWidth = img.width || 1920;
-		originalHeight = img.height || 1080;
+		originalWidth = img.width || 2048;
+		originalHeight = img.height || 1365;
+		originalFileSize = img.file_size || 0;
+		originalMimeType = img.mime_type || "image/jpeg";
 		currentImageUrl = imageService.getImageFileUrl(img.id);
 		resetCropToCenter();
 		resizeWidth = originalWidth;
@@ -272,14 +446,128 @@
 		if (img.category_id) {
 			selectedCategoryId = String(img.category_id);
 		}
-		isImagePickerOpen = false;
+	}
+
+	function handleFileSelected(file: File) {
+		if (!file.type.startsWith("image/")) {
+			uploadError =
+				"Please select a valid image file (PNG, JPG, WEBP, etc.)";
+			return;
+		}
+		uploadError = null;
+		uploadFile = file;
+		uploadProgress = 0;
+		if (uploadPreviewUrl) {
+			URL.revokeObjectURL(uploadPreviewUrl);
+		}
+		uploadPreviewUrl = URL.createObjectURL(file);
+	}
+
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		isDraggingFile = false;
+		if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+			handleFileSelected(e.dataTransfer.files[0]);
+		}
+	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+		isDraggingFile = true;
+	}
+
+	function handleDragLeave(e: DragEvent) {
+		e.preventDefault();
+		isDraggingFile = false;
+	}
+
+	async function submitUpload() {
+		if (!uploadFile) return;
+
+		isUploadingImage = true;
+		uploadError = null;
+		uploadProgress = 10;
+
+		try {
+			const imgObj = new Image();
+			const naturalDimsPromise = new Promise<{
+				width: number;
+				height: number;
+			}>((resolve) => {
+				imgObj.onload = () => {
+					resolve({
+						width: imgObj.naturalWidth || 2048,
+						height: imgObj.naturalHeight || 1365,
+					});
+				};
+				imgObj.onerror = () => {
+					resolve({ width: 2048, height: 1365 });
+				};
+			});
+			if (uploadPreviewUrl) {
+				imgObj.src = uploadPreviewUrl;
+			}
+
+			let uploaded: ImageItem | null = null;
+			try {
+				uploaded = await imageService.uploadImage(
+					uploadFile,
+					uploadCategoryId || null,
+					(p) => (uploadProgress = Math.max(10, p)),
+				);
+			} catch (err: any) {
+				console.warn(
+					"Backend upload failed, loading local image in studio:",
+					err,
+				);
+			}
+
+			const dims = await naturalDimsPromise;
+
+			if (uploaded) {
+				currentImage = uploaded;
+				originalFilename = uploaded.filename;
+				originalWidth = uploaded.width || dims.width;
+				originalHeight = uploaded.height || dims.height;
+				originalFileSize = uploaded.file_size || uploadFile.size;
+				originalMimeType = uploaded.mime_type || uploadFile.type || "image/jpeg";
+				currentImageUrl = imageService.getImageFileUrl(uploaded.id);
+			} else {
+				originalFilename = uploadFile.name;
+				originalWidth = dims.width;
+				originalHeight = dims.height;
+				originalFileSize = uploadFile.size;
+				originalMimeType = uploadFile.type || "image/jpeg";
+				currentImageUrl =
+					uploadPreviewUrl || URL.createObjectURL(uploadFile);
+			}
+
+			resetCropToCenter();
+			resizeWidth = originalWidth;
+			resizeHeight = originalHeight;
+			resetCanvas();
+			isUploadDialogOpen = false;
+			uploadFile = null;
+			uploadProgress = 0;
+		} catch (err: any) {
+			uploadError = err.message || "Failed to process image upload.";
+		} finally {
+			isUploadingImage = false;
+		}
 	}
 
 	function resetCropToCenter() {
-		cropWidth = Math.min(originalWidth, Math.max(100, Math.floor(originalWidth * 0.6)));
-		cropHeight = Math.min(originalHeight, Math.max(100, Math.floor(originalHeight * 0.6)));
+		cropWidth = Math.min(
+			originalWidth,
+			Math.max(100, Math.floor(originalWidth * 0.5)),
+		);
+		cropHeight = Math.min(
+			originalHeight,
+			Math.max(100, Math.floor(originalHeight * 0.5)),
+		);
 		cropX = Math.floor((originalWidth - cropWidth) / 2);
 		cropY = Math.floor((originalHeight - cropHeight) / 2);
+		pushCropHistory();
 	}
 
 	function handleImageLoad(e: Event) {
@@ -293,37 +581,82 @@
 		}
 	}
 
-	// -------------------------------------------------------------------------
-	// INTERACTIVE CROP BOX DRAG & RESIZE ENGINE (iLoveIMG 8-Point Control)
-	// -------------------------------------------------------------------------
-	interface CropHandleDef {
-		id: string;
-		label: string;
-		cursor: string;
-		positionStyle: string;
-	}
-
-	const cropHandles: CropHandleDef[] = [
-		{ id: "nw", label: "Top-Left (NW)", cursor: "nw-resize", positionStyle: "top: 0; left: 0; transform: translate(-50%, -50%);" },
-		{ id: "n", label: "Top-Center (N)", cursor: "n-resize", positionStyle: "top: 0; left: 50%; transform: translate(-50%, -50%);" },
-		{ id: "ne", label: "Top-Right (NE)", cursor: "ne-resize", positionStyle: "top: 0; right: 0; transform: translate(50%, -50%);" },
-		{ id: "e", label: "Middle-Right (E)", cursor: "e-resize", positionStyle: "top: 50%; right: 0; transform: translate(50%, -50%);" },
-		{ id: "se", label: "Bottom-Right (SE)", cursor: "se-resize", positionStyle: "bottom: 0; right: 0; transform: translate(50%, 50%);" },
-		{ id: "s", label: "Bottom-Center (S)", cursor: "s-resize", positionStyle: "bottom: 0; left: 50%; transform: translate(-50%, 50%);" },
-		{ id: "sw", label: "Bottom-Left (SW)", cursor: "sw-resize", positionStyle: "bottom: 0; left: 0; transform: translate(-50%, 50%);" },
-		{ id: "w", label: "Middle-Left (W)", cursor: "w-resize", positionStyle: "top: 50%; left: 0; transform: translate(-50%, -50%);" }
+	// 8 Precise Control Points for the Crop Box
+	const cropHandles = [
+		{
+			id: "nw",
+			label: "Top-Left",
+			cursor: "nwse-resize",
+			positionStyle: "top: 0; left: 0; transform: translate(-50%, -50%);",
+			isCorner: true,
+		},
+		{
+			id: "n",
+			label: "Top-Center",
+			cursor: "ns-resize",
+			positionStyle:
+				"top: 0; left: 50%; transform: translate(-50%, -50%);",
+			isCorner: false,
+		},
+		{
+			id: "ne",
+			label: "Top-Right",
+			cursor: "nesw-resize",
+			positionStyle: "top: 0; right: 0; transform: translate(50%, -50%);",
+			isCorner: true,
+		},
+		{
+			id: "e",
+			label: "Middle-Right",
+			cursor: "ew-resize",
+			positionStyle:
+				"top: 50%; right: 0; transform: translate(50%, -50%);",
+			isCorner: false,
+		},
+		{
+			id: "se",
+			label: "Bottom-Right",
+			cursor: "nwse-resize",
+			positionStyle:
+				"bottom: 0; right: 0; transform: translate(50%, 50%);",
+			isCorner: true,
+		},
+		{
+			id: "s",
+			label: "Bottom-Center",
+			cursor: "ns-resize",
+			positionStyle:
+				"bottom: 0; left: 50%; transform: translate(-50%, 50%);",
+			isCorner: false,
+		},
+		{
+			id: "sw",
+			label: "Bottom-Left",
+			cursor: "nesw-resize",
+			positionStyle:
+				"bottom: 0; left: 0; transform: translate(-50%, 50%);",
+			isCorner: true,
+		},
+		{
+			id: "w",
+			label: "Middle-Left",
+			cursor: "ew-resize",
+			positionStyle:
+				"top: 50%; left: 0; transform: translate(-50%, -50%);",
+			isCorner: false,
+		},
 	];
 
 	const cropCursorMap: Record<string, string> = {
-		nw: "nw-resize",
-		n: "n-resize",
-		ne: "ne-resize",
-		e: "e-resize",
-		se: "se-resize",
-		s: "s-resize",
-		sw: "sw-resize",
-		w: "w-resize",
-		move: "move"
+		nw: "nwse-resize",
+		n: "ns-resize",
+		ne: "nesw-resize",
+		e: "ew-resize",
+		se: "nwse-resize",
+		s: "ns-resize",
+		sw: "nesw-resize",
+		w: "ew-resize",
+		move: "move",
 	};
 
 	function handleCropPointerDown(handle: string, e: PointerEvent) {
@@ -333,7 +666,6 @@
 		dragStartPointer = { x: e.clientX, y: e.clientY };
 		dragStartCrop = { x: cropX, y: cropY, w: cropWidth, h: cropHeight };
 
-		// Keep cursor locked during dragging across the whole document
 		if (typeof document !== "undefined") {
 			document.body.style.cursor = cropCursorMap[handle] || "move";
 			document.body.style.userSelect = "none";
@@ -357,38 +689,94 @@
 		const deltaY = Math.round((e.clientY - dragStartPointer.y) * scaleY);
 
 		if (activeCropDrag === "move") {
-			cropX = clamp(dragStartCrop.x + deltaX, 0, originalWidth - cropWidth);
-			cropY = clamp(dragStartCrop.y + deltaY, 0, originalHeight - cropHeight);
+			cropX = clamp(
+				dragStartCrop.x + deltaX,
+				0,
+				originalWidth - cropWidth,
+			);
+			cropY = clamp(
+				dragStartCrop.y + deltaY,
+				0,
+				originalHeight - cropHeight,
+			);
 		} else if (activeCropDrag === "se") {
-			cropWidth = clamp(dragStartCrop.w + deltaX, 20, originalWidth - dragStartCrop.x);
-			cropHeight = clamp(dragStartCrop.h + deltaY, 20, originalHeight - dragStartCrop.y);
+			cropWidth = clamp(
+				dragStartCrop.w + deltaX,
+				20,
+				originalWidth - dragStartCrop.x,
+			);
+			cropHeight = clamp(
+				dragStartCrop.h + deltaY,
+				20,
+				originalHeight - dragStartCrop.y,
+			);
 		} else if (activeCropDrag === "e") {
-			cropWidth = clamp(dragStartCrop.w + deltaX, 20, originalWidth - dragStartCrop.x);
+			cropWidth = clamp(
+				dragStartCrop.w + deltaX,
+				20,
+				originalWidth - dragStartCrop.x,
+			);
 		} else if (activeCropDrag === "s") {
-			cropHeight = clamp(dragStartCrop.h + deltaY, 20, originalHeight - dragStartCrop.y);
+			cropHeight = clamp(
+				dragStartCrop.h + deltaY,
+				20,
+				originalHeight - dragStartCrop.y,
+			);
 		} else if (activeCropDrag === "nw") {
-			const newX = clamp(dragStartCrop.x + deltaX, 0, dragStartCrop.x + dragStartCrop.w - 20);
-			const newY = clamp(dragStartCrop.y + deltaY, 0, dragStartCrop.y + dragStartCrop.h - 20);
+			const newX = clamp(
+				dragStartCrop.x + deltaX,
+				0,
+				dragStartCrop.x + dragStartCrop.w - 20,
+			);
+			const newY = clamp(
+				dragStartCrop.y + deltaY,
+				0,
+				dragStartCrop.y + dragStartCrop.h - 20,
+			);
 			cropWidth = dragStartCrop.w + (dragStartCrop.x - newX);
 			cropHeight = dragStartCrop.h + (dragStartCrop.y - newY);
 			cropX = newX;
 			cropY = newY;
 		} else if (activeCropDrag === "ne") {
-			const newY = clamp(dragStartCrop.y + deltaY, 0, dragStartCrop.y + dragStartCrop.h - 20);
-			cropWidth = clamp(dragStartCrop.w + deltaX, 20, originalWidth - dragStartCrop.x);
+			const newY = clamp(
+				dragStartCrop.y + deltaY,
+				0,
+				dragStartCrop.y + dragStartCrop.h - 20,
+			);
+			cropWidth = clamp(
+				dragStartCrop.w + deltaX,
+				20,
+				originalWidth - dragStartCrop.x,
+			);
 			cropHeight = dragStartCrop.h + (dragStartCrop.y - newY);
 			cropY = newY;
 		} else if (activeCropDrag === "sw") {
-			const newX = clamp(dragStartCrop.x + deltaX, 0, dragStartCrop.x + dragStartCrop.w - 20);
+			const newX = clamp(
+				dragStartCrop.x + deltaX,
+				0,
+				dragStartCrop.x + dragStartCrop.w - 20,
+			);
 			cropWidth = dragStartCrop.w + (dragStartCrop.x - newX);
-			cropHeight = clamp(dragStartCrop.h + deltaY, 20, originalHeight - dragStartCrop.y);
+			cropHeight = clamp(
+				dragStartCrop.h + deltaY,
+				20,
+				originalHeight - dragStartCrop.y,
+			);
 			cropX = newX;
 		} else if (activeCropDrag === "n") {
-			const newY = clamp(dragStartCrop.y + deltaY, 0, dragStartCrop.y + dragStartCrop.h - 20);
+			const newY = clamp(
+				dragStartCrop.y + deltaY,
+				0,
+				dragStartCrop.y + dragStartCrop.h - 20,
+			);
 			cropHeight = dragStartCrop.h + (dragStartCrop.y - newY);
 			cropY = newY;
 		} else if (activeCropDrag === "w") {
-			const newX = clamp(dragStartCrop.x + deltaX, 0, dragStartCrop.x + dragStartCrop.w - 20);
+			const newX = clamp(
+				dragStartCrop.x + deltaX,
+				0,
+				dragStartCrop.x + dragStartCrop.w - 20,
+			);
 			cropWidth = dragStartCrop.w + (dragStartCrop.x - newX);
 			cropX = newX;
 		}
@@ -402,10 +790,117 @@
 		}
 		window.removeEventListener("pointermove", handleCropPointerMove);
 		window.removeEventListener("pointerup", handleCropPointerUp);
+		pushCropHistory();
+	}
+
+	// Presets & Quick Actions
+	function applyPreset(preset: string) {
+		activePreset = preset;
+		if (
+			preset === "1:1 (Square)" ||
+			preset === "Square (1:1)" ||
+			preset === "1:1"
+		) {
+			const side = Math.min(originalWidth, originalHeight, cropWidth);
+			cropWidth = side;
+			cropHeight = side;
+		} else if (preset === "Landscape (16:9)" || preset === "16:9") {
+			cropWidth = Math.min(
+				originalWidth,
+				Math.floor((originalHeight * 16) / 9),
+			);
+			cropHeight = Math.floor((cropWidth * 9) / 16);
+		} else if (preset === "Portrait (9:16)" || preset === "9:16") {
+			cropHeight = Math.min(
+				originalHeight,
+				Math.floor((originalWidth * 16) / 9),
+			);
+			cropWidth = Math.floor((cropHeight * 9) / 16);
+		} else if (preset === "4:3") {
+			cropWidth = Math.min(
+				originalWidth,
+				Math.floor((originalHeight * 4) / 3),
+			);
+			cropHeight = Math.floor((cropWidth * 3) / 4);
+		} else if (preset === "Original") {
+			cropWidth = originalWidth;
+			cropHeight = originalHeight;
+			cropX = 0;
+			cropY = 0;
+			pushCropHistory();
+			return;
+		}
+		cropX = clamp(cropX, 0, originalWidth - cropWidth);
+		cropY = clamp(cropY, 0, originalHeight - cropHeight);
+		pushCropHistory();
+	}
+
+	function centerCrop() {
+		cropX = Math.floor((originalWidth - cropWidth) / 2);
+		cropY = Math.floor((originalHeight - cropHeight) / 2);
+		pushCropHistory();
+	}
+
+	function fitToImage() {
+		cropX = 0;
+		cropY = 0;
+		cropWidth = originalWidth;
+		cropHeight = originalHeight;
+		activePreset = "Original";
+		pushCropHistory();
+	}
+
+	function fillCrop() {
+		const aspect = cropWidth / cropHeight;
+		if (originalWidth / originalHeight > aspect) {
+			cropHeight = originalHeight;
+			cropWidth = Math.round(cropHeight * aspect);
+		} else {
+			cropWidth = originalWidth;
+			cropHeight = Math.round(cropWidth / aspect);
+		}
+		centerCrop();
+	}
+
+	function resetCrop() {
+		resetCropToCenter();
+		activePreset = "1:1 (Square)";
+	}
+
+	function handleWidthInput() {
+		cropWidth = clamp(cropWidth, 10, originalWidth);
+		if (keepAspectRatio) {
+			const ratio = originalWidth / originalHeight;
+			cropHeight = clamp(
+				Math.round(cropWidth / ratio),
+				10,
+				originalHeight,
+			);
+		}
+		if (cropX + cropWidth > originalWidth) {
+			cropX = originalWidth - cropWidth;
+		}
+		pushCropHistory();
+	}
+
+	function handleHeightInput() {
+		cropHeight = clamp(cropHeight, 10, originalHeight);
+		if (keepAspectRatio) {
+			const ratio = originalWidth / originalHeight;
+			cropWidth = clamp(
+				Math.round(cropHeight * ratio),
+				10,
+				originalWidth,
+			);
+		}
+		if (cropY + cropHeight > originalHeight) {
+			cropY = originalHeight - cropHeight;
+		}
+		pushCropHistory();
 	}
 
 	function resetCanvas() {
-		activeTab = null;
+		activeTab = "crop";
 		shearX = 0.25;
 		shearY = 0.0;
 		shearExpand = true;
@@ -419,25 +914,22 @@
 		rotateBgColor = "#FFFFFF";
 		flipDirection = "horizontal";
 		zoomLevel = 74;
-		activePreset = "Free";
+		activePreset = "1:1 (Square)";
 	}
 
 	async function handleSaveDerivedImage() {
-		if (!activeTab) {
-			errorMessage = "Please select a transformation operation (Crop, Resize, Rotate, Flip, or Shear) from the top bar before saving.";
-			return;
-		}
-
 		isSaving = true;
 		errorMessage = null;
 		saveSuccessImage = null;
 
 		try {
+			const targetOp = activeTab;
+
 			if (!currentImage) {
 				const mockDerived: ImageItem = {
 					id: "mock-" + Math.random().toString(36).substring(2, 9),
 					owner_id: user?.email || "zarqi_ezzoubair",
-					parent_image_id: "ghim_nature_peak",
+					parent_image_id: "chair_01",
 					filename: derivedFilename,
 					storage_key: `derived/${user?.email || "zarqi_ezzoubair"}/${derivedFilename}`,
 					source_type: "derived",
@@ -448,24 +940,27 @@
 					height: computedOutputHeight,
 					created_at: new Date().toISOString(),
 					transformation_params: {
-						operation: activeTab,
-						params: activeParamsJson
-					}
+						operation: targetOp,
+						params: activeParamsJson,
+					},
 				};
 				saveSuccessImage = mockDerived;
 				return;
 			}
 
 			const derived = await imageService.transformImage(currentImage.id, {
-				operation: activeTab,
+				operation: targetOp,
 				params: activeParamsJson,
 				filename: derivedFilename,
-				category_id: selectedCategoryId ? Number(selectedCategoryId) : null
+				category_id: selectedCategoryId
+					? Number(selectedCategoryId)
+					: null,
 			});
 
 			saveSuccessImage = derived;
 		} catch (err: any) {
-			errorMessage = err.message || "Failed to create derived transformed image.";
+			errorMessage =
+				err.message || "Failed to create derived transformed image.";
 		} finally {
 			isSaving = false;
 		}
@@ -477,7 +972,10 @@
 		try {
 			const canvas = document.createElement("canvas");
 			const ctx = canvas.getContext("2d");
-			if (!ctx) throw new Error("Could not initialize 2D rendering canvas context.");
+			if (!ctx)
+				throw new Error(
+					"Could not initialize 2D rendering canvas context.",
+				);
 
 			const img = new Image();
 			img.crossOrigin = "anonymous";
@@ -485,84 +983,166 @@
 
 			await new Promise((resolve, reject) => {
 				img.onload = resolve;
-				img.onerror = () => reject(new Error("Failed to load source image for download."));
+				img.onerror = () =>
+					reject(
+						new Error("Failed to load source image for download."),
+					);
 			});
 
 			const w = img.naturalWidth || originalWidth;
 			const h = img.naturalHeight || originalHeight;
 
-			if (!activeTab) {
-				canvas.width = w;
-				canvas.height = h;
-				ctx.drawImage(img, 0, 0);
+			if (activeTab === "crop") {
+				canvas.width = cropWidth;
+				canvas.height = cropHeight;
+				ctx.drawImage(
+					img,
+					cropX,
+					cropY,
+					cropWidth,
+					cropHeight,
+					0,
+					0,
+					cropWidth,
+					cropHeight,
+				);
 			} else if (activeTab === "shear") {
 				const corners = [
 					[0, 0],
 					[w, 0],
 					[0, h],
-					[w, h]
+					[w, h],
 				];
-				const trans = corners.map(([x, y]) => [x + shearX * y, shearY * x + y]);
+				const trans = corners.map(([x, y]) => [
+					x + shearX * y,
+					shearY * x + y,
+				]);
 				const minX = Math.min(...trans.map((pt) => pt[0]));
 				const maxX = Math.max(...trans.map((pt) => pt[0]));
 				const minY = Math.min(...trans.map((pt) => pt[1]));
 				const maxY = Math.max(...trans.map((pt) => pt[1]));
 
+				canvas.width = shearExpand
+					? Math.max(1, Math.round(maxX - minX))
+					: w;
+				canvas.height = shearExpand
+					? Math.max(1, Math.round(maxY - minY))
+					: h;
+
+				ctx.fillStyle = shearBgColor;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				ctx.save();
 				if (shearExpand) {
-					canvas.width = Math.max(1, Math.ceil(maxX - minX));
-					canvas.height = Math.max(1, Math.ceil(maxY - minY));
-					ctx.fillStyle = shearBgColor;
-					ctx.fillRect(0, 0, canvas.width, canvas.height);
-					ctx.setTransform(1, shearY, shearX, 1, -minX, -minY);
-				} else {
-					canvas.width = w;
-					canvas.height = h;
-					ctx.fillStyle = shearBgColor;
-					ctx.fillRect(0, 0, canvas.width, canvas.height);
-					ctx.setTransform(1, shearY, shearX, 1, 0, 0);
+					ctx.translate(-minX, -minY);
 				}
+				ctx.transform(1, shearY, shearX, 1, 0, 0);
 				ctx.drawImage(img, 0, 0);
-			} else if (activeTab === "crop") {
-				const clampedX = clamp(cropX, 0, w - 1);
-				const clampedY = clamp(cropY, 0, h - 1);
-				const clampedW = clamp(cropWidth, 1, w - clampedX);
-				const clampedH = clamp(cropHeight, 1, h - clampedY);
-				canvas.width = clampedW;
-				canvas.height = clampedH;
-				ctx.drawImage(img, clampedX, clampedY, clampedW, clampedH, 0, 0, clampedW, clampedH);
+				ctx.restore();
+			} else if (activeTab === "affine") {
+				const corners = [
+					[0, 0],
+					[w, 0],
+					[0, h],
+					[w, h],
+				];
+				const trans = corners.map(([x, y]) => [
+					affineA * x + affineB * y + affineC,
+					affineD * x + affineE * y + affineF,
+				]);
+				const minX = Math.min(...trans.map((pt) => pt[0]));
+				const maxX = Math.max(...trans.map((pt) => pt[0]));
+				const minY = Math.min(...trans.map((pt) => pt[1]));
+				const maxY = Math.max(...trans.map((pt) => pt[1]));
+
+				canvas.width = affineExpand
+					? Math.max(1, Math.round(maxX - minX))
+					: w;
+				canvas.height = affineExpand
+					? Math.max(1, Math.round(maxY - minY))
+					: h;
+
+				ctx.fillStyle = affineBgColor;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+				ctx.save();
+				if (affineExpand) {
+					ctx.translate(-minX, -minY);
+				}
+				ctx.transform(
+					affineA,
+					affineD,
+					affineB,
+					affineE,
+					affineC,
+					affineF,
+				);
+				ctx.drawImage(img, 0, 0);
+				ctx.restore();
 			} else if (activeTab === "resize") {
-				canvas.width = Math.max(1, resizeWidth);
-				canvas.height = Math.max(1, resizeHeight);
+				canvas.width = resizeWidth;
+				canvas.height = resizeHeight;
 				ctx.drawImage(img, 0, 0, resizeWidth, resizeHeight);
 			} else if (activeTab === "rotate") {
-				if (rotateExpand && rotateAngle !== 0) {
-					const rad = Math.abs(rotateAngle) * (Math.PI / 180);
-					canvas.width = Math.max(1, Math.round(w * Math.abs(Math.cos(rad)) + h * Math.abs(Math.sin(rad))));
-					canvas.height = Math.max(1, Math.round(w * Math.abs(Math.sin(rad)) + h * Math.abs(Math.cos(rad))));
+				const rad = (rotateAngle * Math.PI) / 180;
+				if (rotateExpand) {
+					const newW = Math.round(
+						w * Math.abs(Math.cos(rad)) +
+							h * Math.abs(Math.sin(rad)),
+					);
+					const newH = Math.round(
+						w * Math.abs(Math.sin(rad)) +
+							h * Math.abs(Math.cos(rad)),
+					);
+					canvas.width = newW;
+					canvas.height = newH;
+					ctx.fillStyle = rotateBgColor;
+					ctx.fillRect(0, 0, newW, newH);
+					ctx.save();
+					ctx.translate(newW / 2, newH / 2);
+					ctx.rotate(rad);
+					ctx.drawImage(img, -w / 2, -h / 2);
+					ctx.restore();
 				} else {
 					canvas.width = w;
 					canvas.height = h;
+					ctx.fillStyle = rotateBgColor;
+					ctx.fillRect(0, 0, w, h);
+					ctx.save();
+					ctx.translate(w / 2, h / 2);
+					ctx.rotate(rad);
+					ctx.drawImage(img, -w / 2, -h / 2);
+					ctx.restore();
 				}
-				ctx.fillStyle = rotateBgColor;
-				ctx.fillRect(0, 0, canvas.width, canvas.height);
-				ctx.translate(canvas.width / 2, canvas.height / 2);
-				ctx.rotate(rotateAngle * (Math.PI / 180));
-				ctx.drawImage(img, -w / 2, -h / 2);
 			} else if (activeTab === "flip") {
 				canvas.width = w;
 				canvas.height = h;
-				ctx.translate(flipDirection === "horizontal" ? w : 0, flipDirection === "vertical" ? h : 0);
-				ctx.scale(flipDirection === "horizontal" ? -1 : 1, flipDirection === "vertical" ? -1 : 1);
+				ctx.save();
+				ctx.translate(
+					flipDirection === "horizontal" ? w : 0,
+					flipDirection === "vertical" ? h : 0,
+				);
+				ctx.scale(
+					flipDirection === "horizontal" ? -1 : 1,
+					flipDirection === "vertical" ? -1 : 1,
+				);
+				ctx.drawImage(img, 0, 0);
+				ctx.restore();
+			} else {
+				canvas.width = w;
+				canvas.height = h;
 				ctx.drawImage(img, 0, 0);
 			}
 
 			const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 			const link = document.createElement("a");
-			link.download = derivedFilename || "transformed_image.jpg";
+			link.download = derivedFilename;
 			link.href = dataUrl;
+			document.body.appendChild(link);
 			link.click();
+			document.body.removeChild(link);
 		} catch (err: any) {
-			errorMessage = "Download error: " + (err.message || String(err));
+			errorMessage = err.message || "Failed to download image.";
 		} finally {
 			isDownloading = false;
 		}
@@ -570,133 +1150,122 @@
 </script>
 
 <svelte:head>
-	<title>Image Transformation Studio • Perceptra</title>
+	<title>Image Transformation Engine - Perceptra</title>
 </svelte:head>
 
-<div class="@container/main flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
-	<!-- ========================================================================= -->
-	<!-- 1. STUDIO HEADER ROW                                                      -->
-	<!-- ========================================================================= -->
-	<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-		<div>
-			<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-				Image Transformation Studio
-			</h1>
-			<p class="text-xs sm:text-sm text-muted-foreground mt-0.5">
-				Create non-destructive derived images via crop, scaling, rotation, flip, and affine shear.
-			</p>
-		</div>
+<HeaderActionPortal>
+	<div class="flex items-center gap-2">
+		<!-- Upload Image Dialog Trigger -->
+		<Button
+			variant="outline"
+			size="sm"
+			class="h-8 px-2.5 sm:px-3 text-xs font-semibold gap-1.5 cursor-pointer shadow-2xs border-border"
+			onclick={() => {
+				uploadError = null;
+				uploadFile = null;
+				if (uploadPreviewUrl) {
+					URL.revokeObjectURL(uploadPreviewUrl);
+					uploadPreviewUrl = null;
+				}
+				isUploadDialogOpen = true;
+			}}
+			title="Upload an image from your computer to transform"
+		>
+			<UploadCloudIcon data-icon="inline-start" class="size-3.5" />
+			<span class="hidden sm:inline">Upload Image</span>
+		</Button>
 
-		<!-- Action Buttons -->
-		<div class="flex items-center gap-2.5 flex-wrap">
-			<!-- Select Image Modal Trigger -->
-			<Button
-				variant="outline"
-				size="sm"
-				class="h-9 px-3 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs"
-				onclick={() => (isImagePickerOpen = true)}
-			>
-				<ImageIcon class="size-3.5 text-muted-foreground" />
-				<span class="max-w-[120px] truncate">{originalFilename}</span>
-			</Button>
+		<!-- Reset Canvas -->
+		<Button
+			variant="outline"
+			size="sm"
+			class="h-8 px-2.5 sm:px-3 text-xs font-semibold gap-1.5 cursor-pointer shadow-2xs border-border"
+			onclick={resetCanvas}
+			title="Reset all transformation parameters"
+		>
+			<RotateCcwIcon data-icon="inline-start" class="size-3.5" />
+			<span class="hidden sm:inline">Reset</span>
+		</Button>
 
-			<!-- Reset Canvas -->
-			<Button
-				variant="outline"
-				size="sm"
-				class="h-9 px-3.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs"
-				onclick={resetCanvas}
-				title="Reset all transformation parameters"
-			>
-				<RotateCcwIcon class="size-3.5" />
-				<span>Reset Canvas</span>
-			</Button>
-
-			<!-- Compare Original -->
-			<Button
-				variant={isComparing ? "secondary" : "outline"}
-				size="sm"
-				class="h-9 px-3.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs {isComparing ? 'ring-2 ring-primary/40' : ''}"
-				onclick={() => (isComparing = !isComparing)}
-				onpointerdown={() => (isComparing = true)}
-				onpointerup={() => (isComparing = false)}
-				title="Hold or click to toggle original image preview"
-			>
-				<Columns2Icon class="size-3.5" />
-				<span>{isComparing ? "Showing Original" : "Compare Original"}</span>
-			</Button>
-
-			<!-- Download Transformed Image Button -->
-			<Button
-				variant="outline"
-				size="sm"
-				class="h-9 px-3.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs hover:border-primary/50"
-				disabled={isDownloading}
-				onclick={handleDownloadImage}
-				title="Download image directly to your computer"
-			>
-				{#if isDownloading}
-					<Loader2Icon class="size-3.5 animate-spin" />
-					<span>Preparing...</span>
-				{:else}
-					<DownloadIcon class="size-3.5 text-primary" />
-					<span>Download Image</span>
-				{/if}
-			</Button>
-
-			<!-- Save Derived Image Button (GitHub Blue Accent) -->
-			<Button
-				size="sm"
-				class="h-9 px-4 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs"
-				disabled={isSaving}
-				onclick={handleSaveDerivedImage}
-				title="Save as non-destructive derived image into your dataset"
-			>
-				{#if isSaving}
-					<Loader2Icon class="size-3.5 animate-spin" />
-					<span>Saving...</span>
-				{:else}
-					<PencilIcon class="size-3.5" />
-					<span>Save Derived Image</span>
-				{/if}
-			</Button>
-		</div>
+		<!-- Save Derived Image Button (Primary Accent) -->
+		<Button
+			size="sm"
+			class="h-8 px-3 sm:px-3.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
+			disabled={isSaving}
+			onclick={handleSaveDerivedImage}
+			title="Save as non-destructive derived image into your dataset"
+		>
+			{#if isSaving}
+				<Loader2Icon class="size-3.5 animate-spin" />
+				<span>Saving...</span>
+			{:else}
+				<DownloadIcon data-icon="inline-start" class="size-3.5" />
+				<span>Save Derived Image</span>
+			{/if}
+		</Button>
 	</div>
+</HeaderActionPortal>
 
+<div
+	class="w-full h-full min-h-0 flex flex-col p-3 sm:p-4 gap-3 select-none overflow-y-auto lg:overflow-hidden"
+>
 	<!-- Alert Messages -->
 	{#if errorMessage}
-		<div class="p-3.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-xs flex items-center justify-between">
+		<div
+			class="p-3.5 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive text-xs flex items-center justify-between"
+		>
 			<span>{errorMessage}</span>
-			<button type="button" class="underline font-bold" onclick={() => (errorMessage = null)}>Dismiss</button>
+			<button
+				type="button"
+				class="underline font-bold cursor-pointer"
+				onclick={() => (errorMessage = null)}>Dismiss</button
+			>
 		</div>
 	{/if}
 
 	{#if saveSuccessImage}
-		<div class="p-4 rounded-xl border border-primary/30 bg-primary/10 text-foreground text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+		<div
+			class="p-4 rounded-xl border border-primary/30 bg-primary/10 text-foreground text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
+		>
 			<div class="flex items-center gap-2.5">
-				<div class="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">✓</div>
+				<div
+					class="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold"
+				>
+					✓
+				</div>
 				<div>
 					<p class="font-bold">Derived Image Successfully Saved!</p>
 					<p class="text-muted-foreground font-mono text-[11px]">
-						{saveSuccessImage.filename} ({saveSuccessImage.width}×{saveSuccessImage.height} px) &bull; Non-destructive child record created.
+						{saveSuccessImage.filename} ({saveSuccessImage.width}×{saveSuccessImage.height}
+						px) &bull; Non-destructive child record created.
 					</p>
 				</div>
 			</div>
 			<div class="flex items-center gap-2">
 				<Button
 					variant="outline"
-					size="xs"
-					class="h-8 px-3 text-xs gap-1"
+					size="sm"
+					class="h-8 px-3 text-xs gap-1.5"
 					onclick={handleDownloadImage}
 				>
-					<DownloadIcon class="size-3" />
+					<DownloadIcon class="size-3.5" />
 					<span>Download</span>
 				</Button>
-				<Button href="/dashboard/images" variant="outline" size="xs" class="h-8 px-3 text-xs">
-					View in Gallery
-					<ExternalLinkIcon class="size-3 ml-1" />
+				<Button
+					href="/dashboard/images"
+					variant="outline"
+					size="sm"
+					class="h-8 px-3 text-xs gap-1.5"
+				>
+					<span>View in Gallery</span>
+					<ExternalLinkIcon class="size-3.5" />
 				</Button>
-				<Button variant="ghost" size="xs" class="h-8 px-2 text-xs" onclick={() => (saveSuccessImage = null)}>
+				<Button
+					variant="ghost"
+					size="sm"
+					class="h-8 px-2 text-xs"
+					onclick={() => (saveSuccessImage = null)}
+				>
 					Dismiss
 				</Button>
 			</div>
@@ -704,641 +1273,712 @@
 	{/if}
 
 	<!-- ========================================================================= -->
-	<!-- 2. MAIN WORKSPACE (2-COLUMN GRID)                                         -->
+	<!-- 2. MAIN 3-COLUMN WORKSPACE (Left: Tools, Center: Canvas, Right: Settings) -->
 	<!-- ========================================================================= -->
-	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+	<div class="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 items-stretch">
 		<!-- --------------------------------------------------------------------- -->
-		<!-- LEFT: Interactive Transformation Canvas & Top Operations Toolbar      -->
+		<!-- COLUMN 1: TRANSFORMATION TOOLS & PRESETS (Left Sidebar)               -->
 		<!-- --------------------------------------------------------------------- -->
-		<div class="lg:col-span-8 flex flex-col gap-3">
-			<Card.Root class="overflow-hidden border border-border shadow-xs flex flex-col">
-				<!-- CARD HEADER: Title on left, Horizontal Operation Toolbar on Top -->
-				<Card.Header class="py-2.5 px-4 border-b border-border bg-card/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-					<div class="flex items-center gap-2">
-						<Card.Title class="text-sm font-bold tracking-tight text-foreground whitespace-nowrap">
-							Interactive Transformation Canvas
-						</Card.Title>
-						{#if activeTab}
-							<Badge variant="outline" class="text-[10px] font-mono capitalize hidden sm:inline-flex">
-								{activeTab} mode
-							</Badge>
-						{/if}
-					</div>
+		<div class="w-full lg:w-56 xl:w-64 shrink-0 flex flex-col h-full min-h-0">
+			<Card.Root
+				class="h-full border border-border/80 shadow-xs p-3.5 flex flex-col justify-between gap-4 overflow-y-auto rounded-xl"
+			>
+				<!-- Section: Transformation Tools -->
+				<div class="space-y-2">
+					<h3
+						class="text-sm font-semibold tracking-tight text-foreground"
+					>
+						Transformation Tools
+					</h3>
 
-					<!-- HORIZONTAL OPERATIONS TOOLBAR ON TOP OF CANVAS -->
-					<div class="flex items-center gap-1 overflow-x-auto py-0.5">
-						<!-- None / Original (Default) -->
+					<div class="flex flex-col gap-1.5">
+						<!-- Crop -->
 						<button
 							type="button"
-							class="h-7 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer {activeTab === null ? 'bg-primary text-primary-foreground shadow-xs font-bold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'}"
-							onclick={() => (activeTab = null)}
-							title="View original image with no transformation"
-						>
-							<EyeIcon class="size-3" />
-							<span>None</span>
-						</button>
-
-						<!-- Crop (Interactive iLoveIMG Style) -->
-						<button
-							type="button"
-							class="h-7 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer {activeTab === 'crop' ? 'bg-primary text-primary-foreground shadow-xs font-bold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'}"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center gap-2.5 text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'crop'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
 							onclick={() => {
 								activeTab = "crop";
-								if (cropWidth > originalWidth || cropHeight > originalHeight) {
-									resetCropToCenter();
-								}
+								resetCropToCenter();
 							}}
-							title="Interactive crop box over image"
 						>
-							<CropIcon class="size-3" />
+							<div
+								class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+								'crop'
+									? 'bg-primary text-primary-foreground shadow-2xs'
+									: 'text-muted-foreground'}"
+							>
+								<CropIcon class="size-3.5" />
+							</div>
 							<span>Crop</span>
 						</button>
 
 						<!-- Resize -->
 						<button
 							type="button"
-							class="h-7 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer {activeTab === 'resize' ? 'bg-primary text-primary-foreground shadow-xs font-bold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'}"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center gap-2.5 text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'resize'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
 							onclick={() => (activeTab = "resize")}
-							title="Scale and resize dimensions"
 						>
-							<Maximize2Icon class="size-3" />
+							<div
+								class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+								'resize'
+									? 'bg-primary text-primary-foreground shadow-2xs'
+									: 'text-muted-foreground'}"
+							>
+								<Maximize2Icon class="size-3.5" />
+							</div>
 							<span>Resize</span>
 						</button>
 
 						<!-- Rotate -->
 						<button
 							type="button"
-							class="h-7 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer {activeTab === 'rotate' ? 'bg-primary text-primary-foreground shadow-xs font-bold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'}"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center gap-2.5 text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'rotate'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
 							onclick={() => (activeTab = "rotate")}
-							title="Rotate image orientation"
 						>
-							<RotateCwIcon class="size-3" />
+							<div
+								class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+								'rotate'
+									? 'bg-primary text-primary-foreground shadow-2xs'
+									: 'text-muted-foreground'}"
+							>
+								<RotateCwIcon class="size-3.5" />
+							</div>
 							<span>Rotate</span>
 						</button>
 
 						<!-- Flip -->
 						<button
 							type="button"
-							class="h-7 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer {activeTab === 'flip' ? 'bg-primary text-primary-foreground shadow-xs font-bold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'}"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center gap-2.5 text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'flip'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
 							onclick={() => (activeTab = "flip")}
-							title="Mirror reflection horizontally or vertically"
 						>
-							<FlipHorizontalIcon class="size-3" />
+							<div
+								class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+								'flip'
+									? 'bg-primary text-primary-foreground shadow-2xs'
+									: 'text-muted-foreground'}"
+							>
+								<SlidersHorizontalIcon class="size-3.5" />
+							</div>
 							<span>Flip</span>
 						</button>
 
 						<!-- Shear -->
 						<button
 							type="button"
-							class="h-7 px-2.5 rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer {activeTab === 'shear' ? 'bg-primary text-primary-foreground shadow-xs font-bold' : 'bg-muted/70 text-muted-foreground hover:text-foreground'}"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center gap-2.5 text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'shear'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
 							onclick={() => (activeTab = "shear")}
-							title="Affine shear deformation"
 						>
-							<SparklesIcon class="size-3" />
+							<div
+								class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+								'shear'
+									? 'bg-primary text-primary-foreground shadow-2xs'
+									: 'text-muted-foreground'}"
+							>
+								<RectangleHorizontalIcon class="size-3.5" />
+							</div>
 							<span>Shear</span>
 						</button>
-					</div>
-				</Card.Header>
 
-				<!-- CANVAS VIEWPORT (Checkerboard Background) -->
-				<Card.Content class="p-4 sm:p-6 bg-muted/20 flex-1">
-					<div
-						class="relative w-full h-[380px] sm:h-[460px] md:h-[520px] xl:h-[580px] rounded-xl border border-border overflow-hidden flex items-center justify-center p-6 select-none bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[size:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0px] dark:bg-[linear-gradient(45deg,#161b22_25%,transparent_25%),linear-gradient(-45deg,#161b22_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#161b22_75%),linear-gradient(-45deg,transparent_75%,#161b22_75%)]"
-					>
-						<!-- Background Fill Layer when expand or shear is applied -->
-						<div
-							class="absolute inset-0 transition-colors pointer-events-none"
-							style="background-color: {activeTab === 'shear' || activeTab === 'rotate' ? shearBgColor + '20' : 'transparent'};"
-						></div>
-
-						<!-- Zoom Scaler Container -->
-						<div
-							class="relative max-w-full max-h-full transition-all duration-150 ease-out origin-center flex items-center justify-center"
-							style="transform: scale({zoomLevel / 100});"
+						<!-- Affine -->
+						<button
+							type="button"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center gap-2.5 text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'affine'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
+							onclick={() => (activeTab = "affine")}
 						>
-							<!-- Image Wrapper -->
 							<div
-								class="relative overflow-hidden shadow-2xl transition-transform duration-100 ease-out select-none"
-								style="
-									{isComparing || !activeTab || activeTab === 'crop'
-										? 'transform: none;'
-										: activeTab === 'shear'
-											? `transform: matrix(1, ${shearY}, ${shearX}, 1, 0, 0);`
-											: activeTab === 'rotate'
-												? `transform: rotate(${rotateAngle}deg);`
-												: activeTab === 'flip'
-													? `transform: scale(${flipDirection === 'horizontal' ? -1 : 1}, ${flipDirection === 'vertical' ? -1 : 1});`
-													: ''}
-								"
+								class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+								'affine'
+									? 'bg-primary text-primary-foreground shadow-2xs'
+									: 'text-muted-foreground'}"
 							>
-								<!-- The Source Image Element -->
-								<img
-									bind:this={imageEl}
-									src={currentImageUrl}
-									alt={originalFilename}
-									onload={handleImageLoad}
-									class="max-w-[680px] max-h-[400px] object-contain rounded-xs border border-white/20 select-none pointer-events-none block"
-								/>
-
-								<!-- ========================================================= -->
-								<!-- INTERACTIVE CROP BOX OVERLAY (iLoveIMG Style with 8 Points) -->
-								<!-- ========================================================= -->
-								{#if activeTab === "crop" && !isComparing}
-									<div
-										role="region"
-										aria-label="Interactive crop selection box"
-										class="absolute border-2 border-[#0969da] cursor-move select-none shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] transition-shadow z-30"
-										style="
-											left: {(cropX / originalWidth) * 100}%;
-											top: {(cropY / originalHeight) * 100}%;
-											width: {(cropWidth / originalWidth) * 100}%;
-											height: {(cropHeight / originalHeight) * 100}%;
-											cursor: move;
-										"
-										onpointerdown={(e) => handleCropPointerDown("move", e)}
-									>
-										<!-- Rule of Thirds Guide Lines -->
-										{#if showRuleOfThirds}
-											<div class="absolute inset-0 pointer-events-none">
-												<div class="absolute top-0 bottom-0 left-1/3 w-px border-l border-white/60 border-dashed"></div>
-												<div class="absolute top-0 bottom-0 left-2/3 w-px border-l border-white/60 border-dashed"></div>
-												<div class="absolute left-0 right-0 top-1/3 h-px border-t border-white/60 border-dashed"></div>
-												<div class="absolute left-0 right-0 top-2/3 h-px border-t border-white/60 border-dashed"></div>
-											</div>
-										{/if}
-
-										<!-- Center Subtle Crosshair Mark (iLoveIMG Style) -->
-										<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-											<div class="relative w-3.5 h-3.5 opacity-60">
-												<div class="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-[#0969da]"></div>
-												<div class="absolute top-1/2 left-0 right-0 h-px -translate-y-1/2 bg-[#0969da]"></div>
-											</div>
-										</div>
-
-										<!-- 8 Precise Control Points (Corners & Midpoint Edges) with Native Directional Cursors -->
-										{#each cropHandles as handle (handle.id)}
-											<div
-												role="button"
-												tabindex="0"
-												aria-label="Resize {handle.label}"
-												class="absolute size-2.5 sm:size-3 bg-[#0969da] border border-white shadow-xs rounded-[1.5px] z-40 transition-transform hover:scale-125 focus:outline-hidden after:absolute after:-inset-2 after:content-['']"
-												style="{handle.positionStyle}; cursor: {handle.cursor};"
-												onpointerdown={(e) => handleCropPointerDown(handle.id, e)}
-											></div>
-										{/each}
-									</div>
-
-								<!-- General Visual Grid Overlay for Other Transformations -->
-								{:else if activeTab && activeTab !== "crop"}
-									<div class="absolute inset-0 pointer-events-none border border-white/40">
-										<div class="absolute top-0 bottom-0 left-1/3 w-px bg-white/30 shadow-[0_0_1px_rgba(0,0,0,0.8)]"></div>
-										<div class="absolute top-0 bottom-0 left-2/3 w-px bg-white/30 shadow-[0_0_1px_rgba(0,0,0,0.8)]"></div>
-										<div class="absolute left-0 right-0 top-1/3 h-px bg-white/30 shadow-[0_0_1px_rgba(0,0,0,0.8)]"></div>
-										<div class="absolute left-0 right-0 top-2/3 h-px bg-white/30 shadow-[0_0_1px_rgba(0,0,0,0.8)]"></div>
-									</div>
-								{/if}
+								<TriangleIcon class="size-3.5" />
 							</div>
-						</div>
+							<span>Affine</span>
+						</button>
 					</div>
-				</Card.Content>
+				</div>
 
-				<!-- DOCKED BOTTOM STATUS BAR (Card Footer) -->
-				<Card.Footer class="py-2.5 px-4 border-t border-border bg-card/60 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-muted-foreground">
-					<div class="flex items-center gap-2 text-foreground font-medium">
-						<span>Zoom: Fit ({zoomLevel}%)</span>
-						<div class="flex items-center gap-0.5 ml-1">
-							<button
-								type="button"
-								class="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-								onclick={() => (zoomLevel = Math.max(30, zoomLevel - 10))}
-								title="Zoom out"
-							>
-								<ZoomOutIcon class="size-3" />
-							</button>
-							<button
-								type="button"
-								class="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-								onclick={() => (zoomLevel = Math.min(150, zoomLevel + 10))}
-								title="Zoom in"
-							>
-								<ZoomInIcon class="size-3" />
-							</button>
-						</div>
-					</div>
+				<!-- Section: Presets -->
+				<div class="space-y-2 pt-2 border-t border-border/80">
+					<h3
+						class="text-sm font-semibold tracking-tight text-foreground"
+					>
+						Presets
+					</h3>
 
-					<div class="flex items-center gap-3 sm:gap-4 flex-wrap">
-						<span>Original: <strong class="text-foreground">{originalWidth}×{originalHeight} px</strong></span>
-						<span class="text-border">|</span>
-						<span>Output: <strong class="text-foreground">{computedOutputWidth}×{computedOutputHeight} px (JPEG)</strong></span>
-						<span class="text-border">|</span>
-						<span>Preset: <strong class="text-foreground">{activePreset}</strong></span>
+					<div class="grid grid-cols-2 gap-2">
+						{#if activeTab === "affine"}
+							{#each [{ label: "Identity", apply: () => {
+											affineA = 1;
+											affineB = 0;
+											affineC = 0;
+											affineD = 0;
+											affineE = 1;
+											affineF = 0;
+											activePreset = "Identity";
+										} }, { label: "Slant Right", apply: () => {
+											affineA = 1;
+											affineB = 0.25;
+											affineC = 0;
+											affineD = 0;
+											affineE = 1;
+											affineF = 0;
+											activePreset = "Slant Right";
+										} }, { label: "Slant Left", apply: () => {
+											affineA = 1;
+											affineB = -0.25;
+											affineC = 0;
+											affineD = 0;
+											affineE = 1;
+											affineF = 0;
+											activePreset = "Slant Left";
+										} }, { label: "Scale 1.25x", apply: () => {
+											affineA = 1.25;
+											affineB = 0;
+											affineC = 0;
+											affineD = 0;
+											affineE = 1.25;
+											affineF = 0;
+											activePreset = "Scale 1.25x";
+										} }] as p}
+								<button
+									type="button"
+									class="h-9 px-2 rounded-lg border text-xs font-medium text-center transition-all cursor-pointer truncate {activePreset ===
+									p.label
+										? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
+										: 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}"
+									onclick={p.apply}
+								>
+									{p.label}
+								</button>
+							{/each}
+						{:else}
+							{#each [{ label: "Square (1:1)", value: "1:1 (Square)" }, { label: "Landscape (16:9)", value: "Landscape (16:9)" }, { label: "Portrait (9:16)", value: "Portrait (9:16)" }, { label: "Original", value: "Original" }] as p}
+								<button
+									type="button"
+									class="h-9 px-2 rounded-lg border text-xs font-medium text-center transition-all cursor-pointer truncate {activePreset ===
+									p.value
+										? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
+										: 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}"
+									onclick={() => applyPreset(p.value)}
+								>
+									{p.label}
+								</button>
+							{/each}
+						{/if}
 					</div>
-				</Card.Footer>
+				</div>
 			</Card.Root>
 		</div>
 
 		<!-- --------------------------------------------------------------------- -->
-		<!-- RIGHT: Operation Configuration Inspector & Saved Info                 -->
+		<!-- COLUMN 2: CENTER CANVAS VIEWPORT & DOCKED TOOLBAR                     -->
 		<!-- --------------------------------------------------------------------- -->
-		<div class="lg:col-span-4 flex flex-col gap-6">
-			<!-- CARD 1: Operation Configuration Inspector -->
-			<Card.Root class="border border-border shadow-xs">
-				<Card.Header class="py-3 px-4 border-b border-border bg-card/60 flex items-center justify-between">
-					<Card.Title class="text-sm font-bold tracking-tight text-foreground">
-						{activeTab === "crop" ? "Crop Options" : "Operation & Parameters Inspector"}
-					</Card.Title>
-					{#if activeTab}
-						<Badge variant="secondary" class="text-[10px] font-mono uppercase">
-							{activeTab}
-						</Badge>
-					{/if}
-				</Card.Header>
+		<div class="flex-1 min-w-0 h-full flex flex-col min-h-0">
+			<Card.Root
+				class="h-full border border-border/80 shadow-xs flex flex-col rounded-xl overflow-hidden min-h-0"
+			>
+				<!-- Canvas Viewport -->
+				<div
+					class="relative w-full flex-1 min-h-[300px] overflow-hidden flex items-center justify-center p-4 sm:p-6 select-none bg-muted/50"
+				>
+					<!-- Zoom Scaler Container -->
+					<div
+						class="relative max-w-full max-h-full transition-transform duration-100 ease-out origin-center flex items-center justify-center"
+						style="transform: scale({zoomLevel / 100});"
+					>
+						<!-- Image Container -->
+						<div
+							class="relative overflow-hidden shadow-2xl transition-transform duration-100 ease-out select-none"
+							style="
+								{activeTab === 'crop'
+								? 'transform: none;'
+								: activeTab === 'shear'
+									? `transform: matrix(1, ${shearY}, ${shearX}, 1, 0, 0);`
+									: activeTab === 'affine'
+										? `transform: matrix(${affineA}, ${affineD}, ${affineB}, ${affineE}, ${affineC}, ${affineF});`
+										: activeTab === 'rotate'
+											? `transform: rotate(${rotateAngle}deg);`
+											: activeTab === 'flip'
+												? `transform: scale(${flipDirection === 'horizontal' ? -1 : 1}, ${flipDirection === 'vertical' ? -1 : 1});`
+												: ''}
+							"
+						>
+							<!-- Source Image Element -->
+							<img
+								bind:this={imageEl}
+								src={currentImageUrl}
+								alt={originalFilename}
+								onload={handleImageLoad}
+								class="max-w-[85vw] max-h-[calc(100vh-250px)] object-contain rounded-xs border border-white/20 select-none pointer-events-none block"
+							/>
 
-				<Card.Content class="p-4 space-y-5">
-					<!-- NO OPERATION SELECTED IDLE STATE -->
-					{#if activeTab === null}
-						<div class="py-10 px-4 text-center space-y-3">
-							<div class="size-12 rounded-full bg-muted/80 border border-border flex items-center justify-center mx-auto text-muted-foreground shadow-2xs">
-								<SlidersIcon class="size-6" />
-							</div>
-							<div class="space-y-1">
-								<h4 class="text-sm font-semibold text-foreground">No Operation Selected</h4>
-								<p class="text-xs text-muted-foreground leading-relaxed">
-									Select a tool from the top toolbar above the canvas to customize parameters:
-								</p>
-							</div>
-							<div class="grid grid-cols-2 gap-2 pt-2 text-left">
-								<button
-									type="button"
-									class="p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/80 transition-colors text-xs flex items-center gap-2 cursor-pointer"
-									onclick={() => {
-										activeTab = "crop";
-										resetCropToCenter();
-									}}
+							<!-- ========================================================= -->
+							<!-- INTERACTIVE CROP BOX OVERLAY (Matching Concept 2)         -->
+							<!-- ========================================================= -->
+							{#if activeTab === "crop"}
+								<div
+									role="region"
+									aria-label="Interactive crop selection box"
+									class="absolute border-2 border-white select-none shadow-[0_0_0_9999px_rgba(0,0,0,0.52)] z-30"
+									style="
+										left: {(cropX / originalWidth) * 100}%;
+										top: {(cropY / originalHeight) * 100}%;
+										width: {(cropWidth / originalWidth) * 100}%;
+										height: {(cropHeight / originalHeight) * 100}%;
+										cursor: move;
+									"
+									onpointerdown={(e) =>
+										handleCropPointerDown("move", e)}
 								>
-									<CropIcon class="size-4 text-primary" />
-									<div>
-										<div class="font-bold text-foreground">Crop</div>
-										<div class="text-[10px] text-muted-foreground">Interactive box</div>
-									</div>
-								</button>
-								<button
-									type="button"
-									class="p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/80 transition-colors text-xs flex items-center gap-2 cursor-pointer"
-									onclick={() => (activeTab = "shear")}
-								>
-									<SparklesIcon class="size-4 text-primary" />
-									<div>
-										<div class="font-bold text-foreground">Shear</div>
-										<div class="text-[10px] text-muted-foreground">Affine distortion</div>
-									</div>
-								</button>
-								<button
-									type="button"
-									class="p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/80 transition-colors text-xs flex items-center gap-2 cursor-pointer"
-									onclick={() => (activeTab = "resize")}
-								>
-									<Maximize2Icon class="size-4 text-primary" />
-									<div>
-										<div class="font-bold text-foreground">Resize</div>
-										<div class="text-[10px] text-muted-foreground">Scale & dimensions</div>
-									</div>
-								</button>
-								<button
-									type="button"
-									class="p-2.5 rounded-lg border border-border bg-muted/30 hover:bg-muted/80 transition-colors text-xs flex items-center gap-2 cursor-pointer"
-									onclick={() => (activeTab = "rotate")}
-								>
-									<RotateCwIcon class="size-4 text-primary" />
-									<div>
-										<div class="font-bold text-foreground">Rotate</div>
-										<div class="text-[10px] text-muted-foreground">Orientation</div>
-									</div>
-								</button>
-							</div>
-						</div>
-
-					<!-- TAB PANEL: CROP (Exact iLoveIMG Options Layout) -->
-					{:else if activeTab === "crop"}
-						<div class="space-y-4 pt-1">
-							<!-- Dimensions Inputs (Matching iLoveIMG Screenshot) -->
-							<div class="space-y-3">
-								<div class="flex items-center justify-between gap-4">
-									<label for="crop-width" class="text-xs font-semibold text-foreground">Width (px)</label>
-									<Input
-										id="crop-width"
-										type="number"
-										min="10"
-										max={originalWidth}
-										bind:value={cropWidth}
-										oninput={() => {
-											cropWidth = clamp(cropWidth, 10, originalWidth);
-											if (cropX + cropWidth > originalWidth) {
-												cropX = originalWidth - cropWidth;
-											}
-										}}
-										class="h-8 w-28 text-right font-mono text-xs"
-									/>
-								</div>
-
-								<div class="flex items-center justify-between gap-4">
-									<label for="crop-height" class="text-xs font-semibold text-foreground">Height (px)</label>
-									<Input
-										id="crop-height"
-										type="number"
-										min="10"
-										max={originalHeight}
-										bind:value={cropHeight}
-										oninput={() => {
-											cropHeight = clamp(cropHeight, 10, originalHeight);
-											if (cropY + cropHeight > originalHeight) {
-												cropY = originalHeight - cropHeight;
-											}
-										}}
-										class="h-8 w-28 text-right font-mono text-xs"
-									/>
-								</div>
-
-								<div class="flex items-center justify-between gap-4">
-									<label for="crop-pos-x" class="text-xs font-semibold text-foreground">Position X (px)</label>
-									<Input
-										id="crop-pos-x"
-										type="number"
-										min="0"
-										max={Math.max(0, originalWidth - cropWidth)}
-										bind:value={cropX}
-										oninput={() => {
-											cropX = clamp(cropX, 0, Math.max(0, originalWidth - cropWidth));
-										}}
-										class="h-8 w-28 text-right font-mono text-xs"
-									/>
-								</div>
-
-								<div class="flex items-center justify-between gap-4">
-									<label for="crop-pos-y" class="text-xs font-semibold text-foreground">Position Y (px)</label>
-									<Input
-										id="crop-pos-y"
-										type="number"
-										min="0"
-										max={Math.max(0, originalHeight - cropHeight)}
-										bind:value={cropY}
-										oninput={() => {
-											cropY = clamp(cropY, 0, Math.max(0, originalHeight - cropHeight));
-										}}
-										class="h-8 w-28 text-right font-mono text-xs"
-									/>
-								</div>
-							</div>
-
-							<!-- Aspect Ratio Presets -->
-							<div class="space-y-1.5 pt-2 border-t border-border/70">
-								<span class="text-xs font-semibold text-foreground">Aspect Presets</span>
-								<div class="grid grid-cols-4 gap-1.5">
-									{#each ["Free", "1:1", "4:3", "16:9"] as preset}
-										<button
-											type="button"
-											class="py-1 px-2 rounded-md border text-xs font-medium cursor-pointer transition-colors {activePreset === preset ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-border bg-card text-muted-foreground hover:bg-muted'}"
-											onclick={() => {
-												activePreset = preset;
-												if (preset === "1:1") {
-													const side = Math.min(originalWidth, originalHeight, cropWidth);
-													cropWidth = side;
-													cropHeight = side;
-												} else if (preset === "4:3") {
-													cropWidth = Math.min(originalWidth, Math.floor((originalHeight * 4) / 3));
-													cropHeight = Math.floor((cropWidth * 3) / 4);
-												} else if (preset === "16:9") {
-													cropWidth = Math.min(originalWidth, Math.floor((originalHeight * 16) / 9));
-													cropHeight = Math.floor((cropWidth * 9) / 16);
-												}
-												cropX = clamp(cropX, 0, originalWidth - cropWidth);
-												cropY = clamp(cropY, 0, originalHeight - cropHeight);
-											}}
+									<!-- Rule of Thirds Guide Lines -->
+									{#if showRuleOfThirds}
+										<div
+											class="absolute inset-0 pointer-events-none"
 										>
-											{preset}
-										</button>
+											<div
+												class="absolute top-0 bottom-0 left-1/3 w-px border-l border-white/40"
+											></div>
+											<div
+												class="absolute top-0 bottom-0 left-2/3 w-px border-l border-white/40"
+											></div>
+											<div
+												class="absolute left-0 right-0 top-1/3 h-px border-t border-white/40"
+											></div>
+											<div
+												class="absolute left-0 right-0 top-2/3 h-px border-t border-white/40"
+											></div>
+										</div>
+									{/if}
+
+									<!-- 8 Precision Handles (4 Corners are circular primary nodes, 4 Edges are subtle pills) -->
+									{#each cropHandles as handle (handle.id)}
+										{#if handle.isCorner}
+											<div
+												role="button"
+												tabindex="0"
+												aria-label="Resize {handle.label}"
+												class="absolute size-3.5 sm:size-4 rounded-full bg-primary border-2 border-background shadow-md z-40 transition-transform hover:scale-125 focus:outline-hidden after:absolute after:-inset-2.5 after:content-['']"
+												style="{handle.positionStyle}; cursor: {handle.cursor};"
+												onpointerdown={(e) =>
+													handleCropPointerDown(
+														handle.id,
+														e,
+													)}
+											></div>
+										{:else}
+											<div
+												role="button"
+												tabindex="0"
+												aria-label="Resize {handle.label}"
+												class="absolute size-2 sm:size-2.5 rounded-full bg-primary/90 border border-background shadow-xs z-40 transition-transform hover:scale-125 focus:outline-hidden after:absolute after:-inset-2 after:content-['']"
+												style="{handle.positionStyle}; cursor: {handle.cursor};"
+												onpointerdown={(e) =>
+													handleCropPointerDown(
+														handle.id,
+														e,
+													)}
+											></div>
+										{/if}
 									{/each}
 								</div>
-							</div>
-
-							<!-- Quick Centering & Reset Actions -->
-							<div class="flex items-center gap-2 pt-1">
-								<Button
-									variant="outline"
-									size="xs"
-									class="flex-1 text-xs gap-1"
-									onclick={resetCropToCenter}
-								>
-									<CrosshairIcon class="size-3" />
-									<span>Center Box</span>
-								</Button>
-								<Button
-									variant="outline"
-									size="xs"
-									class="flex-1 text-xs"
-									onclick={() => {
-										cropX = 0;
-										cropY = 0;
-										cropWidth = originalWidth;
-										cropHeight = originalHeight;
-										activePreset = "Free";
-									}}
-								>
-									<span>Fit Whole Image</span>
-								</Button>
-							</div>
-
-							<!-- Grid Overlay Toggle -->
-							<div class="flex items-center gap-2 pt-2 border-t border-border/70">
-								<input
-									id="crop-grid"
-									type="checkbox"
-									bind:checked={showRuleOfThirds}
-									class="size-4 rounded-xs border-input text-primary accent-primary cursor-pointer"
-								/>
-								<label for="crop-grid" class="text-xs font-semibold text-foreground cursor-pointer select-none">
-									Rule of Thirds Overlay
-								</label>
-							</div>
+							{/if}
 						</div>
+					</div>
+				</div>
 
-					<!-- TAB PANEL: SHEAR (Mockup Match) -->
-					{:else if activeTab === "shear"}
-						<div class="space-y-4 pt-1">
-							<div class="flex items-center justify-between">
-								<h3 class="text-xs font-bold uppercase tracking-wider text-foreground">
-									Shear (Affine transform)
-								</h3>
-							</div>
+				<!-- DOCKED CANVAS BOTTOM TOOLBAR -->
+				<div
+					class="p-2.5 px-4 border-t border-border bg-card flex items-center justify-between text-xs text-muted-foreground select-none"
+				>
+					<!-- Left: Undo & Redo -->
+					<div class="flex items-center gap-1.5">
+						<Button
+							variant="outline"
+							size="icon"
+							class="size-8 rounded-lg cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+							disabled={cropHistoryIndex <= 0}
+							onclick={undoCrop}
+							title="Undo (Ctrl+Z)"
+						>
+							<Undo2Icon class="size-4" />
+						</Button>
+						<Button
+							variant="outline"
+							size="icon"
+							class="size-8 rounded-lg cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+							disabled={cropHistoryIndex >=
+								cropHistory.length - 1}
+							onclick={redoCrop}
+							title="Redo (Ctrl+Y)"
+						>
+							<Redo2Icon class="size-4" />
+						</Button>
+					</div>
 
-							<!-- Horizontal Shear X -->
-							<div class="space-y-1.5">
-								<div class="flex items-center justify-between text-xs">
-									<label for="shear-x" class="font-semibold text-foreground">Horizontal Shear X</label>
-									<span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-border bg-muted/40">
-										{shearX.toFixed(2)}
-									</span>
-								</div>
-								<input
-									id="shear-x"
-									type="range"
-									min="-2.0"
-									max="2.0"
-									step="0.05"
-									bind:value={shearX}
-									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
-								/>
-								<div class="flex justify-between text-[10px] text-muted-foreground font-mono">
-									<span>-2.0</span>
-									<span>2.0</span>
-								</div>
-							</div>
+					<!-- Center: Zoom Controls Pill -->
+					<div
+						class="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-muted/30 font-mono"
+					>
+						<button
+							type="button"
+							class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+							onclick={() =>
+								(zoomLevel = Math.max(30, zoomLevel - 10))}
+							title="Zoom Out"
+						>
+							<MinusIcon class="size-3.5" />
+						</button>
+						<span
+							class="text-xs font-semibold text-foreground px-2 select-none"
+							>{zoomLevel}%</span
+						>
+						<button
+							type="button"
+							class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+							onclick={() =>
+								(zoomLevel = Math.min(150, zoomLevel + 10))}
+							title="Zoom In"
+						>
+							<PlusIcon class="size-3.5" />
+						</button>
+					</div>
 
-							<!-- Vertical Shear Y -->
-							<div class="space-y-1.5">
-								<div class="flex items-center justify-between text-xs">
-									<label for="shear-y" class="font-semibold text-foreground">Vertical Shear Y</label>
-									<span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-border bg-muted/40">
-										{shearY.toFixed(2)}
-									</span>
-								</div>
-								<input
-									id="shear-y"
-									type="range"
-									min="-2.0"
-									max="2.0"
-									step="0.05"
-									bind:value={shearY}
-									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
-								/>
-								<div class="flex justify-between text-[10px] text-muted-foreground font-mono">
-									<span>-2.0</span>
-									<span>2.0</span>
-								</div>
-							</div>
+					<!-- Right: Fit to View / Fullscreen -->
+					<div class="flex items-center gap-1">
+						<Button
+							variant="outline"
+							size="icon"
+							class="size-8 rounded-lg cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
+							onclick={() => (zoomLevel = 74)}
+							title="Reset zoom to 74%"
+						>
+							<Maximize2Icon class="size-4" />
+						</Button>
+					</div>
+				</div>
+			</Card.Root>
+		</div>
 
-							<!-- Expand Canvas Checkbox -->
-							<div class="flex items-center gap-2 pt-1">
-								<input
-									id="shear-expand"
-									type="checkbox"
-									bind:checked={shearExpand}
-									class="size-4 rounded-xs border-input text-primary accent-primary cursor-pointer"
-								/>
-								<label for="shear-expand" class="text-xs font-semibold text-foreground cursor-pointer select-none">
-									Expand Canvas
-								</label>
-							</div>
+		<!-- --------------------------------------------------------------------- -->
+		<!-- COLUMN 3: SETTINGS & QUICK ACTIONS (Right Sidebar)                    -->
+		<!-- --------------------------------------------------------------------- -->
+		<div class="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col h-full min-h-0">
+			<Card.Root
+				class="h-full border border-border/80 shadow-xs p-3.5 flex flex-col justify-between gap-4 overflow-y-auto rounded-xl"
+			>
+				<!-- Section: Dynamic Tool Settings Title -->
+				<div class="space-y-4">
+					<h3
+						class="text-sm font-semibold tracking-tight text-foreground"
+					>
+						{activeTab === "crop"
+							? "Crop Settings"
+							: activeTab === "resize"
+								? "Resize Settings"
+								: activeTab === "rotate"
+									? "Rotate Settings"
+									: activeTab === "flip"
+										? "Flip Settings"
+										: activeTab === "affine"
+											? "Affine Settings"
+											: "Shear Settings"}
+					</h3>
 
-							<!-- Background Fill Color -->
-							<div class="flex items-center justify-between pt-1">
-								<span class="text-xs font-semibold text-foreground">Background Fill Color</span>
-								<div class="flex items-center gap-2">
-									<input
-										type="color"
-										bind:value={shearBgColor}
-										class="size-6 rounded-md border border-border p-0 cursor-pointer overflow-hidden"
-									/>
-									<span class="text-xs font-mono text-muted-foreground uppercase">{shearBgColor}</span>
-								</div>
-							</div>
-
-							<!-- View Transformation Params Button -->
-							<button
-								type="button"
-								class="w-full py-2 flex items-center justify-between text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors border-t border-border/70 pt-3 cursor-pointer"
-								onclick={() => (showParamsDialog = true)}
+					<!-- CROP CONTROLS -->
+					{#if activeTab === "crop"}
+						<!-- Aspect Ratio Dropdown -->
+						<div class="space-y-1.5">
+							<span class="text-xs font-medium text-foreground"
+								>Aspect ratio</span
 							>
-								<span>Transformation Params</span>
-								<ScanIcon class="size-3.5" />
-							</button>
+							<Select.Root
+								type="single"
+								value={activePreset}
+								onValueChange={(val) => {
+									if (val) applyPreset(val);
+								}}
+							>
+								<Select.Trigger
+									class="w-full text-xs h-9 justify-between font-normal"
+								>
+									<span>{activePreset}</span>
+								</Select.Trigger>
+								<Select.Content>
+									<Select.Item value="1:1 (Square)"
+										>1:1 (Square)</Select.Item
+									>
+									<Select.Item value="Landscape (16:9)"
+										>Landscape (16:9)</Select.Item
+									>
+									<Select.Item value="Portrait (9:16)"
+										>Portrait (9:16)</Select.Item
+									>
+									<Select.Item value="4:3">4:3</Select.Item>
+									<Select.Item value="Original"
+										>Original</Select.Item
+									>
+									<Select.Item value="Free">Free</Select.Item>
+								</Select.Content>
+							</Select.Root>
 						</div>
 
-					<!-- TAB PANEL: RESIZE -->
-					{:else if activeTab === "resize"}
-						<div class="space-y-4 pt-1">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-foreground">
-								Scaling & Dimensions
-							</h3>
+						<!-- Dimensions (W / H with Aspect Lock) -->
+						<div class="space-y-1.5">
+							<span class="text-xs font-medium text-foreground"
+								>Dimensions</span
+							>
+							<div class="flex items-center gap-2">
+								<!-- Width Box -->
+								<div
+									class="flex-1 flex items-center h-8.5 rounded-lg border border-input bg-card px-2.5 gap-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:border-primary"
+								>
+									<span
+										class="text-xs font-semibold text-muted-foreground select-none"
+										>W</span
+									>
+									<input
+										type="number"
+										bind:value={cropWidth}
+										oninput={handleWidthInput}
+										class="w-full bg-transparent text-xs font-mono text-foreground focus:outline-none"
+										min="10"
+										max={originalWidth}
+									/>
+									<span
+										class="text-[11px] text-muted-foreground select-none"
+										>px</span
+									>
+								</div>
 
-							<div class="space-y-1.5">
-								<div class="flex items-center justify-between text-xs">
-									<label for="resize-scale" class="font-semibold text-foreground">Scale Multiplier</label>
-									<span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-border bg-muted/40">
-										{(resizeScale * 100).toFixed(0)}%
-									</span>
+								<!-- Lock Aspect Ratio Toggle Button -->
+								<Button
+									variant="ghost"
+									size="icon"
+									class="size-8 rounded-full shrink-0 transition-colors {keepAspectRatio
+										? 'text-primary bg-primary/10 shadow-2xs'
+										: 'text-muted-foreground hover:bg-muted'}"
+									onclick={() =>
+										(keepAspectRatio = !keepAspectRatio)}
+									title={keepAspectRatio
+										? "Aspect ratio locked"
+										: "Aspect ratio unlocked"}
+								>
+									{#if keepAspectRatio}
+										<LinkIcon class="size-3.5" />
+									{:else}
+										<UnlinkIcon class="size-3.5" />
+									{/if}
+								</Button>
+
+								<!-- Height Box -->
+								<div
+									class="flex-1 flex items-center h-8.5 rounded-lg border border-input bg-card px-2.5 gap-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:border-primary"
+								>
+									<span
+										class="text-xs font-semibold text-muted-foreground select-none"
+										>H</span
+									>
+									<input
+										type="number"
+										bind:value={cropHeight}
+										oninput={handleHeightInput}
+										class="w-full bg-transparent text-xs font-mono text-foreground focus:outline-none"
+										min="10"
+										max={originalHeight}
+									/>
+									<span
+										class="text-[11px] text-muted-foreground select-none"
+										>px</span
+									>
+								</div>
+							</div>
+						</div>
+
+						<!-- Position (X / Y) -->
+						<div class="space-y-1.5">
+							<span class="text-xs font-medium text-foreground"
+								>Position</span
+							>
+							<div class="flex items-center gap-2">
+								<div
+									class="flex-1 flex items-center h-8.5 rounded-lg border border-input bg-card px-2.5 gap-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:border-primary"
+								>
+									<span
+										class="text-xs font-semibold text-muted-foreground select-none"
+										>X</span
+									>
+									<input
+										type="number"
+										bind:value={cropX}
+										oninput={() => {
+											cropX = clamp(
+												cropX,
+												0,
+												Math.max(
+													0,
+													originalWidth - cropWidth,
+												),
+											);
+											pushCropHistory();
+										}}
+										class="w-full bg-transparent text-xs font-mono text-foreground focus:outline-none"
+										min="0"
+										max={Math.max(
+											0,
+											originalWidth - cropWidth,
+										)}
+									/>
+									<span
+										class="text-[11px] text-muted-foreground select-none"
+										>px</span
+									>
+								</div>
+
+								<div
+									class="flex-1 flex items-center h-8.5 rounded-lg border border-input bg-card px-2.5 gap-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:border-primary"
+								>
+									<span
+										class="text-xs font-semibold text-muted-foreground select-none"
+										>Y</span
+									>
+									<input
+										type="number"
+										bind:value={cropY}
+										oninput={() => {
+											cropY = clamp(
+												cropY,
+												0,
+												Math.max(
+													0,
+													originalHeight - cropHeight,
+												),
+											);
+											pushCropHistory();
+										}}
+										class="w-full bg-transparent text-xs font-mono text-foreground focus:outline-none"
+										min="0"
+										max={Math.max(
+											0,
+											originalHeight - cropHeight,
+										)}
+									/>
+									<span
+										class="text-[11px] text-muted-foreground select-none"
+										>px</span
+									>
+								</div>
+							</div>
+						</div>
+
+						<!-- RESIZE CONTROLS -->
+					{:else if activeTab === "resize"}
+						<div class="space-y-3">
+							<div class="space-y-1">
+								<div
+									class="flex items-center justify-between text-xs"
+								>
+									<span class="text-muted-foreground"
+										>Scale</span
+									>
+									<span
+										class="font-mono font-bold text-foreground"
+										>{(resizeScale * 100).toFixed(0)}%</span
+									>
 								</div>
 								<input
-									id="resize-scale"
 									type="range"
 									min="0.1"
 									max="2.0"
 									step="0.05"
 									bind:value={resizeScale}
 									oninput={() => {
-										resizeWidth = Math.round(originalWidth * resizeScale);
-										resizeHeight = Math.round(originalHeight * resizeScale);
+										resizeWidth = Math.round(
+											originalWidth * resizeScale,
+										);
+										resizeHeight = Math.round(
+											originalHeight * resizeScale,
+										);
 									}}
 									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
 								/>
 							</div>
 
-							<div class="grid grid-cols-2 gap-3">
-								<div class="space-y-1">
-									<label for="resize-w" class="text-xs text-muted-foreground">Width (px)</label>
-									<Input
-										id="resize-w"
+							<div class="flex items-center gap-2">
+								<div
+									class="flex-1 flex items-center h-8.5 rounded-lg border border-input bg-card px-2.5 gap-1.5"
+								>
+									<span
+										class="text-xs text-muted-foreground select-none"
+										>W</span
+									>
+									<input
 										type="number"
 										bind:value={resizeWidth}
 										oninput={() => {
 											if (keepAspectRatio) {
-												resizeHeight = Math.round((resizeWidth / originalWidth) * originalHeight);
+												resizeHeight = Math.round(
+													(resizeWidth /
+														originalWidth) *
+														originalHeight,
+												);
 											}
 										}}
-										class="h-8 text-xs font-mono"
+										class="w-full bg-transparent text-xs font-mono text-foreground focus:outline-none"
 									/>
 								</div>
-								<div class="space-y-1">
-									<label for="resize-h" class="text-xs text-muted-foreground">Height (px)</label>
-									<Input
-										id="resize-h"
+								<div
+									class="flex-1 flex items-center h-8.5 rounded-lg border border-input bg-card px-2.5 gap-1.5"
+								>
+									<span
+										class="text-xs text-muted-foreground select-none"
+										>H</span
+									>
+									<input
 										type="number"
 										bind:value={resizeHeight}
 										oninput={() => {
 											if (keepAspectRatio) {
-												resizeWidth = Math.round((resizeHeight / originalHeight) * originalWidth);
+												resizeWidth = Math.round(
+													(resizeHeight /
+														originalHeight) *
+														originalWidth,
+												);
 											}
 										}}
-										class="h-8 text-xs font-mono"
+										class="w-full bg-transparent text-xs font-mono text-foreground focus:outline-none"
 									/>
 								</div>
 							</div>
-
-							<div class="flex items-center gap-2 pt-1">
-								<input
-									id="resize-aspect"
-									type="checkbox"
-									bind:checked={keepAspectRatio}
-									class="size-4 rounded-xs border-input text-primary accent-primary cursor-pointer"
-								/>
-								<label for="resize-aspect" class="text-xs font-semibold text-foreground cursor-pointer select-none">
-									Lock Aspect Ratio ({originalWidth}:{originalHeight})
-								</label>
-							</div>
 						</div>
 
-					<!-- TAB PANEL: ROTATE -->
+						<!-- ROTATE CONTROLS -->
 					{:else if activeTab === "rotate"}
-						<div class="space-y-4 pt-1">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-foreground">
-								Rotation & Orientation
-							</h3>
-
-							<div class="grid grid-cols-4 gap-2">
+						<div class="space-y-3">
+							<div class="grid grid-cols-4 gap-1.5">
 								{#each [-90, 90, 180, 0] as deg}
 									<Button
 										variant="outline"
-										size="xs"
+										size="sm"
 										class="h-8 text-xs font-mono"
 										onclick={() => (rotateAngle = deg)}
 									>
@@ -1346,16 +1986,19 @@
 									</Button>
 								{/each}
 							</div>
-
-							<div class="space-y-1.5">
-								<div class="flex items-center justify-between text-xs">
-									<label for="rotate-slider" class="font-semibold text-foreground">Custom Angle</label>
-									<span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md border border-border bg-muted/40">
-										{rotateAngle}°
-									</span>
+							<div class="space-y-1">
+								<div
+									class="flex items-center justify-between text-xs"
+								>
+									<span class="text-muted-foreground"
+										>Angle</span
+									>
+									<span
+										class="font-mono font-bold text-foreground"
+										>{rotateAngle}°</span
+									>
 								</div>
 								<input
-									id="rotate-slider"
 									type="range"
 									min="-180"
 									max="180"
@@ -1363,241 +2006,680 @@
 									bind:value={rotateAngle}
 									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
 								/>
-								<div class="flex justify-between text-[10px] text-muted-foreground font-mono">
-									<span>-180°</span>
-									<span>0°</span>
-									<span>+180°</span>
+							</div>
+						</div>
+
+						<!-- FLIP CONTROLS -->
+					{:else if activeTab === "flip"}
+						<div class="grid grid-cols-2 gap-2">
+							<button
+								type="button"
+								class="p-3 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer {flipDirection ===
+								'horizontal'
+									? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
+									: 'border-border bg-card text-muted-foreground hover:bg-muted'}"
+								onclick={() => (flipDirection = "horizontal")}
+							>
+								<FlipHorizontalIcon class="size-5" />
+								<span class="text-xs">Horizontal</span>
+							</button>
+							<button
+								type="button"
+								class="p-3 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer {flipDirection ===
+								'vertical'
+									? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
+									: 'border-border bg-card text-muted-foreground hover:bg-muted'}"
+								onclick={() => (flipDirection = "vertical")}
+							>
+								<FlipVerticalIcon class="size-5" />
+								<span class="text-xs">Vertical</span>
+							</button>
+						</div>
+
+						<!-- SHEAR CONTROLS -->
+					{:else if activeTab === "shear"}
+						<div class="space-y-3">
+							<div class="space-y-1">
+								<div
+									class="flex items-center justify-between text-xs"
+								>
+									<span class="text-muted-foreground"
+										>Horizontal Shear</span
+									>
+									<span
+										class="font-mono font-bold text-foreground"
+										>{shearX.toFixed(2)}</span
+									>
+								</div>
+								<input
+									type="range"
+									min="-2.0"
+									max="2.0"
+									step="0.05"
+									bind:value={shearX}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+							<div class="space-y-1">
+								<div
+									class="flex items-center justify-between text-xs"
+								>
+									<span class="text-muted-foreground"
+										>Vertical Shear</span
+									>
+									<span
+										class="font-mono font-bold text-foreground"
+										>{shearY.toFixed(2)}</span
+									>
+								</div>
+								<input
+									type="range"
+									min="-2.0"
+									max="2.0"
+									step="0.05"
+									bind:value={shearY}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<div class="flex items-center justify-between pt-1">
+								<span class="text-xs text-muted-foreground">Expand Canvas</span>
+								<input
+									type="checkbox"
+									bind:checked={shearExpand}
+									class="rounded border-border accent-primary cursor-pointer"
+								/>
+							</div>
+							<div class="flex items-center justify-between pt-1">
+								<span class="text-xs text-muted-foreground">Background Color</span>
+								<div class="flex items-center gap-1.5">
+									<input
+										type="color"
+										bind:value={shearBgColor}
+										class="size-6 p-0 border border-border rounded cursor-pointer bg-transparent"
+									/>
+									<span class="font-mono text-2xs uppercase text-foreground">{shearBgColor}</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- AFFINE CONTROLS -->
+					{:else}
+						<div class="space-y-3">
+							<!-- Matrix Visual Preview Card -->
+							<div
+								class="p-2.5 rounded-lg border border-border bg-muted/30 font-mono text-2xs space-y-1.5"
+							>
+								<div
+									class="flex justify-between items-center text-muted-foreground border-b border-border/50 pb-1 font-sans text-xs"
+								>
+									<span class="font-semibold text-foreground">Transformation Matrix</span>
+									<span class="font-mono text-2xs">det = {(affineA * affineE - affineB * affineD).toFixed(2)}</span>
+								</div>
+								<div class="grid grid-cols-3 gap-1 pt-1 text-center font-mono">
+									<div class="p-1 rounded bg-card border border-border/70">
+										<span class="text-muted-foreground text-[10px] block font-sans">a (scaleX)</span>
+										<span class="font-bold text-foreground">{affineA.toFixed(2)}</span>
+									</div>
+									<div class="p-1 rounded bg-card border border-border/70">
+										<span class="text-muted-foreground text-[10px] block font-sans">b (shearX)</span>
+										<span class="font-bold text-foreground">{affineB.toFixed(2)}</span>
+									</div>
+									<div class="p-1 rounded bg-card border border-border/70">
+										<span class="text-muted-foreground text-[10px] block font-sans">c (offsetX)</span>
+										<span class="font-bold text-foreground">{Math.round(affineC)}px</span>
+									</div>
+									<div class="p-1 rounded bg-card border border-border/70">
+										<span class="text-muted-foreground text-[10px] block font-sans">d (shearY)</span>
+										<span class="font-bold text-foreground">{affineD.toFixed(2)}</span>
+									</div>
+									<div class="p-1 rounded bg-card border border-border/70">
+										<span class="text-muted-foreground text-[10px] block font-sans">e (scaleY)</span>
+										<span class="font-bold text-foreground">{affineE.toFixed(2)}</span>
+									</div>
+									<div class="p-1 rounded bg-card border border-border/70">
+										<span class="text-muted-foreground text-[10px] block font-sans">f (offsetY)</span>
+										<span class="font-bold text-foreground">{Math.round(affineF)}px</span>
+									</div>
 								</div>
 							</div>
 
-							<div class="flex items-center gap-2 pt-1">
-								<input
-									id="rotate-expand"
-									type="checkbox"
-									bind:checked={rotateExpand}
-									class="size-4 rounded-xs border-input text-primary accent-primary cursor-pointer"
-								/>
-								<label for="rotate-expand" class="text-xs font-semibold text-foreground cursor-pointer select-none">
-									Expand Canvas to Fit Rotation
-								</label>
-							</div>
-						</div>
+							<!-- Matrix Sliders -->
+							<div class="space-y-2">
+								<div class="grid grid-cols-2 gap-2">
+									<div class="space-y-1">
+										<div class="flex items-center justify-between text-2xs">
+											<span class="text-muted-foreground">Scale X (a)</span>
+											<span class="font-mono font-bold text-foreground">{affineA.toFixed(2)}</span>
+										</div>
+										<input
+											type="range"
+											min="-2.5"
+											max="2.5"
+											step="0.05"
+											bind:value={affineA}
+											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+										/>
+									</div>
+									<div class="space-y-1">
+										<div class="flex items-center justify-between text-2xs">
+											<span class="text-muted-foreground">Scale Y (e)</span>
+											<span class="font-mono font-bold text-foreground">{affineE.toFixed(2)}</span>
+										</div>
+										<input
+											type="range"
+											min="-2.5"
+											max="2.5"
+											step="0.05"
+											bind:value={affineE}
+											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+										/>
+									</div>
+								</div>
 
-					<!-- TAB PANEL: FLIP -->
-					{:else if activeTab === "flip"}
-						<div class="space-y-4 pt-1">
-							<h3 class="text-xs font-bold uppercase tracking-wider text-foreground">
-								Mirror & Reflection
-							</h3>
+								<div class="grid grid-cols-2 gap-2">
+									<div class="space-y-1">
+										<div class="flex items-center justify-between text-2xs">
+											<span class="text-muted-foreground">Shear X (b)</span>
+											<span class="font-mono font-bold text-foreground">{affineB.toFixed(2)}</span>
+										</div>
+										<input
+											type="range"
+											min="-2.0"
+											max="2.0"
+											step="0.05"
+											bind:value={affineB}
+											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+										/>
+									</div>
+									<div class="space-y-1">
+										<div class="flex items-center justify-between text-2xs">
+											<span class="text-muted-foreground">Shear Y (d)</span>
+											<span class="font-mono font-bold text-foreground">{affineD.toFixed(2)}</span>
+										</div>
+										<input
+											type="range"
+											min="-2.0"
+											max="2.0"
+											step="0.05"
+											bind:value={affineD}
+											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+										/>
+									</div>
+								</div>
 
-							<div class="grid grid-cols-2 gap-3">
-								<button
-									type="button"
-									class="p-4 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer {flipDirection === 'horizontal' ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-border bg-card text-muted-foreground hover:bg-muted'}"
-									onclick={() => (flipDirection = "horizontal")}
-								>
-									<FlipHorizontalIcon class="size-6" />
-									<span class="text-xs">Flip Horizontal</span>
-								</button>
+								<div class="grid grid-cols-2 gap-2">
+									<div class="space-y-1">
+										<div class="flex items-center justify-between text-2xs">
+											<span class="text-muted-foreground">Offset X (c)</span>
+											<span class="font-mono font-bold text-foreground">{Math.round(affineC)}px</span>
+										</div>
+										<input
+											type="range"
+											min={-Math.max(500, originalWidth)}
+											max={Math.max(500, originalWidth)}
+											step="1"
+											bind:value={affineC}
+											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+										/>
+									</div>
+									<div class="space-y-1">
+										<div class="flex items-center justify-between text-2xs">
+											<span class="text-muted-foreground">Offset Y (f)</span>
+											<span class="font-mono font-bold text-foreground">{Math.round(affineF)}px</span>
+										</div>
+										<input
+											type="range"
+											min={-Math.max(500, originalHeight)}
+											max={Math.max(500, originalHeight)}
+											step="1"
+											bind:value={affineF}
+											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+										/>
+									</div>
+								</div>
 
-								<button
-									type="button"
-									class="p-4 rounded-xl border flex flex-col items-center gap-2 transition-all cursor-pointer {flipDirection === 'vertical' ? 'border-primary bg-primary/10 text-primary font-bold' : 'border-border bg-card text-muted-foreground hover:bg-muted'}"
-									onclick={() => (flipDirection = "vertical")}
-								>
-									<FlipVerticalIcon class="size-6" />
-									<span class="text-xs">Flip Vertical</span>
-								</button>
+								<div class="flex items-center justify-between pt-1">
+									<span class="text-xs text-muted-foreground">Expand Canvas</span>
+									<input
+										type="checkbox"
+										bind:checked={affineExpand}
+										class="rounded border-border accent-primary cursor-pointer"
+									/>
+								</div>
+								<div class="flex items-center justify-between pt-1">
+									<span class="text-xs text-muted-foreground">Background Color</span>
+									<div class="flex items-center gap-1.5">
+										<input
+											type="color"
+											bind:value={affineBgColor}
+											class="size-6 p-0 border border-border rounded cursor-pointer bg-transparent"
+										/>
+										<span class="font-mono text-2xs uppercase text-foreground">{affineBgColor}</span>
+									</div>
+								</div>
 							</div>
 						</div>
 					{/if}
-				</Card.Content>
-			</Card.Root>
+				</div>
 
-			<!-- CARD 2: Saved Info (Mockup Bottom Right Card) -->
-			<Card.Root class="border border-border shadow-xs">
-				<Card.Header class="py-3 px-4 border-b border-border bg-card/60">
-					<Card.Title class="text-sm font-bold tracking-tight text-foreground">
-						Saved Info
-					</Card.Title>
-				</Card.Header>
+				<!-- Section: Quick Actions (Matching Concept 2 2x2 Grid) -->
+				<div class="space-y-2.5 pt-2 border-t border-border/80">
+					<h3
+						class="text-sm font-semibold tracking-tight text-foreground"
+					>
+						Quick Actions
+					</h3>
 
-				<Card.Content class="p-4 space-y-4">
-					<!-- Derived Filename -->
-					<div class="space-y-1.5">
-						<label for="derived-name" class="text-xs font-semibold text-foreground flex items-center justify-between">
-							<span>Derived Filename</span>
-							<PencilIcon class="size-3 text-muted-foreground" />
-						</label>
-						<Input
-							id="derived-name"
-							type="text"
-							bind:value={derivedFilename}
-							placeholder="ghim_nature_peak_transformed.jpg"
-							class="h-9 text-xs font-mono"
-						/>
+					<div class="grid grid-cols-2 gap-2">
+						{#if activeTab === "crop"}
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={centerCrop}
+							>
+								<CrosshairIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Center</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={fitToImage}
+							>
+								<ScanIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Fit to Image</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={fillCrop}
+							>
+								<MaximizeIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Fill</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={resetCrop}
+							>
+								<RotateCcwIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Reset Crop</span>
+							</Button>
+						{:else if activeTab === "affine"}
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									affineA = 1;
+									affineB = 0;
+									affineC = 0;
+									affineD = 0;
+									affineE = 1;
+									affineF = 0;
+								}}
+							>
+								<RotateCcwIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Reset Matrix</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									affineC = 0;
+									affineF = 0;
+								}}
+							>
+								<CrosshairIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Zero Offset</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									affineA = -affineA;
+								}}
+							>
+								<FlipHorizontalIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Reflect X</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									affineE = -affineE;
+								}}
+							>
+								<FlipVerticalIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Reflect Y</span>
+							</Button>
+						{:else}
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={centerCrop}
+							>
+								<CrosshairIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Center</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={fitToImage}
+							>
+								<ScanIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Fit to Image</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={fillCrop}
+							>
+								<MaximizeIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Fill</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={resetCrop}
+							>
+								<RotateCcwIcon
+									data-icon="inline-start"
+									class="size-3.5"
+								/>
+								<span>Reset</span>
+							</Button>
+						{/if}
 					</div>
-
-					<!-- Target Category -->
-					<div class="space-y-1.5">
-						<label for="category-select" class="text-xs font-semibold text-foreground">
-							Target Category
-						</label>
-						<select
-							id="category-select"
-							bind:value={selectedCategoryId}
-							class="w-full h-9 rounded-md border border-input bg-card px-3 text-xs text-foreground shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-						>
-							<option value="">Nature &gt; Landscapes &gt; Mountains</option>
-							{#each categories as cat}
-								<option value={cat.id}>{cat.name}</option>
-							{/each}
-						</select>
-					</div>
-
-					<!-- Lineage & Non-destructive Info (Exact Mockup Match) -->
-					<div class="pt-2 border-t border-border/80">
-						<p class="text-[11px] text-muted-foreground leading-relaxed">
-							<strong class="text-foreground font-semibold">Lineage:</strong>
-							Derived from <span class="font-mono text-foreground">{originalFilename}</span> &bull;
-							users/{user?.email ? user.email.split("@")[0] : "zarqi_ezzoubair"}/ (Atomic UUID)
-						</p>
-					</div>
-
-					<!-- Quick Action Buttons -->
-					<div class="pt-1 flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="sm"
-							class="flex-1 text-xs gap-1.5"
-							disabled={isDownloading}
-							onclick={handleDownloadImage}
-						>
-							<DownloadIcon class="size-3.5" />
-							<span>Download</span>
-						</Button>
-						<Button
-							size="sm"
-							class="flex-1 text-xs gap-1.5"
-							disabled={isSaving || !activeTab}
-							onclick={handleSaveDerivedImage}
-						>
-							{#if isSaving}
-								<Loader2Icon class="size-3.5 animate-spin" />
-								<span>Saving...</span>
-							{:else}
-								<PencilIcon class="size-3.5" />
-								<span>Save</span>
-							{/if}
-						</Button>
-					</div>
-				</Card.Content>
+				</div>
 			</Card.Root>
 		</div>
 	</div>
+
+	<!-- ========================================================================= -->
+	<!-- 3. BOTTOM SUMMARY CARD (Original File Info -> Arrow -> Derived Info)      -->
+	<!-- ========================================================================= -->
+	<Card.Root
+		class="shrink-0 border border-border/80 bg-card p-3 sm:p-3.5 rounded-xl shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3"
+	>
+		<!-- Left: Original Image Info -->
+		<div class="flex items-center gap-3.5 w-full sm:w-auto">
+			<div
+				class="size-12 rounded-lg overflow-hidden border border-border bg-muted shrink-0"
+			>
+				<img
+					src={currentImageUrl}
+					alt={originalFilename}
+					class="size-full object-cover"
+				/>
+			</div>
+			<div class="space-y-0.5 min-w-0">
+				<div
+					class="font-bold text-sm text-foreground truncate max-w-[220px] sm:max-w-[340px]"
+				>
+					{originalFilename}
+				</div>
+				<div class="text-xs text-muted-foreground font-mono">
+					{displayFormat} &bull; {originalWidth} &times; {originalHeight} &bull; {formatFileSize(originalFileSize)}
+				</div>
+			</div>
+		</div>
+
+		<!-- Center: Direction Arrow -->
+		<div
+			class="hidden sm:flex items-center justify-center text-primary"
+		>
+			<ArrowRightIcon class="size-5" />
+		</div>
+
+		<!-- Right: Derived Transformation Info -->
+		<div class="flex flex-col sm:items-end gap-1 w-full sm:w-auto">
+			<Badge
+				variant="secondary"
+				class="bg-primary/10 text-primary border-primary/20 font-semibold px-2.5 py-0.5 w-fit"
+			>
+				Derived Image ({activeTab
+					? activeTab.charAt(0).toUpperCase() + activeTab.slice(1)
+					: "Crop"})
+			</Badge>
+			<div class="text-xs text-muted-foreground font-mono">
+				{computedOutputWidth} &times; {computedOutputHeight} &bull; ~{formatFileSize(estimatedDerivedBytes)}
+			</div>
+		</div>
+	</Card.Root>
 </div>
 
 <!-- ========================================================================= -->
-<!-- 3. IMAGE PICKER DIALOG                                                    -->
+<!-- 4. UPLOAD IMAGE DIALOG                                                    -->
 <!-- ========================================================================= -->
-<Dialog.Root bind:open={isImagePickerOpen}>
-	<Dialog.Content class="max-w-2xl">
-		<Dialog.Header>
-			<Dialog.Title class="text-base font-bold">Select Image to Transform</Dialog.Title>
+<Dialog.Root bind:open={isUploadDialogOpen}>
+	<Dialog.Content class="max-w-md sm:max-w-lg p-5">
+		<Dialog.Header class="pb-1">
+			<Dialog.Title class="text-base font-bold text-foreground">
+				Upload Image to Transform
+			</Dialog.Title>
 			<Dialog.Description class="text-xs text-muted-foreground">
-				Choose any image from your dataset or reference archive to open in the Transformation Studio.
+				Select or drag & drop an image from your device to immediately
+				load and edit on the transformation canvas.
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<div class="py-4">
-			{#if userImages.length === 0}
-				<div class="text-center py-8 space-y-3">
-					<ImageIcon class="size-8 mx-auto text-muted-foreground opacity-50" />
-					<p class="text-xs text-muted-foreground">No custom uploaded images found in your gallery.</p>
-					<Button
-						variant="outline"
-						size="sm"
-						onclick={() => {
-							originalFilename = "ghim_nature_peak.jpg";
-							originalWidth = 1920;
-							originalHeight = 1080;
-							currentImageUrl = "/images/auth-hero.jpg";
-							resetCropToCenter();
-							isImagePickerOpen = false;
-						}}
+		{#if uploadError}
+			<div
+				class="p-2.5 rounded-md border border-destructive/30 bg-destructive/10 text-destructive text-xs flex items-center justify-between"
+			>
+				<span>{uploadError}</span>
+				<button
+					type="button"
+					class="underline font-bold cursor-pointer"
+					onclick={() => (uploadError = null)}>Dismiss</button
+				>
+			</div>
+		{/if}
+
+		<div class="py-2 space-y-3.5">
+			<!-- Drop Zone -->
+			<div
+				role="button"
+				tabindex="0"
+				aria-label="Upload image drop zone"
+				class="relative rounded-xl border-2 border-dashed p-6 flex flex-col items-center justify-center gap-2.5 text-center cursor-pointer transition-all {isDraggingFile
+					? 'border-primary bg-primary/5'
+					: 'border-border/80 bg-muted/20 hover:border-primary/50 hover:bg-muted/40'}"
+				onclick={() => uploadFileInputRef?.click()}
+				onkeydown={(e) => {
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						uploadFileInputRef?.click();
+					}
+				}}
+				ondragover={handleDragOver}
+				ondragleave={handleDragLeave}
+				ondrop={handleDrop}
+			>
+				<input
+					bind:this={uploadFileInputRef}
+					type="file"
+					accept="image/png, image/jpeg, image/webp, image/gif, image/tiff"
+					class="hidden"
+					onchange={(e) => {
+						const input = e.currentTarget;
+						if (input.files && input.files[0]) {
+							handleFileSelected(input.files[0]);
+						}
+					}}
+				/>
+
+				{#if uploadPreviewUrl}
+					<!-- Selected File Preview -->
+					<div
+						class="relative max-h-36 max-w-full rounded-md overflow-hidden border border-border shadow-xs"
 					>
-						Load GHIM-10K Sample Mountain Peak
-					</Button>
-				</div>
-			{:else}
-				<div class="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[360px] overflow-y-auto p-1">
-					{#each userImages as img}
-						<button
-							type="button"
-							class="group relative aspect-4/3 rounded-lg border overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary {currentImage?.id === img.id ? 'ring-2 ring-primary border-primary' : 'border-border'}"
-							onclick={() => selectImage(img)}
+						<img
+							src={uploadPreviewUrl}
+							alt={uploadFile?.name || "Selected Preview"}
+							class="max-h-36 max-w-full object-contain"
+						/>
+					</div>
+					<div class="space-y-0.5">
+						<p
+							class="text-xs font-semibold text-foreground truncate max-w-[260px]"
 						>
-							<img
-								src={imageService.getImageFileUrl(img.id)}
-								alt={img.filename}
-								class="size-full object-cover group-hover:scale-105 transition-transform"
-							/>
-							<div class="absolute inset-x-0 bottom-0 bg-background/90 backdrop-blur-xs p-1 text-[10px] truncate text-center font-mono">
-								{img.filename}
-							</div>
-						</button>
-					{/each}
+							{uploadFile?.name}
+						</p>
+						<p class="text-[11px] font-mono text-muted-foreground">
+							{uploadFile
+								? (uploadFile.size / 1024).toFixed(1) + " KB"
+								: ""}
+						</p>
+					</div>
+					<span class="text-[11px] text-primary underline"
+						>Click to choose another image</span
+					>
+				{:else}
+					<div
+						class="size-11 rounded-full bg-primary/10 text-primary flex items-center justify-center"
+					>
+						<UploadCloudIcon class="size-5" />
+					</div>
+					<div class="space-y-1">
+						<p class="text-xs font-semibold text-foreground">
+							Click to browse or drag & drop image here
+						</p>
+						<p class="text-[11px] text-muted-foreground">
+							Supports PNG, JPEG, WEBP, GIF, and TIFF (up to 20MB)
+						</p>
+					</div>
+				{/if}
+			</div>
+
+			<!-- Optional Category Assignment -->
+			{#if categories.length > 0}
+				<div class="space-y-1">
+					<label
+						for="upload-category"
+						class="text-xs font-medium text-foreground"
+					>
+						Assign Category (Optional)
+					</label>
+					<select
+						id="upload-category"
+						bind:value={uploadCategoryId}
+						class="w-full h-8.5 rounded-md border border-input bg-card px-2.5 text-xs text-foreground shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					>
+						<option value="">No Category (Uncategorized)</option>
+						{#each categories as cat}
+							<option value={cat.id}>{cat.name}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
+
+			{#if isUploadingImage && uploadProgress > 0}
+				<!-- Progress Bar -->
+				<div class="space-y-1">
+					<div
+						class="flex items-center justify-between text-[11px] font-mono text-muted-foreground"
+					>
+						<span>Uploading image...</span>
+						<span>{uploadProgress}%</span>
+					</div>
+					<div
+						class="h-1.5 w-full bg-muted rounded-full overflow-hidden"
+					>
+						<div
+							class="h-full bg-primary transition-all duration-200"
+							style="width: {uploadProgress}%;"
+						></div>
+					</div>
 				</div>
 			{/if}
 		</div>
 
-		<Dialog.Footer class="flex justify-between items-center sm:justify-between">
-			<Button href="/dashboard/upload" variant="outline" size="sm" class="text-xs gap-1.5">
-				Upload New Image
-				<ExternalLinkIcon class="size-3" />
-			</Button>
-			<Button variant="ghost" size="sm" onclick={() => (isImagePickerOpen = false)}>
+		<Dialog.Footer
+			class="flex justify-between items-center sm:justify-between pt-1"
+		>
+			<Button
+				variant="ghost"
+				size="sm"
+				class="text-xs"
+				onclick={() => {
+					isUploadDialogOpen = false;
+					uploadFile = null;
+					if (uploadPreviewUrl) {
+						URL.revokeObjectURL(uploadPreviewUrl);
+						uploadPreviewUrl = null;
+					}
+				}}
+			>
 				Cancel
 			</Button>
-		</Dialog.Footer>
-	</Dialog.Content>
-</Dialog.Root>
 
-<!-- ========================================================================= -->
-<!-- 4. TRANSFORMATION PARAMS RAW MODAL                                        -->
-<!-- ========================================================================= -->
-<Dialog.Root bind:open={showParamsDialog}>
-	<Dialog.Content class="max-w-md">
-		<Dialog.Header>
-			<Dialog.Title class="text-sm font-bold flex items-center gap-2">
-				<CodeIcon class="size-4 text-primary" />
-				Transformation Parameters Matrix
-			</Dialog.Title>
-			<Dialog.Description class="text-xs text-muted-foreground">
-				JSON representation passed to the deterministic TransformEngine backend pipeline.
-			</Dialog.Description>
-		</Dialog.Header>
-
-		<div class="py-2">
-			<pre class="p-3 rounded-lg bg-muted text-foreground text-xs font-mono overflow-x-auto border border-border">
-{JSON.stringify(
-	{
-		operation: activeTab || "none",
-		params: activeParamsJson,
-		dimensions: {
-			original: `${originalWidth}x${originalHeight}`,
-			computed_output: `${computedOutputWidth}x${computedOutputHeight}`
-		}
-	},
-	null,
-	2
-)}
-			</pre>
-		</div>
-
-		<Dialog.Footer>
-			<Button size="sm" class="text-xs" onclick={() => (showParamsDialog = false)}>
-				Close
+			<Button
+				size="sm"
+				class="text-xs font-semibold"
+				disabled={!uploadFile || isUploadingImage}
+				onclick={submitUpload}
+			>
+				{#if isUploadingImage}
+					<Loader2Icon class="size-3.5 animate-spin mr-1.5" />
+					<span>Uploading...</span>
+				{:else}
+					<span>Load in Canvas</span>
+				{/if}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

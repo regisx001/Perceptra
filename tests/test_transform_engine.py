@@ -132,3 +132,60 @@ def test_compute_output_dimensions():
     # Shear
     w, h = TransformEngine.compute_output_dimensions(100, 80, "shear", {"shear_x": 0.25, "shear_y": 0.0, "expand": True})
     assert (w, h) == (120, 80)
+
+    # Affine identity
+    w, h = TransformEngine.compute_output_dimensions(100, 80, "affine", {"matrix": [1, 0, 0, 0, 1, 0], "expand": True})
+    assert (w, h) == (100, 80)
+
+    # Affine scale 2x with expand
+    w, h = TransformEngine.compute_output_dimensions(100, 80, "affine", {"matrix": [2, 0, 0, 0, 2, 0], "expand": True})
+    assert (w, h) == (200, 160)
+
+    # Affine without expand
+    w, h = TransformEngine.compute_output_dimensions(100, 80, "affine", {"matrix": [2, 0, 0, 0, 2, 0], "expand": False})
+    assert (w, h) == (100, 80)
+
+
+def test_affine_identity():
+    img_bytes = make_test_image(size=(100, 80))
+    res = TransformEngine.apply_transform(
+        img_bytes,
+        "affine",
+        {"matrix": [1, 0, 0, 0, 1, 0], "expand": True},
+    )
+    assert res.width == 100
+    assert res.height == 80
+    assert res.format == "PNG"
+
+
+def test_affine_scale_with_expansion():
+    img_bytes = make_test_image(size=(100, 80))
+    res = TransformEngine.apply_transform(
+        img_bytes,
+        "affine",
+        {"matrix": [1.5, 0, 0, 0, 1.5, 0], "expand": True},
+    )
+    assert res.width == 150
+    assert res.height == 120
+
+
+def test_affine_decomposed_params():
+    img_bytes = make_test_image(size=(100, 80))
+    res = TransformEngine.apply_transform(
+        img_bytes,
+        "affine",
+        {"scale_x": 2.0, "scale_y": 1.0, "expand": True},
+    )
+    assert res.width == 200
+    assert res.height == 80
+
+
+def test_affine_singular_matrix_raises():
+    img_bytes = make_test_image(size=(100, 80))
+    with pytest.raises(InvalidTransformParamsError):
+        TransformEngine.apply_transform(
+            img_bytes,
+            "affine",
+            {"matrix": [1, 1, 0, 1, 1, 0]},  # det = 1*1 - 1*1 = 0
+        )
+
