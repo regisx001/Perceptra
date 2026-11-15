@@ -92,15 +92,24 @@ def get_image(image_id: str):
 def get_image_file(image_id: str):
     user_id = str(get_jwt_identity())
     as_attachment = request.args.get("download", "false").lower() in {"true", "1", "yes"}
+    preview = request.args.get("preview", "false").lower() in {"true", "1", "yes"}
 
     service = get_image_service()
-    image, stream = service.open_image_stream(user_id=user_id, image_id=image_id)
+    image, stream, mime_type = service.open_image_stream(
+        user_id=user_id,
+        image_id=image_id,
+        preview=preview,
+    )
+
+    download_name = image.filename
+    if preview and mime_type == "image/jpeg" and not download_name.lower().endswith((".jpg", ".jpeg")):
+        download_name = f"{download_name.rsplit('.', 1)[0]}_preview.jpg"
 
     return send_file(
         stream,
-        mimetype=image.mime_type,
+        mimetype=mime_type,
         as_attachment=as_attachment,
-        download_name=image.filename,
+        download_name=download_name,
     )
 
 
@@ -164,3 +173,72 @@ def bulk_delete_images():
     service = get_image_service()
     deleted_count = service.bulk_delete_images(user_id=user_id, image_ids=image_ids)
     return jsonify({"success": True, "deleted_count": deleted_count}), 200
+
+
+@images_bp.route("/<image_id>/transform-validate", methods=["POST"])
+@jwt_required()
+def transform_validate_route(image_id: str):
+    user_id = str(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+
+    operation = data.get("operation")
+    if not operation or not isinstance(operation, str):
+        return jsonify({"success": False, "error": "operation field is required."}), 400
+
+    params = data.get("params")
+    if not isinstance(params, dict):
+        return jsonify({"success": False, "error": "params object is required."}), 400
+
+    service = get_image_service()
+    result = service.validate_transform_dimensions(
+        user_id=user_id,
+        image_id=image_id,
+        operation=operation,
+        params=params,
+    )
+
+    return jsonify({"success": True, **result}), 200
+
+
+@images_bp.route("/<image_id>/transform", methods=["POST"])
+@jwt_required()
+def transform_image_route(image_id: str):
+    user_id = str(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+
+    operation = data.get("operation")
+    if not operation or not isinstance(operation, str):
+        return jsonify({"success": False, "error": "operation field is required."}), 400
+
+    params = data.get("params")
+    if not isinstance(params, dict):
+        return jsonify({"success": False, "error": "params object is required."}), 400
+
+    filename = data.get("filename")
+    category_id = data.get("category_id")
+
+    service = get_image_service()
+    derived = service.transform_image(
+        user_id=user_id,
+        image_id=image_id,
+        operation=operation,
+        params=params,
+        filename=filename,
+        category_id=category_id,
+    )
+
+    return jsonify({"success": True, "image": derived.to_dict()}), 201
+
+
+@images_bp.route("/<image_id>/derivatives", methods=["GET"])
+@jwt_required()
+def list_derivatives_route(image_id: str):
+    user_id = str(get_jwt_identity())
+    service = get_image_service()
+    derivatives = service.list_derivatives(user_id=user_id, image_id=image_id)
+
+    return jsonify({
+        "success": True,
+        "parent_image_id": image_id,
+        "derivatives": [d.to_dict() for d in derivatives],
+    }), 200

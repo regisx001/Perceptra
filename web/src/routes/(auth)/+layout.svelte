@@ -17,7 +17,7 @@
 
 	onMount(async () => {
 		if (auth.isAuthenticated()) {
-			await goto("/", { replaceState: true });
+			await goto("/dashboard", { replaceState: true });
 		} else {
 			isChecking = false;
 		}

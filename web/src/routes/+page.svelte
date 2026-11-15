@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import * as m from '#lib/paraglide/messages.js';
 	import { useLocale } from '#lib/i18n.svelte.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -27,8 +28,18 @@
 	const locale = useLocale();
 	let currentUser = $state<User | null>(null);
 	let emailSignup = $state('');
+	let isRedirecting = $state(typeof window !== 'undefined' && auth.isAuthenticated());
+
+	if (typeof window !== 'undefined' && auth.isAuthenticated()) {
+		goto('/dashboard', { replaceState: true });
+	}
 
 	onMount(async () => {
+		if (auth.isAuthenticated()) {
+			isRedirecting = true;
+			await goto('/dashboard', { replaceState: true });
+			return;
+		}
 		currentUser = auth.getUser();
 		try {
 			const updated = await auth.fetchCurrentUser();
@@ -140,6 +151,14 @@
 	<title>Perceptra • Content-Based Image Retrieval Platform (GHIM-10K)</title>
 </svelte:head>
 
+{#if isRedirecting}
+	<div class="flex min-h-screen items-center justify-center bg-background">
+		<div class="flex items-center gap-3 text-muted-foreground text-sm">
+			<div class="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+			<span>Redirecting to dashboard...</span>
+		</div>
+	</div>
+{:else}
 <div class="min-h-screen bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary">
 	<!-- ========================================================================= -->
 	<!-- 1. GITHUB-STYLE STICKY NAVBAR                                             -->
@@ -1013,3 +1032,4 @@
 		</div>
 	</footer>
 </div>
+{/if}

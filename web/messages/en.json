@@ -116,6 +116,7 @@
   "categories_all_loaded": "All {total} images loaded",
   "nav_overview": "Overview",
   "nav_images": "Images",
+  "nav_transform": "Image Transform",
   "nav_upload_images": "Upload Images",
   "nav_categories": "Categories",
   "images_title": "All Images",

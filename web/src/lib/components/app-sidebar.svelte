@@ -3,6 +3,7 @@
 	import LayoutDashboardIcon from "@tabler/icons-svelte/icons/layout-dashboard";
 	import UploadIcon from "@tabler/icons-svelte/icons/upload";
 	import FolderTreeIcon from "@tabler/icons-svelte/icons/folder";
+	import TransformIcon from "@tabler/icons-svelte/icons/transform";
 	import HelpIcon from "@tabler/icons-svelte/icons/help";
 	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
@@ -25,6 +26,11 @@
 			title: m.nav_images(),
 			url: "/dashboard/images",
 			icon: PhotoIcon,
+		},
+		{
+			title: m.nav_transform(),
+			url: "/dashboard/transform",
+			icon: TransformIcon,
 		},
 		{
 			title: m.nav_upload_images(),

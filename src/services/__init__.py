@@ -16,6 +16,12 @@ from src.services.storage import (
     StorageNotFoundError,
     StorageWriteError,
 )
+from src.services.transform_engine import (
+    InvalidTransformParamsError,
+    TransformedImageResult,
+    TransformEngine,
+    TransformError,
+)
 
 __all__ = [
     "Storage",
@@ -32,4 +38,8 @@ __all__ = [
     "ResourceNotFoundError",
     "SUPPORTED_IMAGE_FORMATS",
     "ValidatedImageMetadata",
+    "TransformEngine",
+    "TransformError",
+    "InvalidTransformParamsError",
+    "TransformedImageResult",
 ]

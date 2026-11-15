@@ -272,6 +272,84 @@ class ImageService {
 
 		return data.deleted_count ?? 0;
 	}
+
+	/**
+	 * Validate transformation dimensions without modifying files.
+	 * Calls POST /api/v1/images/:id/transform-validate
+	 */
+	async validateTransform(
+		imageId: string,
+		operation: string,
+		params: Record<string, any>
+	): Promise<{
+		success: boolean;
+		image_id: string;
+		original_width: number;
+		original_height: number;
+		new_width: number;
+		new_height: number;
+		aspect_ratio: number;
+		operation: string;
+		params: Record<string, any>;
+	}> {
+		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/transform-validate`, {
+			method: "POST",
+			headers: this.getHeaders("application/json"),
+			body: JSON.stringify({ operation, params })
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || `Failed to validate transformation (${response.status})`);
+		}
+
+		return data;
+	}
+
+	/**
+	 * Execute transformation creating a derived image.
+	 * Calls POST /api/v1/images/:id/transform
+	 */
+	async transformImage(
+		imageId: string,
+		payload: {
+			operation: string;
+			params: Record<string, any>;
+			filename?: string;
+			category_id?: string | number | null;
+		}
+	): Promise<ImageItem> {
+		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/transform`, {
+			method: "POST",
+			headers: this.getHeaders("application/json"),
+			body: JSON.stringify(payload)
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || `Failed to transform image (${response.status})`);
+		}
+
+		return data.image;
+	}
+
+	/**
+	 * List all derived images from a parent image.
+	 * Calls GET /api/v1/images/:id/derivatives
+	 */
+	async getDerivatives(imageId: string): Promise<ImageItem[]> {
+		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/derivatives`, {
+			method: "GET",
+			headers: this.getHeaders("application/json")
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || `Failed to get derivatives (${response.status})`);
+		}
+
+		return data.derivatives || [];
+	}
 }
 
 export const imageService = new ImageService();

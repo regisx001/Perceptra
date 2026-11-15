@@ -1,15 +1,20 @@
 import hashlib
 import io
 from dataclasses import dataclass
-from typing import BinaryIO, Optional
+from typing import Any, BinaryIO, Optional
 
-from PIL import Image as PILImage, UnidentifiedImageError
+from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
 from sqlalchemy.exc import SQLAlchemyError
 
 from src.extensions import db
 from src.models.category import Category
 from src.models.image import Image
 from src.services.storage import StorageBackend, StorageError
+from src.services.transform_engine import (
+    InvalidTransformParamsError,
+    TransformEngine,
+    TransformError,
+)
 
 
 class ImageServiceError(Exception):
@@ -151,6 +156,106 @@ class ImageService:
             self.storage.delete(storage_key)
             raise ImageServiceError("Database error while saving image metadata.") from exc
 
+    def transform_image(
+        self,
+        user_id: str,
+        image_id: str,
+        operation: str,
+        params: dict[str, Any],
+        filename: Optional[str] = None,
+        category_id: Optional[str] = None,
+    ) -> Image:
+        """
+        Execute a transformation on an owned image, creating a new derived child Image.
+        """
+        # 1. Fetch original parent image and verify ownership
+        original = self.get_user_image(user_id, image_id)
+
+        # 2. Verify target category if specified (defaults to parent's category_id)
+        if category_id is not None:
+            target_category_id = self._verify_category_ownership(user_id, category_id)
+        else:
+            target_category_id = original.category_id
+
+        # 3. Read source image bytes from storage
+        try:
+            with self.storage.open(original.storage_key, "rb") as f_in:
+                source_bytes = f_in.read()
+        except StorageError as exc:
+            raise ResourceNotFoundError(f"Source image file missing from storage: {exc}") from exc
+
+        # 4. Apply transformation using TransformEngine
+        try:
+            res = TransformEngine.apply_transform(
+                image_bytes=source_bytes,
+                operation=operation,
+                params=params,
+            )
+        except InvalidTransformParamsError as exc:
+            raise ImageServiceError(str(exc)) from exc
+        except TransformError as exc:
+            raise ImageServiceError(f"Transformation failed: {exc}") from exc
+
+        # 5. Persist derived image into derived/{user_id}/{uuid}.{ext}
+        derived_directory = f"derived/{user_id}"
+        try:
+            storage_key = self.storage.save(
+                file=io.BytesIO(res.data),
+                directory=derived_directory,
+                extension=res.extension,
+            )
+        except StorageError as exc:
+            raise ImageServiceError(f"Failed to persist transformed image: {exc}") from exc
+
+        # 6. Determine safe filename
+        if filename and filename.strip():
+            safe_filename = filename.strip()[:255]
+        else:
+            stem = original.filename.rsplit(".", 1)[0] if "." in original.filename else original.filename
+            safe_filename = f"{stem}_{operation.lower()}{res.extension}"[:255]
+
+        # 7. Persist child Image in database with compensating rollback
+        derived_image = Image(
+            owner_id=user_id,
+            category_id=target_category_id,
+            parent_image_id=original.id,
+            filename=safe_filename,
+            storage_key=storage_key,
+            source_type="derived",
+            mime_type=res.mime_type,
+            file_size=res.file_size,
+            width=res.width,
+            height=res.height,
+            checksum=res.checksum,
+            transformation_params={
+                "operation": operation.lower(),
+                "params": params,
+            },
+            processing_status="pending",
+        )
+
+        try:
+            db.session.add(derived_image)
+            db.session.commit()
+            return derived_image
+        except SQLAlchemyError as exc:
+            db.session.rollback()
+            self.storage.delete(storage_key)
+            raise ImageServiceError("Database error while recording transformed image.") from exc
+
+    def list_derivatives(self, user_id: str, image_id: str) -> list[Image]:
+        """
+        List all derived versions of an image owned by the user.
+        """
+        # Ensure parent exists and belongs to user
+        self.get_user_image(user_id, image_id)
+
+        return (
+            Image.query.filter_by(parent_image_id=image_id, owner_id=user_id)
+            .order_by(Image.created_at.desc())
+            .all()
+        )
+
     def list_user_images(
         self,
         user_id: str,
@@ -177,13 +282,94 @@ class ImageService:
             raise ResourceNotFoundError("Image not found.")
         return image
 
-    def open_image_stream(self, user_id: str, image_id: str) -> tuple[Image, BinaryIO]:
+    def open_image_stream(
+        self,
+        user_id: str,
+        image_id: str,
+        preview: bool = False,
+        max_preview_edge: int = 800,
+    ) -> tuple[Image, BinaryIO, str]:
+        """
+        Open image stream. If preview=True and image dimensions exceed max_preview_edge,
+        downscale the stream in-memory via Pillow thumbnail into a lightweight JPEG (quality=80).
+        Returns: (image_model, stream, mime_type)
+        """
         image = self.get_user_image(user_id, image_id)
         try:
             stream = self.storage.open(image.storage_key)
-            return image, stream
         except StorageError as exc:
             raise ResourceNotFoundError("Physical image file missing from storage.") from exc
+
+        if not preview or (image.width <= max_preview_edge and image.height <= max_preview_edge):
+            return image, stream, image.mime_type
+
+        # Generate lightweight downscaled preview in-memory
+        try:
+            with stream:
+                raw_bytes = stream.read()
+
+            with PILImage.open(io.BytesIO(raw_bytes)) as img:
+                img = ImageOps.exif_transpose(img) or img
+                if img.mode in ("RGBA", "LA", "P"):
+                    # Flatten onto white background for JPEG
+                    bg = PILImage.new("RGB", img.size, (255, 255, 255))
+                    if img.mode == "RGBA":
+                        bg.paste(img, mask=img.split()[3])
+                    else:
+                        bg.paste(img.convert("RGBA"), mask=img.convert("RGBA").split()[3])
+                    preview_img = bg
+                elif img.mode != "RGB":
+                    preview_img = img.convert("RGB")
+                else:
+                    preview_img = img.copy()
+
+                preview_img.thumbnail((max_preview_edge, max_preview_edge), resample=PILImage.Resampling.LANCZOS)
+                preview_buffer = io.BytesIO()
+                preview_img.save(preview_buffer, format="JPEG", quality=80, optimize=True)
+                preview_buffer.seek(0)
+                return image, preview_buffer, "image/jpeg"
+        except Exception as exc:
+            # Fallback to original stream if thumbnail creation fails
+            try:
+                fallback_stream = self.storage.open(image.storage_key)
+                return image, fallback_stream, image.mime_type
+            except Exception:
+                raise ImageServiceError(f"Failed to generate image preview: {exc}") from exc
+
+    def validate_transform_dimensions(
+        self,
+        user_id: str,
+        image_id: str,
+        operation: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Pure math validation query using only SQLite width/height metadata.
+        Does not touch physical storage or pixel buffers.
+        """
+        image = self.get_user_image(user_id, image_id)
+        try:
+            new_w, new_h = TransformEngine.compute_output_dimensions(
+                width=image.width,
+                height=image.height,
+                operation=operation,
+                params=params,
+            )
+        except InvalidTransformParamsError as exc:
+            raise ImageServiceError(str(exc)) from exc
+
+        aspect_ratio = round(new_w / new_h, 4) if new_h > 0 else 0.0
+
+        return {
+            "image_id": image.id,
+            "original_width": image.width,
+            "original_height": image.height,
+            "new_width": new_w,
+            "new_height": new_h,
+            "aspect_ratio": aspect_ratio,
+            "operation": (operation or "").strip().lower(),
+            "params": params,
+        }
 
     def assign_category(
         self, user_id: str, image_ids: list[str], category_id: Optional[str]

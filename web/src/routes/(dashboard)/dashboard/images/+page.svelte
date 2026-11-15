@@ -17,6 +17,7 @@
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 	import FolderIcon from "@lucide/svelte/icons/folder";
 	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+	import Wand2Icon from "@lucide/svelte/icons/wand-2";
 
 	interface GalleryImage {
 		id: string;
@@ -307,6 +308,15 @@
 								<ImageIcon class="size-6 opacity-40 mb-1" />
 								<span class="text-[10px] truncate max-w-full font-mono">{img.filename}</span>
 							</div>
+
+							<!-- Floating Action Buttons -->
+							<a
+								href="/dashboard/transform?image_id={img.id}"
+								class="absolute top-1.5 left-1.5 size-6 rounded-md bg-background/80 hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs"
+								title="Transform in Studio"
+							>
+								<Wand2Icon class="size-3" />
+							</a>
 
 							<!-- Floating Delete Button -->
 							<button
