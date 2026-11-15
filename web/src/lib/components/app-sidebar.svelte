@@ -68,25 +68,29 @@
 	let { ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
 
-<Sidebar.Root collapsible="offcanvas" {...restProps}>
-	<Sidebar.Header class="border-b border-sidebar-border px-3 py-3">
+<Sidebar.Root collapsible="icon" {...restProps}>
+	<Sidebar.Header class="border-b border-sidebar-border px-3 py-2.5 group-data-[collapsible=icon]:p-1.5">
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
-				<Sidebar.MenuButton size="lg" class="h-11 rounded-lg data-[slot=sidebar-menu-button]:!p-2 hover:bg-sidebar-accent">
+				<Sidebar.MenuButton
+					size="lg"
+					tooltipContent="Perceptra"
+					class="h-11 rounded-lg data-[slot=sidebar-menu-button]:!p-2 hover:bg-sidebar-accent group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-1!"
+				>
 					{#snippet child({ props })}
-						<a href="/" {...props} class="flex items-center gap-3">
+						<a href="/" {...props} class="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
 							<!-- Brand Logo Image matching the Auth & Landing pages -->
 							<img
 								src="/logo-black.png"
 								alt="Perceptra Logo"
-								class="h-8 w-auto object-contain dark:hidden"
+								class="size-7 w-auto object-contain dark:hidden shrink-0 group-data-[collapsible=icon]:size-6"
 							/>
 							<img
 								src="/logo-beige.png"
 								alt="Perceptra Logo"
-								class="hidden h-8 w-auto object-contain dark:block"
+								class="hidden size-7 w-auto object-contain dark:block shrink-0 group-data-[collapsible=icon]:size-6"
 							/>
-							<div class="flex flex-col gap-0.5 leading-none">
+							<div class="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
 								<span class="font-bold tracking-tight text-sm text-foreground">Perceptra</span>
 								<span class="text-[11px] text-muted-foreground font-medium">Group 13 &bull; GHIM-10K</span>
 							</div>
@@ -102,7 +106,8 @@
 		<NavSecondary items={navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 
-	<Sidebar.Footer class="border-t border-sidebar-border p-2">
+	<Sidebar.Footer class="border-t border-sidebar-border p-2 group-data-[collapsible=icon]:p-1.5">
 		<NavUser user={sidebarData.user} />
 	</Sidebar.Footer>
+	<Sidebar.Rail />
 </Sidebar.Root>

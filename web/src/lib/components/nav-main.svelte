@@ -16,14 +16,15 @@
 <Sidebar.Group class="py-2">
 	<Sidebar.GroupContent class="flex flex-col gap-2">
 		<!-- Primary Call to Action Button in Sidebar -->
-		<div class="px-2 pb-1">
+		<div class="px-2 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
 			<Button
 				href="/search"
-				class="w-full justify-start gap-2 rounded-lg font-semibold shadow-xs"
+				class="w-full justify-start gap-2 rounded-lg font-semibold shadow-xs group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
 				size="sm"
+				title={m.nav_new_visual_query()}
 			>
 				<PhotoPlusIcon class="size-4 shrink-0" />
-				<span class="truncate">{m.nav_new_visual_query()}</span>
+				<span class="truncate group-data-[collapsible=icon]:hidden">{m.nav_new_visual_query()}</span>
 			</Button>
 		</div>
 

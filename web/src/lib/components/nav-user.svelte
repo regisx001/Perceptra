@@ -17,12 +17,12 @@
 <Sidebar.Menu>
 	<Sidebar.MenuItem>
 		<div
-			class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start transition-colors hover:bg-sidebar-accent/50"
+			class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-start transition-colors hover:bg-sidebar-accent/50 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
 		>
 			<a
 				href="/settings"
-				class="flex flex-1 items-center gap-2.5 min-w-0 group"
-				title={m.nav_settings()}
+				class="flex flex-1 items-center gap-2.5 min-w-0 group group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center"
+				title={`${user.name} (${user.email})`}
 			>
 				<Avatar.Root class="size-8 rounded-full border shrink-0">
 					<Avatar.Image src={user.avatar} alt={user.name} />
@@ -30,7 +30,7 @@
 						{user.name.substring(0, 2).toUpperCase()}
 					</Avatar.Fallback>
 				</Avatar.Root>
-				<div class="grid flex-1 text-start text-xs leading-tight min-w-0">
+				<div class="grid flex-1 text-start text-xs leading-tight min-w-0 group-data-[collapsible=icon]:hidden">
 					<span class="truncate font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{user.name}</span>
 					<span class="truncate text-muted-foreground text-[11px]" title={user.email}>
 						{user.email}
@@ -41,7 +41,7 @@
 				type="button"
 				onclick={handleLogout}
 				title={m.auth_logout()}
-				class="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/10 transition-colors shrink-0 cursor-pointer"
+				class="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/10 transition-colors shrink-0 cursor-pointer group-data-[collapsible=icon]:hidden"
 				aria-label={m.auth_logout()}
 			>
 				<LogoutIcon class="size-4" />
