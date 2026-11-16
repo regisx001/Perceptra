@@ -289,7 +289,10 @@
 			<!-- Render Image Cards: 5 images per row on desktop -->
 			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4.5 sm:gap-5">
 				{#each filteredImages as img (img.id)}
-					<div class="group relative flex flex-col rounded-lg border border-border/70 bg-card overflow-hidden shadow-2xs hover:shadow-xs hover:border-primary/40 transition-all">
+					<a
+						href="/dashboard/images/{img.id}"
+						class="group relative flex flex-col rounded-lg border border-border/70 bg-card overflow-hidden shadow-2xs hover:shadow-xs hover:border-primary/40 transition-all text-left"
+					>
 						<!-- Image Thumbnail with fallback -->
 						<div class="aspect-4/3 w-full overflow-hidden bg-muted relative">
 							<img
@@ -309,18 +312,23 @@
 							</div>
 
 							<!-- Floating Action Buttons -->
-							<a
-								href="/dashboard/transform?image_id={img.id}"
-								class="absolute top-2 left-2 size-7 rounded-md bg-background/85 hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer"
+							<button
+								type="button"
+								class="absolute top-2 left-2 size-7 rounded-md bg-background/85 hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer z-10"
 								title="Transform in Studio"
+								onclick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									window.location.href = `/dashboard/transform?image_id=${img.id}`;
+								}}
 							>
 								<Wand2Icon class="size-3.5" />
-							</a>
+							</button>
 
 							<!-- Floating Delete Button -->
 							<button
 								type="button"
-								class="absolute top-2 right-2 size-7 rounded-md bg-background/85 hover:bg-destructive hover:text-destructive-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer"
+								class="absolute top-2 right-2 size-7 rounded-md bg-background/85 hover:bg-destructive hover:text-destructive-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer z-10"
 								onclick={(e) => promptDelete(img, e)}
 								title="Delete Image"
 							>
@@ -330,7 +338,7 @@
 
 						<!-- Card Details -->
 						<div class="p-2.5 bg-background/80 backdrop-blur-xs flex flex-col gap-1">
-							<p class="truncate text-xs font-semibold text-foreground" title={img.filename}>
+							<p class="truncate text-xs font-semibold text-foreground group-hover:text-primary transition-colors" title={img.filename}>
 								{img.filename}
 							</p>
 							<div class="flex items-center justify-between text-[11px] text-muted-foreground">
@@ -344,7 +352,7 @@
 								{/if}
 							</div>
 						</div>
-					</div>
+					</a>
 				{/each}
 			</div>
 

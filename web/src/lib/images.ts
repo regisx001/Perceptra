@@ -8,7 +8,7 @@ export interface ImageItem {
 	filename: string;
 	storage_key: string;
 	source_type: string;
-	processing_status: "pending" | "processing" | "completed" | "failed";
+	processing_status: "pending" | "processing" | "indexed" | "completed" | "failed" | string;
 	mime_type: string;
 	file_size: number;
 	width?: number | null;
@@ -16,6 +16,81 @@ export interface ImageItem {
 	checksum?: string | null;
 	transformation_params?: any;
 	created_at?: string;
+}
+
+export interface ColorHistogramFeature {
+	channels: {
+		h: number[];
+		s: number[];
+		v: number[];
+	};
+	vector: number[];
+}
+
+export interface ColorMomentsFeature {
+	channels: {
+		h: { mean: number; std: number; skewness: number };
+		s: { mean: number; std: number; skewness: number };
+		v: { mean: number; std: number; skewness: number };
+	};
+	vector: number[];
+}
+
+export interface DominantColorCluster {
+	rank: number;
+	rgb: [number, number, number];
+	hex: string;
+	percentage: number;
+}
+
+export interface DominantColorsFeature {
+	clusters: DominantColorCluster[];
+	vector: number[];
+}
+
+export interface GlcmMetricSet {
+	contrast: number;
+	correlation: number;
+	energy: number;
+	homogeneity: number;
+}
+
+export interface GlcmFeature {
+	summary: GlcmMetricSet;
+	by_angle: Record<string, GlcmMetricSet>;
+	vector: number[];
+}
+
+export interface LbpHistogramFeature {
+	bins: number[];
+	labels: string[];
+	vector: number[];
+}
+
+export interface DescriptorsMap {
+	color_histogram?: ColorHistogramFeature;
+	color_moments?: ColorMomentsFeature;
+	dominant_colors?: DominantColorsFeature;
+	glcm?: GlcmFeature;
+	lbp_histogram?: LbpHistogramFeature;
+	[key: string]: any;
+}
+
+export interface ImageDescriptorsResponse {
+	success: boolean;
+	image_id: string;
+	processing_status: string;
+	available_features: string[];
+	descriptors: DescriptorsMap;
+	error?: string;
+}
+
+export interface ExtractDescriptorsResponse {
+	success: boolean;
+	image_id: string;
+	processing_status: string;
+	descriptors: DescriptorsMap;
+	error?: string;
 }
 
 export interface ImagePagination {
@@ -198,6 +273,13 @@ class ImageService {
 	}
 
 	/**
+	 * Alias for getImageFileUrl.
+	 */
+	getImageUrl(imageId: string, download = false): string {
+		return this.getImageFileUrl(imageId, download);
+	}
+
+	/**
 	 * Update an image's category assignment.
 	 * Calls PATCH /api/v1/images/:id
 	 */
@@ -349,6 +431,65 @@ class ImageService {
 		}
 
 		return data.derivatives || [];
+	}
+
+	/**
+	 * Retrieve stored visual descriptors for an image.
+	 * Calls GET /api/v1/images/:id/descriptors
+	 */
+	async getImageDescriptors(imageId: string): Promise<ImageDescriptorsResponse> {
+		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/descriptors`, {
+			method: "GET",
+			headers: this.getHeaders("application/json")
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || `Failed to fetch descriptors (${response.status})`);
+		}
+
+		return data;
+	}
+
+	/**
+	 * Extract or recompute visual descriptors for an image.
+	 * Calls POST /api/v1/descriptors/extract/:id
+	 */
+	async extractDescriptors(
+		imageId: string,
+		payload?: { feature_types?: string[]; force?: boolean }
+	): Promise<ExtractDescriptorsResponse> {
+		const response = await fetch(`${this.apiBase}/descriptors/extract/${encodeURIComponent(imageId)}`, {
+			method: "POST",
+			headers: this.getHeaders("application/json"),
+			body: JSON.stringify(payload || {})
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || `Failed to extract descriptors (${response.status})`);
+		}
+
+		return data;
+	}
+
+	/**
+	 * Update image metadata such as category_id or filename.
+	 * Calls PATCH /api/v1/images/:id
+	 */
+	async updateImage(imageId: string, payload: { category_id?: string | null; filename?: string }): Promise<ImageItem> {
+		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
+			method: "PATCH",
+			headers: this.getHeaders("application/json"),
+			body: JSON.stringify(payload)
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success || !data.image) {
+			throw new Error(data.error || `Failed to update image (${response.status})`);
+		}
+
+		return data.image;
 	}
 }
 

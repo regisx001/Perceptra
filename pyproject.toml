@@ -11,11 +11,17 @@ dependencies = [
     "flask-cors>=6.0.5",
     "flask-jwt-extended>=4.7.4",
     "flask-migrate>=4.1.0",
+    "flask-restful>=0.3.10",
     "flask-sqlalchemy>=3.1.1",
     "fsspec>=2026.9.0",
     "gunicorn>=26.2.0",
+    "numpy>=2.5.5",
+    "opencv-python-headless>=5.0.0.93",
     "pillow>=13.0.0",
     "python-dotenv>=1.2.4",
+    "scikit-image>=0.26.0",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
 ]
 
 [project.scripts]

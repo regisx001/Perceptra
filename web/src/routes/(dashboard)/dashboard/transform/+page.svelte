@@ -1154,6 +1154,33 @@
 </svelte:head>
 
 <HeaderActionPortal>
+	{#snippet breadcrumb()}
+		<nav class="flex items-center gap-2 text-xs text-muted-foreground min-w-0" aria-label="Breadcrumb">
+			<a
+				href="/dashboard"
+				class="text-sm font-semibold tracking-tight text-foreground hover:text-primary transition-colors shrink-0"
+			>
+				Perceptra
+			</a>
+
+			<span class="text-xs text-muted-foreground/60 shrink-0">/</span>
+
+			<a
+				href="/dashboard/transform"
+				class="transition-colors hover:text-foreground shrink-0 {currentImage ? 'text-muted-foreground' : 'text-foreground font-medium'}"
+			>
+				{m.nav_transform()}
+			</a>
+
+			{#if currentImage}
+				<span class="text-xs text-muted-foreground/60 shrink-0">/</span>
+				<span class="max-w-[110px] sm:max-w-[150px] md:max-w-[190px] lg:max-w-[240px] truncate font-medium text-foreground font-mono" title={currentImage.filename}>
+					{currentImage.filename}
+				</span>
+			{/if}
+		</nav>
+	{/snippet}
+
 	<div class="flex items-center gap-2">
 		<!-- Upload Image Dialog Trigger -->
 		<Button

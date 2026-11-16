@@ -8,6 +8,7 @@ from src.extensions import db, migrate, bcrypt, jwt
 from src.models import dummy, user, category, image, image_feature
 from src.routes.auth import auth_bp
 from src.routes.categories import categories_bp
+from src.routes.descriptors import descriptors_bp
 from src.routes.images import images_bp
 
 
@@ -64,6 +65,7 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(categories_bp, url_prefix="/api/v1/categories")
     app.register_blueprint(images_bp, url_prefix="/api/v1/images")
+    app.register_blueprint(descriptors_bp, url_prefix="/api/v1")
 
     @app.route("/")
     def index():
