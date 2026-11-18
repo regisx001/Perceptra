@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from "#lib/components/ui/card/index.js";
-	import GridIcon from "@lucide/svelte/icons/grid";
 	import type { LbpHistogramFeature } from "#lib/images.js";
 
 	let { data }: { data?: LbpHistogramFeature } = $props();
@@ -18,18 +17,13 @@
 <Card.Root class="border border-border/80 shadow-xs">
 	<Card.Header class="pb-3">
 		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<div class="p-1.5 rounded-md bg-primary/10 text-primary">
-					<GridIcon class="size-4" />
-				</div>
-				<div>
-					<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-						Local Binary Patterns (LBP)
-					</Card.Title>
-					<Card.Description class="text-xs text-muted-foreground">
-						Uniform micro-texture pattern histogram ($P=8, R=1$, 10 bins)
-					</Card.Description>
-				</div>
+			<div>
+				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
+					Local Binary Patterns (LBP)
+				</Card.Title>
+				<Card.Description class="text-xs text-muted-foreground">
+					Uniform micro-texture pattern histogram ($P=8, R=1$, 10 bins)
+				</Card.Description>
 			</div>
 			<span class="text-2xs font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
 				10-D Vector

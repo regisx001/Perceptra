@@ -7,11 +7,8 @@
 	import * as Select from "#lib/components/ui/select/index.js";
 	import CopyIcon from "@lucide/svelte/icons/copy";
 	import CheckIcon from "@lucide/svelte/icons/check";
-	import FolderIcon from "@lucide/svelte/icons/folder";
-	import GitBranchIcon from "@lucide/svelte/icons/git-branch";
 	import ArrowUpRightIcon from "@lucide/svelte/icons/arrow-up-right";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
-	import SlidersIcon from "@lucide/svelte/icons/sliders";
 
 	let {
 		image,
@@ -121,10 +118,7 @@
 
 			<!-- Category Selector -->
 			<div class="flex items-center justify-between py-2.5 gap-2">
-				<dt class="text-muted-foreground flex items-center gap-1.5">
-					<FolderIcon class="size-3.5" />
-					<span>Category</span>
-				</dt>
+				<dt class="text-muted-foreground">Category</dt>
 				<dd class="flex items-center gap-1.5">
 					{#if isUpdatingCategory}
 						<Loader2Icon class="size-3.5 animate-spin text-muted-foreground" />
@@ -182,8 +176,7 @@
 		{#if image.parent_image_id}
 			<div class="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs space-y-2">
 				<div class="flex items-center justify-between font-medium text-foreground">
-					<span class="flex items-center gap-1.5 text-primary">
-						<GitBranchIcon class="size-3.5" />
+					<span class="text-primary font-medium">
 						Lineage & Parent Image
 					</span>
 					<a
@@ -197,9 +190,8 @@
 
 				{#if image.transformation_params}
 					<div class="mt-2 pt-2 border-t border-primary/10">
-						<div class="flex items-center gap-1 text-[11px] font-medium text-muted-foreground mb-1">
-							<SlidersIcon class="size-3" />
-							<span>Applied Transformations</span>
+						<div class="text-[11px] font-medium text-muted-foreground mb-1">
+							Applied Transformations
 						</div>
 						<pre class="bg-background/80 p-2 rounded border border-border/40 font-mono text-[11px] text-foreground overflow-x-auto max-h-32">
 {JSON.stringify(image.transformation_params, null, 2)}

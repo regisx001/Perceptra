@@ -26,20 +26,20 @@ def test_engine_color_histogram():
     params, f_vals = DescriptorEngine.extract_color_histogram(rgb_arr)
 
     assert params["color_space"] == "HSV"
-    assert params["bins"] == {"h": 16, "s": 8, "v": 8}
+    assert params["bins"] == {"h": 256, "s": 256, "v": 256}
     assert params["normalization"] == "L1"
 
     channels = f_vals["channels"]
-    assert len(channels["h"]) == 16
-    assert len(channels["s"]) == 8
-    assert len(channels["v"]) == 8
+    assert len(channels["h"]) == 256
+    assert len(channels["s"]) == 256
+    assert len(channels["v"]) == 256
 
     # Each channel sums approximately to 1.0
     assert abs(sum(channels["h"]) - 1.0) < 0.01
     assert abs(sum(channels["s"]) - 1.0) < 0.01
     assert abs(sum(channels["v"]) - 1.0) < 0.01
 
-    assert len(f_vals["vector"]) == 32
+    assert len(f_vals["vector"]) == 768
 
 
 def test_engine_color_moments():

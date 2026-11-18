@@ -3,10 +3,6 @@
 	import * as Card from "#lib/components/ui/card/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import SparklesIcon from "@lucide/svelte/icons/sparkles";
-	import Wand2Icon from "@lucide/svelte/icons/wand-2";
-	import ArrowUpRightIcon from "@lucide/svelte/icons/arrow-up-right";
-	import LayersIcon from "@lucide/svelte/icons/layers";
 
 	let {
 		derivatives = [],
@@ -33,9 +29,8 @@
 <Card.Root class="border border-border bg-card shadow-xs">
 	<Card.Header class="pb-3 pt-4 px-4 sm:px-5">
 		<div class="flex items-center justify-between">
-			<Card.Title class="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
-				<LayersIcon class="size-4 text-primary" />
-				<span>Derived Variations</span>
+			<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
+				Derived Variations
 			</Card.Title>
 			<Badge variant="secondary" class="font-mono text-xs">
 				{derivatives.length}
@@ -65,7 +60,6 @@
 								<Badge variant="outline" class="text-[10px] px-1.5 py-0 font-medium border-primary/20 text-primary truncate">
 									{getOperationLabel(item)}
 								</Badge>
-								<ArrowUpRightIcon class="size-3 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary" />
 							</div>
 
 							<p class="truncate font-mono text-[11px] text-muted-foreground">
@@ -77,9 +71,6 @@
 			</div>
 		{:else}
 			<div class="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/80 bg-muted/10 p-6 text-center">
-				<div class="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground mb-2">
-					<Wand2Icon class="size-5" />
-				</div>
 				<p class="text-xs font-medium text-foreground">No derived versions yet</p>
 				<p class="mt-1 text-[11px] text-muted-foreground max-w-xs">
 					Apply non-destructive transformations like crop, resize, rotate, flip, shear, or affine in the Transformation Studio.
@@ -87,10 +78,9 @@
 				<Button
 					variant="outline"
 					size="sm"
-					class="mt-3 gap-1.5 text-xs h-7"
+					class="mt-3 text-xs h-7"
 					href="/dashboard/transform?image_id={parentImageId}"
 				>
-					<SparklesIcon class="size-3 text-primary" />
 					Create Derived Version
 				</Button>
 			</div>

@@ -1,159 +1,284 @@
 <script lang="ts">
+	import { scaleLinear } from "d3-scale";
+	import { curveMonotoneX } from "d3-shape";
+	import { LineChart } from "layerchart";
 	import * as Card from "#lib/components/ui/card/index.js";
-	import BarChart3Icon from "@lucide/svelte/icons/bar-chart-3";
+	import * as Chart from "#lib/components/ui/chart/index.js";
 	import type { ColorHistogramFeature } from "#lib/images.js";
 
 	let { data }: { data?: ColorHistogramFeature } = $props();
 
-	type Channel = "h" | "s" | "v";
-	let activeChannel = $state<Channel>("h");
+	const chartConfig = {
+		hue: { label: "Hue", color: "#3b82f6" },
+		saturation: { label: "Saturation", color: "#ef4444" },
+		value: { label: "Value", color: "#10b981" },
+	} satisfies Chart.ChartConfig;
 
-	let currentBins = $derived.by(() => {
-		if (!data?.channels) return [];
-		return data.channels[activeChannel] || [];
-	});
+	// Interactive channel visibility states
+	let showHue = $state(true);
+	let showSaturation = $state(true);
+	let showValue = $state(true);
 
-	let maxBinVal = $derived.by(() => {
-		if (currentBins.length === 0) return 1.0;
-		const max = Math.max(...currentBins);
-		return max > 0 ? max : 1.0;
-	});
+	let isAllActive = $derived(showHue && showSaturation && showValue);
 
-	function getBarColor(channel: Channel, index: number, total: number): string {
-		if (channel === "h") {
-			// True hue angle in degrees: 0..360
-			const hue = Math.round((index / total) * 360);
-			return `hsl(${hue}, 85%, 55%)`;
-		} else if (channel === "s") {
-			// Saturation spectrum
-			const pct = Math.round((index / total) * 100);
-			return `hsl(210, ${pct}%, 55%)`;
-		} else {
-			// Value / brightness spectrum
-			const light = Math.round(20 + (index / total) * 70);
-			return `hsl(0, 0%, ${light}%)`;
+	function showAll() {
+		showHue = true;
+		showSaturation = true;
+		showValue = true;
+	}
+
+	function isolateChannel(key: "hue" | "saturation" | "value") {
+		showHue = key === "hue";
+		showSaturation = key === "saturation";
+		showValue = key === "value";
+	}
+
+	function toggleChannel(key: "hue" | "saturation" | "value") {
+		if (key === "hue") showHue = !showHue;
+		if (key === "saturation") showSaturation = !showSaturation;
+		if (key === "value") showValue = !showValue;
+
+		// Prevent disabling all 3: if all are false, restore the clicked one
+		if (!showHue && !showSaturation && !showValue) {
+			if (key === "hue") showHue = true;
+			if (key === "saturation") showSaturation = true;
+			if (key === "value") showValue = true;
 		}
 	}
+
+	let activeSeries = $derived.by(() => {
+		const list = [];
+		if (showHue) {
+			list.push({
+				key: "hue",
+				label: "Hue",
+				color: chartConfig.hue.color,
+			});
+		}
+		if (showSaturation) {
+			list.push({
+				key: "saturation",
+				label: "Saturation",
+				color: chartConfig.saturation.color,
+			});
+		}
+		if (showValue) {
+			list.push({
+				key: "value",
+				label: "Value",
+				color: chartConfig.value.color,
+			});
+		}
+		return list;
+	});
+
+	// Extract full-resolution channel curves (256 bins each), with backward-compatible interpolation for legacy datasets
+	let chartData = $derived.by(() => {
+		const h = data?.channels?.h || [];
+		const s = data?.channels?.s || [];
+		const v = data?.channels?.v || [];
+		if (h.length === 0 && s.length === 0 && v.length === 0) return [];
+
+		const N = Math.max(h.length, s.length, v.length);
+		if (N === 0) return [];
+
+		// Direct 1:1 mapping when channels have equal resolution (e.g. 256 points)
+		if (h.length === N && s.length === N && v.length === N) {
+			return Array.from({ length: N }, (_, i) => ({
+				bin: i + 1,
+				hue: +(h[i] * 100).toFixed(3),
+				saturation: +(s[i] * 100).toFixed(3),
+				value: +(v[i] * 100).toFixed(3),
+			}));
+		}
+
+		// Backward-compatibility: interpolate across N if legacy bins have varying channel lengths (e.g. 16/8/8)
+		return Array.from({ length: N }, (_, t) => {
+			const hVal = h[t] !== undefined ? +(h[t] * 100).toFixed(3) : 0;
+
+			const sPos = s.length > 1 ? t * ((s.length - 1) / (N - 1)) : 0;
+			const sIdx = Math.floor(sPos);
+			const sFrac = sPos - sIdx;
+			const s0 = s[sIdx] || 0;
+			const s1 = s[Math.min(sIdx + 1, s.length - 1)] || s0;
+			const sVal = +((s0 * (1 - sFrac) + s1 * sFrac) * 100).toFixed(3);
+
+			const vPos = v.length > 1 ? t * ((v.length - 1) / (N - 1)) : 0;
+			const vIdx = Math.floor(vPos);
+			const vFrac = vPos - vIdx;
+			const v0 = v[vIdx] || 0;
+			const v1 = v[Math.min(vIdx + 1, v.length - 1)] || v0;
+			const vVal = +((v0 * (1 - vFrac) + v1 * vFrac) * 100).toFixed(3);
+
+			return {
+				bin: t + 1,
+				hue: hVal,
+				saturation: sVal,
+				value: vVal,
+			};
+		});
+	});
+
+	let peakHue = $derived.by(() => {
+		const h = data?.channels?.h || [];
+		return h.length > 0 ? (Math.max(...h) * 100).toFixed(2) : "0.00";
+	});
+
+	let peakSaturation = $derived.by(() => {
+		const s = data?.channels?.s || [];
+		return s.length > 0 ? (Math.max(...s) * 100).toFixed(2) : "0.00";
+	});
+
+	let peakValue = $derived.by(() => {
+		const v = data?.channels?.v || [];
+		return v.length > 0 ? (Math.max(...v) * 100).toFixed(2) : "0.00";
+	});
 </script>
 
 <Card.Root class="border border-border/80 shadow-xs">
 	<Card.Header class="pb-3">
-		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-			<div class="flex items-center gap-2">
-				<div class="p-1.5 rounded-md bg-primary/10 text-primary">
-					<BarChart3Icon class="size-4" />
-				</div>
-				<div>
-					<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-						HSV Color Histogram
-					</Card.Title>
-					<Card.Description class="text-xs text-muted-foreground">
-						32-D concatenated L1-normalized frequency distribution
-					</Card.Description>
-				</div>
+		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+			<div>
+				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
+					HSV Color Distribution ({chartData.length || 256} Bins)
+				</Card.Title>
+				<Card.Description class="text-xs text-muted-foreground">
+					High-resolution continuous frequency distribution curves for Hue, Saturation, and Value
+				</Card.Description>
 			</div>
 
-			<!-- Channel Toggle Pills -->
-			<div class="flex items-center p-0.5 rounded-lg border border-border bg-muted/40 w-fit">
+			<!-- Interactive Channel Selection & Legend Controls -->
+			<div class="flex items-center gap-1.5 flex-wrap">
+				<!-- Show All Button -->
 				<button
 					type="button"
-					class="px-2.5 py-1 text-2xs font-medium rounded-md transition-all cursor-pointer {activeChannel === 'h'
-						? 'bg-card text-foreground font-semibold shadow-2xs border border-border/60'
-						: 'text-muted-foreground hover:text-foreground'}"
-					onclick={() => (activeChannel = "h")}
+					class="px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all {isAllActive
+						? 'bg-foreground text-background font-semibold shadow-xs'
+						: 'bg-muted/60 text-muted-foreground hover:text-foreground'}"
+					onclick={showAll}
+					title="Show all 3 channels"
 				>
-					Hue (16)
+					All (3)
 				</button>
-				<button
-					type="button"
-					class="px-2.5 py-1 text-2xs font-medium rounded-md transition-all cursor-pointer {activeChannel === 's'
-						? 'bg-card text-foreground font-semibold shadow-2xs border border-border/60'
-						: 'text-muted-foreground hover:text-foreground'}"
-					onclick={() => (activeChannel = "s")}
-				>
-					Saturation (8)
-				</button>
-				<button
-					type="button"
-					class="px-2.5 py-1 text-2xs font-medium rounded-md transition-all cursor-pointer {activeChannel === 'v'
-						? 'bg-card text-foreground font-semibold shadow-2xs border border-border/60'
-						: 'text-muted-foreground hover:text-foreground'}"
-					onclick={() => (activeChannel = "v")}
-				>
-					Value (8)
-				</button>
+
+				<!-- Hue Chip: click label to toggle, click 'only' to isolate -->
+				<div class="inline-flex items-center rounded-md border {showHue ? 'border-border bg-background shadow-xs' : 'border-transparent bg-muted/20'} text-xs font-mono overflow-hidden transition-all">
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 px-2.5 py-1 transition-all {showHue ? 'text-foreground font-medium' : 'text-muted-foreground/40 hover:text-muted-foreground'}"
+						onclick={() => toggleChannel('hue')}
+						title="Toggle Hue on/off"
+					>
+						<span class="size-2 rounded-full {showHue ? '' : 'opacity-30'}" style="background-color: {chartConfig.hue.color};"></span>
+						<span class="{showHue ? '' : 'line-through'}">Hue</span>
+					</button>
+					<button
+						type="button"
+						class="px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 border-l border-border/40 transition-colors"
+						onclick={() => isolateChannel('hue')}
+						title="Show only Hue (disable others)"
+					>
+						only
+					</button>
+				</div>
+
+				<!-- Saturation Chip -->
+				<div class="inline-flex items-center rounded-md border {showSaturation ? 'border-border bg-background shadow-xs' : 'border-transparent bg-muted/20'} text-xs font-mono overflow-hidden transition-all">
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 px-2.5 py-1 transition-all {showSaturation ? 'text-foreground font-medium' : 'text-muted-foreground/40 hover:text-muted-foreground'}"
+						onclick={() => toggleChannel('saturation')}
+						title="Toggle Saturation on/off"
+					>
+						<span class="size-2 rounded-full {showSaturation ? '' : 'opacity-30'}" style="background-color: {chartConfig.saturation.color};"></span>
+						<span class="{showSaturation ? '' : 'line-through'}">Saturation</span>
+					</button>
+					<button
+						type="button"
+						class="px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 border-l border-border/40 transition-colors"
+						onclick={() => isolateChannel('saturation')}
+						title="Show only Saturation (disable others)"
+					>
+						only
+					</button>
+				</div>
+
+				<!-- Value Chip -->
+				<div class="inline-flex items-center rounded-md border {showValue ? 'border-border bg-background shadow-xs' : 'border-transparent bg-muted/20'} text-xs font-mono overflow-hidden transition-all">
+					<button
+						type="button"
+						class="inline-flex items-center gap-1.5 px-2.5 py-1 transition-all {showValue ? 'text-foreground font-medium' : 'text-muted-foreground/40 hover:text-muted-foreground'}"
+						onclick={() => toggleChannel('value')}
+						title="Toggle Value on/off"
+					>
+						<span class="size-2 rounded-full {showValue ? '' : 'opacity-30'}" style="background-color: {chartConfig.value.color};"></span>
+						<span class="{showValue ? '' : 'line-through'}">Value</span>
+					</button>
+					<button
+						type="button"
+						class="px-1.5 py-1 text-[10px] text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 border-l border-border/40 transition-colors"
+						onclick={() => isolateChannel('value')}
+						title="Show only Value (disable others)"
+					>
+						only
+					</button>
+				</div>
 			</div>
 		</div>
 	</Card.Header>
 
-	<Card.Content class="space-y-3">
-		{#if !data || !data.channels || currentBins.length === 0}
+	<Card.Content class="pt-1 pb-2">
+		{#if !data || !data.channels || chartData.length === 0}
 			<div class="text-xs text-muted-foreground py-6 text-center">
 				No color histogram data available.
 			</div>
 		{:else}
-			<!-- Pure SVG Histogram Bar Chart -->
-			<div class="w-full bg-muted/20 border border-border/60 rounded-lg p-3">
-				<svg
-					viewBox="0 0 400 130"
-					class="w-full h-32 overflow-visible select-none"
-					preserveAspectRatio="none"
+			<Chart.Container config={chartConfig} class="h-44 sm:h-48 md:h-52 w-full aspect-auto">
+				<LineChart
+					data={chartData}
+					x="bin"
+					xScale={scaleLinear()}
+					axis="x"
+					series={activeSeries}
+					props={{
+						spline: { curve: curveMonotoneX, motion: "tween", strokeWidth: 2 },
+						xAxis: {
+							ticks: chartData.length > 64 ? [1, 32, 64, 96, 128, 160, 192, 224, 256] : undefined,
+							format: (v: number) => `${Math.round(v)}`,
+						},
+						highlight: { points: { r: 3.5 } },
+					}}
 				>
-					<!-- Grid lines -->
-					<line x1="0" y1="100" x2="400" y2="100" stroke="currentColor" stroke-opacity="0.2" stroke-width="1" />
-					<line x1="0" y1="50" x2="400" y2="50" stroke="currentColor" stroke-opacity="0.1" stroke-dasharray="2,2" stroke-width="1" />
-					<line x1="0" y1="0" x2="400" y2="0" stroke="currentColor" stroke-opacity="0.1" stroke-dasharray="2,2" stroke-width="1" />
-
-					<!-- Bars -->
-					{#each currentBins as val, i}
-						{@const barCount = currentBins.length}
-						{@const slotW = 400 / barCount}
-						{@const pad = slotW * 0.15}
-						{@const barW = Math.max(2, slotW - pad * 2)}
-						{@const barH = Math.max(2, (val / maxBinVal) * 98)}
-						{@const barX = i * slotW + pad}
-						{@const barY = 100 - barH}
-						{@const fill = getBarColor(activeChannel, i, barCount)}
-
-						<g class="transition-all duration-150 group">
-							<rect
-								x={barX}
-								y={barY}
-								width={barW}
-								height={barH}
-								rx="2"
-								fill={fill}
-								class="opacity-90 hover:opacity-100 cursor-pointer"
-							>
-								<title>Bin #{i + 1}: {(val * 100).toFixed(2)}% ({val.toFixed(4)})</title>
-							</rect>
-							<!-- Bin Label -->
-							<text
-								x={barX + barW / 2}
-								y="118"
-								text-anchor="middle"
-								font-size="9"
-								class="fill-muted-foreground font-mono select-none"
-							>
-								{i + 1}
-							</text>
-						</g>
-					{/each}
-				</svg>
-			</div>
-
-			<!-- Quick Channel Metrics -->
-			<div class="flex items-center justify-between text-2xs text-muted-foreground px-1">
-				<span>
-					Peak: <strong class="text-foreground font-mono">{(maxBinVal * 100).toFixed(1)}%</strong>
-				</span>
-				<span>
-					Bins: <strong class="text-foreground font-mono">{currentBins.length}</strong>
-				</span>
-				<span>
-					Channel Sum: <strong class="text-foreground font-mono">{currentBins.reduce((a, b) => a + b, 0).toFixed(2)}</strong> (L1)
-				</span>
-			</div>
+					{#snippet tooltip()}
+						<Chart.Tooltip labelFormatter={(v) => `Bin ${v} (of ${chartData.length})`} />
+					{/snippet}
+				</LineChart>
+			</Chart.Container>
 		{/if}
 	</Card.Content>
+
+	{#if chartData.length > 0}
+		<Card.Footer class="border-t border-border/60 bg-muted/20 px-4 sm:px-6 py-2.5">
+			<div class="flex w-full items-center justify-between text-xs text-muted-foreground font-mono flex-wrap gap-2">
+				{#if showHue}
+					<div>
+						Peak Hue: <strong class="text-foreground font-semibold">{peakHue}%</strong>
+					</div>
+				{/if}
+				{#if showSaturation}
+					<div>
+						Peak Saturation: <strong class="text-foreground font-semibold">{peakSaturation}%</strong>
+					</div>
+				{/if}
+				{#if showValue}
+					<div>
+						Peak Value: <strong class="text-foreground font-semibold">{peakValue}%</strong>
+					</div>
+				{/if}
+				<div class="hidden sm:block ml-auto">
+					Resolution: <strong class="text-foreground font-semibold">{chartData.length} bins</strong> &bull; Vector: <strong class="text-foreground font-semibold">{data?.vector?.length ?? (chartData.length * 3)}-D</strong> (L1)
+				</div>
+			</div>
+		</Card.Footer>
+	{/if}
 </Card.Root>

@@ -63,15 +63,15 @@ class DescriptorEngine:
     @classmethod
     def extract_color_histogram(cls, rgb_arr: np.ndarray) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Extracts 32-D L1-normalized HSV color histogram (H=16, S=8, V=8).
+        Extracts 768-D L1-normalized HSV color histogram (H=256, S=256, V=256).
         """
         resized = cv2.resize(rgb_arr, (256, 256), interpolation=cv2.INTER_AREA)
         hsv = cv2.cvtColor(resized, cv2.COLOR_RGB2HSV)
 
         # In OpenCV: H in [0, 180), S in [0, 256), V in [0, 256)
-        hist_h = cv2.calcHist([hsv], [0], None, [16], [0, 180]).flatten()
-        hist_s = cv2.calcHist([hsv], [1], None, [8], [0, 256]).flatten()
-        hist_v = cv2.calcHist([hsv], [2], None, [8], [0, 256]).flatten()
+        hist_h = cv2.calcHist([hsv], [0], None, [256], [0, 180]).flatten()
+        hist_s = cv2.calcHist([hsv], [1], None, [256], [0, 256]).flatten()
+        hist_v = cv2.calcHist([hsv], [2], None, [256], [0, 256]).flatten()
 
         # L1-normalize each channel so each sums to 1.0
         sum_h = float(hist_h.sum()) or 1.0
@@ -86,7 +86,7 @@ class DescriptorEngine:
 
         parameters = {
             "color_space": "HSV",
-            "bins": {"h": 16, "s": 8, "v": 8},
+            "bins": {"h": 256, "s": 256, "v": 256},
             "normalization": "L1",
         }
         feature_values = {

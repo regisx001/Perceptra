@@ -9,7 +9,7 @@
 	import ImageDetailHeader from "#lib/components/image-detail/image-detail-header.svelte";
 	import ImagePreviewCard from "#lib/components/image-detail/image-preview-card.svelte";
 	import ImageMetadataCard from "#lib/components/image-detail/image-metadata-card.svelte";
-	import DerivedVersionsCard from "#lib/components/image-detail/derived-versions-card.svelte";
+	import LineageDialog from "#lib/components/image-detail/lineage-dialog.svelte";
 	import UnindexedEmptyState from "#lib/components/image-detail/unindexed-empty-state.svelte";
 	import DominantColorsCard from "#lib/components/image-detail/dominant-colors-card.svelte";
 	import ColorHistogramCard from "#lib/components/image-detail/color-histogram-card.svelte";
@@ -18,8 +18,6 @@
 	import LbpHistogramCard from "#lib/components/image-detail/lbp-histogram-card.svelte";
 
 	// Icons
-	import PaletteIcon from "@lucide/svelte/icons/palette";
-	import GridIcon from "@lucide/svelte/icons/grid";
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 
@@ -29,10 +27,11 @@
 	let descriptors = $state<DescriptorsMap>({});
 	let derivatives = $state<ImageItem[]>([]);
 	let categories = $state<CategoryItem[]>([]);
-	let activeTab = $state<"color" | "texture">("color");
+	let activeTab = $state<"color" | "texture" | "metadata">("color");
 
 	let isLoading = $state(true);
 	let isExtracting = $state(false);
+	let isLineageDialogOpen = $state(false);
 	let error = $state<string | null>(null);
 
 	const categoryMap = $derived.by(() => {
@@ -177,62 +176,59 @@
 			onDelete={handleDelete}
 		/>
 
-		<!-- Two-Column Main Content Grid -->
-		<div class="flex-1 p-6">
+		<!-- Two-Column Top Content Grid & Full-Width Histogram Layout -->
+		<div class="flex-1 p-6 space-y-6">
 			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-				<!-- Left Column (~40%): Visual Preview, Metadata, Lineage & Derivatives -->
+				<!-- Left Column (~40%): Visual Preview with Check Lineage on top of image -->
 				<div class="lg:col-span-5 xl:col-span-4 space-y-6">
-					<!-- Preview Card with Lightbox -->
+					<!-- Preview (Cardless Compact Viewport with Check Lineage Button) -->
 					<ImagePreviewCard
 						{image}
 						imageUrl={imageService.getImageUrl(image.id)}
-					/>
-
-					<!-- Metadata & Properties Card -->
-					<ImageMetadataCard
-						{image}
-						{categories}
-						onCategoryChange={handleCategoryChange}
-					/>
-
-					<!-- Derived Variations Card -->
-					<DerivedVersionsCard
-						{derivatives}
-						parentImageId={image.id}
+						derivativesCount={derivatives.length}
+						onOpenLineage={() => (isLineageDialogOpen = true)}
 					/>
 				</div>
 
-				<!-- Right Column (~60%): Visual Descriptors & Feature Analysis -->
+				<!-- Right Column (~60%): Feature Tabs & Compact Descriptor Analysis / Metadata -->
 				<div class="lg:col-span-7 xl:col-span-8 space-y-6">
 					<!-- Feature Navigation Strip -->
 					<div class="flex items-center justify-between border-b border-border pb-3">
 						<div class="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40">
 							<button
 								type="button"
-								class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all {activeTab === 'color'
+								class="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-all {activeTab === 'color'
 									? 'bg-background text-foreground shadow-xs'
 									: 'text-muted-foreground hover:text-foreground'}"
 								onclick={() => (activeTab = "color")}
 							>
-								<PaletteIcon class="size-3.5" />
 								<span>Color Features</span>
 								{#if hasDescriptors}
-									<span class="ml-1 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-mono text-primary">3</span>
+									<span class="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-mono text-primary">3</span>
 								{/if}
 							</button>
 
 							<button
 								type="button"
-								class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all {activeTab === 'texture'
+								class="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-all {activeTab === 'texture'
 									? 'bg-background text-foreground shadow-xs'
 									: 'text-muted-foreground hover:text-foreground'}"
 								onclick={() => (activeTab = "texture")}
 							>
-								<GridIcon class="size-3.5" />
 								<span>Texture Features</span>
 								{#if hasDescriptors}
-									<span class="ml-1 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-mono text-primary">2</span>
+									<span class="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-mono text-primary">2</span>
 								{/if}
+							</button>
+
+							<button
+								type="button"
+								class="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-all {activeTab === 'metadata'
+									? 'bg-background text-foreground shadow-xs'
+									: 'text-muted-foreground hover:text-foreground'}"
+								onclick={() => (activeTab = "metadata")}
+							>
+								<span>Metadata & Properties</span>
 							</button>
 						</div>
 
@@ -243,30 +239,28 @@
 						{/if}
 					</div>
 
-					<!-- Content based on extraction status -->
-					{#if !hasDescriptors}
+					<!-- Content based on activeTab -->
+					{#if activeTab === "metadata"}
+						<ImageMetadataCard
+							{image}
+							{categories}
+							onCategoryChange={handleCategoryChange}
+						/>
+					{:else if !hasDescriptors}
 						<UnindexedEmptyState
 							{isExtracting}
 							onExtract={() => handleExtract(false)}
 						/>
 					{:else}
 						<!-- Descriptors Display based on activeTab -->
-						<div class="space-y-6">
-							<!-- Color Descriptors -->
-							{#if activeTab === "color"}
+						{#if activeTab === "color"}
+							<div class="space-y-6">
 								{#if descriptors.dominant_colors}
 									<DominantColorsCard data={descriptors.dominant_colors} />
 								{/if}
-
-								{#if descriptors.color_histogram}
-									<ColorHistogramCard data={descriptors.color_histogram} />
-								{/if}
-
-								{#if descriptors.color_moments}
-									<ColorMomentsCard data={descriptors.color_moments} />
-								{/if}
-							{:else if activeTab === "texture"}
-								<!-- Texture Descriptors -->
+							</div>
+						{:else if activeTab === "texture"}
+							<div class="space-y-6">
 								{#if descriptors.glcm}
 									<GlcmTextureCard data={descriptors.glcm} />
 								{/if}
@@ -274,11 +268,33 @@
 								{#if descriptors.lbp_histogram}
 									<LbpHistogramCard data={descriptors.lbp_histogram} />
 								{/if}
-							{/if}
-						</div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>
+
+			<!-- Full-Width Sections for Color Features: HSV Color Distribution on top of Color Moments -->
+			{#if activeTab === "color" && hasDescriptors}
+				{#if descriptors.color_histogram}
+					<div class="w-full">
+						<ColorHistogramCard data={descriptors.color_histogram} />
+					</div>
+				{/if}
+
+				{#if descriptors.color_moments}
+					<div class="w-full">
+						<ColorMomentsCard data={descriptors.color_moments} />
+					</div>
+				{/if}
+			{/if}
 		</div>
+
+		<!-- Lineage & Derived Variations Dialog -->
+		<LineageDialog
+			bind:open={isLineageDialogOpen}
+			{image}
+			{derivatives}
+		/>
 	{/if}
 </div>

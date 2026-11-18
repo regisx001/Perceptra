@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from "#lib/components/ui/card/index.js";
-	import CalculatorIcon from "@lucide/svelte/icons/calculator";
 	import type { ColorMomentsFeature } from "#lib/images.js";
 
 	let { data }: { data?: ColorMomentsFeature } = $props();
@@ -15,18 +14,13 @@
 <Card.Root class="border border-border/80 shadow-xs">
 	<Card.Header class="pb-3">
 		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<div class="p-1.5 rounded-md bg-primary/10 text-primary">
-					<CalculatorIcon class="size-4" />
-				</div>
-				<div>
-					<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-						Color Moments
-					</Card.Title>
-					<Card.Description class="text-xs text-muted-foreground">
-						First 3 statistical moments ($\mu$, $\sigma$, $s$) in normalized HSV
-					</Card.Description>
-				</div>
+			<div>
+				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
+					Color Moments
+				</Card.Title>
+				<Card.Description class="text-xs text-muted-foreground">
+					First 3 statistical moments (μ, σ, s) in normalized HSV
+				</Card.Description>
 			</div>
 			<span class="text-2xs font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
 				9-D Vector
@@ -45,9 +39,9 @@
 					<thead class="bg-muted/40 border-b border-border/80 text-2xs uppercase text-muted-foreground font-semibold">
 						<tr>
 							<th class="py-2.5 px-3">Channel</th>
-							<th class="py-2.5 px-3 text-right">Mean ($\mu$)</th>
-							<th class="py-2.5 px-3 text-right">Std Dev ($\sigma$)</th>
-							<th class="py-2.5 px-3 text-right">Skewness ($s$)</th>
+							<th class="py-2.5 px-3 text-right">Mean (μ)</th>
+							<th class="py-2.5 px-3 text-right">Std Dev (σ)</th>
+							<th class="py-2.5 px-3 text-right">Skewness (s)</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-border/60">

@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Card from "#lib/components/ui/card/index.js";
-	import SparklesIcon from "@lucide/svelte/icons/sparkles";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
-	import EyeIcon from "@lucide/svelte/icons/eye";
-	import BarChart3Icon from "@lucide/svelte/icons/bar-chart-3";
-	import PaletteIcon from "@lucide/svelte/icons/palette";
-	import GridIcon from "@lucide/svelte/icons/grid";
 
 	let {
 		isExtracting = false,
@@ -19,13 +14,11 @@
 
 <Card.Root class="border-dashed border-2 bg-card/60 p-8 text-center backdrop-blur-sm">
 	<div class="mx-auto flex max-w-lg flex-col items-center">
-		<div class="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-8 ring-primary/5">
-			{#if isExtracting}
-				<Loader2Icon class="size-7 animate-spin" />
-			{:else}
-				<SparklesIcon class="size-7" />
-			{/if}
-		</div>
+		{#if isExtracting}
+			<div class="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-8 ring-primary/5">
+				<Loader2Icon class="size-6 animate-spin" />
+			</div>
+		{/if}
 
 		<h3 class="text-xl font-semibold tracking-tight text-foreground">
 			{isExtracting ? "Extracting Visual Descriptors..." : "Visual Descriptors Not Indexed"}
@@ -39,17 +32,17 @@
 
 		<!-- Feature badges preview -->
 		<div class="mt-6 flex flex-wrap items-center justify-center gap-2">
-			<span class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				<PaletteIcon class="size-3 text-primary" /> Dominant Colors
+			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+				Dominant Colors
 			</span>
-			<span class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				<BarChart3Icon class="size-3 text-primary" /> Color Histogram
+			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+				Color Histogram
 			</span>
-			<span class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				<EyeIcon class="size-3 text-primary" /> Color Moments
+			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+				Color Moments
 			</span>
-			<span class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				<GridIcon class="size-3 text-primary" /> GLCM & LBP
+			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
+				GLCM & LBP Texture
 			</span>
 		</div>
 
@@ -63,10 +56,9 @@
 			>
 				{#if isExtracting}
 					<Loader2Icon class="size-4 animate-spin" />
-					Extracting Features...
+					<span>Extracting Features...</span>
 				{:else}
-					<SparklesIcon class="size-4" />
-					Extract Visual Descriptors
+					<span>Extract Visual Descriptors</span>
 				{/if}
 			</Button>
 		</div>

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from "#lib/components/ui/card/index.js";
-	import LayersIcon from "@lucide/svelte/icons/layers";
 	import type { GlcmFeature, GlcmMetricSet } from "#lib/images.js";
 
 	let { data }: { data?: GlcmFeature } = $props();
@@ -45,18 +44,13 @@
 <Card.Root class="border border-border/80 shadow-xs">
 	<Card.Header class="pb-3">
 		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-			<div class="flex items-center gap-2">
-				<div class="p-1.5 rounded-md bg-primary/10 text-primary">
-					<LayersIcon class="size-4" />
-				</div>
-				<div>
-					<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-						GLCM Texture Analysis
-					</Card.Title>
-					<Card.Description class="text-xs text-muted-foreground">
-						Gray-Level Co-occurrence Matrix (32 levels, distance $d=1$)
-					</Card.Description>
-				</div>
+			<div>
+				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
+					GLCM Texture Analysis
+				</Card.Title>
+				<Card.Description class="text-xs text-muted-foreground">
+					Gray-Level Co-occurrence Matrix (32 levels, distance $d=1$)
+				</Card.Description>
 			</div>
 
 			<!-- Angle Selector -->

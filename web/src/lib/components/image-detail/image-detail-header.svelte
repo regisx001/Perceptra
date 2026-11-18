@@ -4,14 +4,9 @@
 	import * as AlertDialog from "#lib/components/ui/alert-dialog/index.js";
 	import HeaderActionPortal from "#lib/components/header-action-portal.svelte";
 	import * as m from "#lib/paraglide/messages.js";
-	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
-	import SearchIcon from "@lucide/svelte/icons/search";
-	import Wand2Icon from "@lucide/svelte/icons/wand-2";
-	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
 	import DownloadIcon from "@lucide/svelte/icons/download";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
-	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 
 	let {
 		image,
@@ -81,22 +76,20 @@
 		<Button
 			variant="default"
 			size="sm"
-			class="gap-1.5 text-xs h-8 shadow-xs"
+			class="text-xs h-8 px-3 shadow-xs"
 			href="/dashboard/query?image_id={image.id}"
 		>
-			<SearchIcon class="size-3.5" />
-			<span class="hidden sm:inline">Search Similar</span>
+			<span>Search Similar</span>
 		</Button>
 
 		<!-- Transform Image -->
 		<Button
 			variant="outline"
 			size="sm"
-			class="gap-1.5 text-xs h-8 border-border bg-background hover:bg-muted/50"
+			class="text-xs h-8 px-3 border-border bg-background hover:bg-muted/50"
 			href="/dashboard/transform?image_id={image.id}"
 		>
-			<Wand2Icon class="size-3.5 text-primary" />
-			<span class="hidden sm:inline">Transform</span>
+			<span>Transform</span>
 		</Button>
 
 		<!-- Extract / Recompute Descriptors -->
@@ -105,15 +98,14 @@
 			size="sm"
 			disabled={isExtracting}
 			onclick={onExtract}
-			class="gap-1.5 text-xs h-8 border-border bg-background hover:bg-muted/50"
+			class="gap-1.5 text-xs h-8 px-3 border-border bg-background hover:bg-muted/50"
 			title="Recompute all visual descriptors"
 		>
 			{#if isExtracting}
 				<Loader2Icon class="size-3.5 animate-spin" />
-				<span class="hidden sm:inline">Extracting…</span>
+				<span>Extracting…</span>
 			{:else}
-				<RefreshCwIcon class="size-3.5 text-muted-foreground" />
-				<span class="hidden sm:inline">Recompute</span>
+				<span>Recompute</span>
 			{/if}
 		</Button>
 

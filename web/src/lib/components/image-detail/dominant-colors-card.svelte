@@ -2,7 +2,6 @@
 	import * as Card from "#lib/components/ui/card/index.js";
 	import CopyIcon from "@lucide/svelte/icons/copy";
 	import CheckIcon from "@lucide/svelte/icons/check";
-	import PaletteIcon from "@lucide/svelte/icons/palette";
 	import type { DominantColorsFeature } from "#lib/images.js";
 
 	let { data }: { data?: DominantColorsFeature } = $props();
@@ -25,18 +24,13 @@
 <Card.Root class="border border-border/80 shadow-xs">
 	<Card.Header class="pb-3">
 		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2">
-				<div class="p-1.5 rounded-md bg-primary/10 text-primary">
-					<PaletteIcon class="size-4" />
-				</div>
-				<div>
-					<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-						Dominant Colors
-					</Card.Title>
-					<Card.Description class="text-xs text-muted-foreground">
-						Top 5 clustered color centroids via MiniBatchKMeans (k = 5)
-					</Card.Description>
-				</div>
+			<div>
+				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
+					Dominant Colors
+				</Card.Title>
+				<Card.Description class="text-xs text-muted-foreground">
+					Top 5 clustered color centroids via MiniBatchKMeans (k = 5)
+				</Card.Description>
 			</div>
 			{#if data?.clusters?.length}
 				<span class="text-2xs font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
