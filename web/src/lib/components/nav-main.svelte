@@ -18,7 +18,7 @@
 		<!-- Primary Call to Action Button in Sidebar -->
 		<div class="px-2 pb-1 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
 			<Button
-				href="/search"
+				href="/dashboard/query"
 				class="w-full justify-start gap-2 rounded-lg font-semibold shadow-xs group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:justify-center"
 				size="sm"
 				title={m.nav_new_visual_query()}

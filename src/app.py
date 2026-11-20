@@ -10,6 +10,7 @@ from src.routes.auth import auth_bp
 from src.routes.categories import categories_bp
 from src.routes.descriptors import descriptors_bp
 from src.routes.images import images_bp
+from src.routes.query import query_bp
 
 
 def configure_logging(app: Flask):
@@ -66,6 +67,7 @@ def create_app(config_class=Config):
     app.register_blueprint(categories_bp, url_prefix="/api/v1/categories")
     app.register_blueprint(images_bp, url_prefix="/api/v1/images")
     app.register_blueprint(descriptors_bp, url_prefix="/api/v1")
+    app.register_blueprint(query_bp, url_prefix="/api/v1/query")
 
     @app.route("/")
     def index():
