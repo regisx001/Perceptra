@@ -207,17 +207,24 @@
 	<title>{m.upload_title()} - Perceptra</title>
 </svelte:head>
 
-<div class="flex flex-1 flex-col p-4 md:p-6 lg:p-8 space-y-6">
-	<!-- Page Header -->
-	<header class="flex flex-col gap-1">
-		<h1 class="text-2xl font-bold tracking-tight text-foreground">{m.upload_title()}</h1>
-		<p class="text-sm text-muted-foreground">
-			{m.upload_subtitle()}
-		</p>
-	</header>
+<div class="flex flex-1 flex-col">
+	<div class="@container/main flex flex-1 flex-col gap-2">
+		<!-- Top Welcome & Page Header Bar -->
+		<div class="flex flex-col gap-2 px-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
+			<div>
+				<h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+					{m.upload_title()}
+				</h1>
+				<p class="text-xs text-muted-foreground sm:text-sm">
+					{m.upload_subtitle()}
+				</p>
+			</div>
+		</div>
 
-	<!-- Top Grid: Drag & Drop Zone + Upload Options -->
-	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+		<!-- Dashboard Core Analytics & Controls -->
+		<div class="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+			<!-- Top Grid: Drag & Drop Zone + Upload Options -->
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-stretch">
 		<!-- Drag & Drop Box -->
 		<div class="lg:col-span-8">
 			<Card.Root class="h-full border border-border/80 bg-card/60 backdrop-blur-xs shadow-xs">
@@ -572,4 +579,6 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
+</div>
+</div>
 </div>

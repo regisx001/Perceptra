@@ -235,19 +235,25 @@
 	</div>
 </HeaderActionPortal>
 
-<div class="flex flex-1 flex-col p-4 sm:p-6 lg:p-8 space-y-6">
-	<!-- Page Header: Title & Subtitle -->
-	<header class="flex flex-col gap-1">
-		<div class="flex items-center gap-2.5">
-			<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{m.images_title()}</h1>
-			<span class="inline-flex items-center font-mono text-xs px-2.5 py-0.5 rounded-full bg-secondary border border-border/80 text-secondary-foreground font-medium">
-				{m.images_total_counter({ count: totalImages })}
-			</span>
+<div class="flex flex-1 flex-col">
+	<div class="@container/main flex flex-1 flex-col gap-2">
+		<!-- Top Welcome & Page Header Bar -->
+		<div class="flex flex-col gap-2 px-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
+			<div>
+				<div class="flex items-center gap-2.5">
+					<h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{m.images_title()}</h1>
+					<span class="inline-flex items-center font-mono text-xs px-2.5 py-0.5 rounded-full bg-secondary border border-border/80 text-secondary-foreground font-medium">
+						{m.images_total_counter({ count: totalImages })}
+					</span>
+				</div>
+				<p class="text-xs text-muted-foreground sm:text-sm">
+					{m.images_subtitle()}
+				</p>
+			</div>
 		</div>
-		<p class="text-xs sm:text-sm text-muted-foreground">
-			{m.images_subtitle()}
-		</p>
-	</header>
+
+		<!-- Dashboard Core Analytics & Controls -->
+		<div class="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
 
 	<!-- Images Grid -->
 	<Card.Root class="border border-border/80 bg-card/60 backdrop-blur-xs shadow-xs p-5 sm:p-6">
@@ -388,6 +394,8 @@
 			{/if}
 		{/if}
 	</Card.Root>
+</div>
+</div>
 </div>
 
 <!-- Delete Image Confirmation Modal -->

@@ -2,12 +2,14 @@
 	import { tv, type VariantProps } from "tailwind-variants";
 
 	export const fieldVariants = tv({
-		base: "flex w-full group/field data-[invalid=true]:text-destructive",
+		base: "data-[invalid=true]:text-destructive gap-3 group/field flex w-full",
 		variants: {
 			orientation: {
-				vertical: "flex-col gap-2",
-				horizontal: "flex-row items-center gap-3",
-				responsive: "flex-col gap-2 sm:flex-row sm:items-center sm:gap-3",
+				vertical: "flex-col *:w-full [&>.sr-only]:w-auto",
+				horizontal:
+					"flex-row items-center has-[>[data-slot=field-content]]:items-start *:data-[slot=field-label]:flex-auto has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px",
+				responsive:
+					"flex-col *:w-full @md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto @md/field-group:has-[>[data-slot=field-content]]:items-start @md/field-group:*:data-[slot=field-label]:flex-auto [&>.sr-only]:w-auto @md/field-group:has-[>[data-slot=field-content]]:[&>[role=checkbox],[role=radio]]:mt-px",
 			},
 		},
 		defaultVariants: {

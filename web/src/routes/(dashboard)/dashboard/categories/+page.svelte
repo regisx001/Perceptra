@@ -558,51 +558,54 @@
 	{/if}
 {/snippet}
 
-<div class="@container/main flex flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
-	<!-- Page Header with Top Actions -->
-	<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-		<div>
-			<div class="flex items-center gap-2">
-				<h1 class="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-					{m.categories_title()}
-				</h1>
-				{#if isLoading}
-					<Loader2Icon class="size-4 animate-spin text-muted-foreground" />
-				{/if}
+<div class="flex flex-1 flex-col">
+	<div class="@container/main flex flex-1 flex-col gap-2">
+		<!-- Top Welcome & Page Header Bar -->
+		<div class="flex flex-col gap-2 px-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
+			<div>
+				<div class="flex items-center gap-2">
+					<h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+						{m.categories_title()}
+					</h1>
+					{#if isLoading}
+						<Loader2Icon class="size-4 animate-spin text-muted-foreground" />
+					{/if}
+				</div>
+				<p class="text-xs text-muted-foreground sm:text-sm">
+					{m.categories_subtitle()}
+				</p>
 			</div>
-			<p class="text-xs sm:text-sm text-muted-foreground mt-0.5">
-				{m.categories_subtitle()}
-			</p>
+
+			<div class="flex items-center gap-2 pt-2 sm:pt-0">
+				<Button
+					variant="outline"
+					size="sm"
+					class="h-8 gap-1.5 text-xs shadow-2xs font-semibold"
+					onclick={collapseAll}
+				>
+					<FoldVerticalIcon class="size-3.5" />
+					<span>{m.categories_collapse_all()}</span>
+				</Button>
+
+				<Button
+					size="sm"
+					class="h-8 gap-1.5 text-xs shadow-xs font-semibold"
+					onclick={() => {
+						newCategoryParentId = "root";
+						newCategoryName = "";
+						isNewCategoryDialogOpen = true;
+					}}
+				>
+					<PlusIcon class="size-3.5" />
+					<span>{m.categories_new_category()}</span>
+				</Button>
+			</div>
 		</div>
 
-		<div class="flex items-center gap-2">
-			<Button
-				variant="outline"
-				size="sm"
-				class="gap-1.5 font-semibold shadow-2xs"
-				onclick={collapseAll}
-			>
-				<FoldVerticalIcon class="size-3.5" />
-				<span>{m.categories_collapse_all()}</span>
-			</Button>
-
-			<Button
-				size="sm"
-				class="gap-1.5 font-semibold shadow-xs"
-				onclick={() => {
-					newCategoryParentId = "root";
-					newCategoryName = "";
-					isNewCategoryDialogOpen = true;
-				}}
-			>
-				<PlusIcon class="size-3.5" />
-				<span>{m.categories_new_category()}</span>
-			</Button>
-		</div>
-	</div>
-
-	<!-- Section 1: KPI Statistic Cards (Matching Main Dashboard SectionCards style) -->
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+		<!-- Dashboard Core Analytics & Controls -->
+		<div class="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+			<!-- Section 1: KPI Statistic Cards (Matching Main Dashboard SectionCards style) -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 		<!-- Card 1: Total Categories -->
 		<Card.Root class="@container/card">
 			<Card.Header>
@@ -703,7 +706,7 @@
 	</div>
 
 	<!-- Main Two-Column Layout: Categories Sidebar & Details View -->
-	<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+	<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
 		<!-- Left Column: Category Hierarchy Tree (4 cols) - Sticky & Visible -->
 		<div class="lg:col-span-4 lg:sticky lg:top-6 self-start z-10">
 			<Card.Root class="border border-border/80 bg-card/80 shadow-xs backdrop-blur-md">
@@ -972,6 +975,8 @@
 			</Card.Root>
 		</div>
 	</div>
+</div>
+</div>
 </div>
 
 <!-- Dialog 1: Create New Category -->

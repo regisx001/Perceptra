@@ -132,7 +132,7 @@
 
 <div class="flex min-h-full flex-col bg-background text-foreground">
 	{#if isLoading}
-		<div class="p-6 space-y-6">
+		<div class="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
 			<div class="flex justify-between items-center">
 				<Skeleton class="h-8 w-64" />
 				<div class="flex gap-2">
@@ -140,12 +140,12 @@
 					<Skeleton class="h-8 w-24" />
 				</div>
 			</div>
-			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-				<div class="lg:col-span-5 xl:col-span-4 space-y-6">
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+				<div class="lg:col-span-5 xl:col-span-4 space-y-4 md:space-y-6">
 					<Skeleton class="h-[360px] w-full rounded-xl" />
 					<Skeleton class="h-[240px] w-full rounded-xl" />
 				</div>
-				<div class="lg:col-span-7 xl:col-span-8 space-y-6">
+				<div class="lg:col-span-7 xl:col-span-8 space-y-4 md:space-y-6">
 					<Skeleton class="h-10 w-80 rounded-lg" />
 					<Skeleton class="h-[200px] w-full rounded-xl" />
 					<Skeleton class="h-[240px] w-full rounded-xl" />
@@ -177,10 +177,10 @@
 		/>
 
 		<!-- Two-Column Top Content Grid & Full-Width Histogram Layout -->
-		<div class="flex-1 p-6 space-y-6">
-			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+		<div class="flex-1 flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
+			<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-start">
 				<!-- Left Column (~40%): Visual Preview with Check Lineage on top of image -->
-				<div class="lg:col-span-5 xl:col-span-4 space-y-6">
+				<div class="lg:col-span-5 xl:col-span-4 space-y-4 md:space-y-6">
 					<!-- Preview (Cardless Compact Viewport with Check Lineage Button) -->
 					<ImagePreviewCard
 						{image}
@@ -191,7 +191,7 @@
 				</div>
 
 				<!-- Right Column (~60%): Feature Tabs & Compact Descriptor Analysis / Metadata -->
-				<div class="lg:col-span-7 xl:col-span-8 space-y-6">
+				<div class="lg:col-span-7 xl:col-span-8 space-y-4 md:space-y-6">
 					<!-- Feature Navigation Strip -->
 					<div class="flex items-center justify-between border-b border-border pb-3">
 						<div class="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40">

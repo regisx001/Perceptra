@@ -9,7 +9,10 @@
 	let { items = [] }: { items?: { title: string; url: string; icon?: Icon }[] } = $props();
 
 	function isCurrent(url: string) {
-		return page.url.pathname === url;
+		if (url === "/dashboard") {
+			return page.url.pathname === "/dashboard" || page.url.pathname === "/dashboard/";
+		}
+		return page.url.pathname.startsWith(url);
 	}
 </script>
 
