@@ -264,10 +264,6 @@
 								{#if descriptors.glcm}
 									<GlcmTextureCard data={descriptors.glcm} />
 								{/if}
-
-								{#if descriptors.lbp_histogram}
-									<LbpHistogramCard data={descriptors.lbp_histogram} />
-								{/if}
 							</div>
 						{/if}
 					{/if}
@@ -287,6 +283,13 @@
 						<ColorMomentsCard data={descriptors.color_moments} />
 					</div>
 				{/if}
+			{/if}
+
+			<!-- Full-Width Section for Texture Features: 256-Bin LBP BarChart -->
+			{#if activeTab === "texture" && hasDescriptors && descriptors.lbp_histogram}
+				<div class="w-full">
+					<LbpHistogramCard data={descriptors.lbp_histogram} />
+				</div>
 			{/if}
 		</div>
 

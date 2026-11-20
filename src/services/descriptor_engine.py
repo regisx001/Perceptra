@@ -270,26 +270,25 @@ class DescriptorEngine:
     @classmethod
     def extract_lbp_histogram(cls, rgb_arr: np.ndarray, p: int = 8, r: int = 1) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Extracts 10-bin L1-normalized Local Binary Pattern (LBP) uniform histogram.
+        Extracts 256-bin L1-normalized Local Binary Pattern (LBP) standard histogram (P=8, R=1).
         """
         resized = cv2.resize(rgb_arr, (256, 256), interpolation=cv2.INTER_AREA)
         gray = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
 
-        lbp = local_binary_pattern(gray, P=p, R=r, method="uniform")
+        lbp = local_binary_pattern(gray, P=p, R=r, method="default")
 
-        # In uniform mode with P=8, outputs are integers in [0..P+1] = [0..9]
-        # Bins: 0..8 uniform patterns, 9 non-uniform pattern
-        hist, _ = np.histogram(lbp.ravel(), bins=10, range=(0, 10))
+        # In standard mode with P=8, outputs are integers in [0..255] (256 bins)
+        hist, _ = np.histogram(lbp.ravel(), bins=256, range=(0, 256))
         sum_hist = float(hist.sum()) or 1.0
         norm_bins = [round(float(v / sum_hist), 6) for v in hist]
 
-        labels = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "non-uniform"]
+        labels = [str(i) for i in range(256)]
 
         parameters = {
             "P": p,
             "R": r,
-            "method": "uniform",
-            "bins": 10,
+            "method": "default",
+            "bins": 256,
         }
         feature_values = {
             "bins": norm_bins,

@@ -138,13 +138,9 @@ class ImageService {
 	}
 
 	private getHeaders(contentType?: string): HeadersInit {
-		const token = auth.getToken();
 		const headers: Record<string, string> = {};
 		if (contentType) {
 			headers["Content-Type"] = contentType;
-		}
-		if (token) {
-			headers["Authorization"] = `Bearer ${token}`;
 		}
 		return headers;
 	}
@@ -158,51 +154,68 @@ class ImageService {
 		categoryId?: string | null,
 		onProgress?: (percent: number) => void
 	): Promise<ImageItem> {
-		return new Promise((resolve, reject) => {
-			const xhr = new XMLHttpRequest();
-			const url = `${this.apiBase}/images`;
+		const executeUpload = (token: string | null): Promise<ImageItem> => {
+			return new Promise((resolve, reject) => {
+				const xhr = new XMLHttpRequest();
+				const url = `${this.apiBase}/images`;
 
-			xhr.open("POST", url, true);
+				xhr.open("POST", url, true);
 
-			const token = auth.getToken();
-			if (token) {
-				xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-			}
+				if (token) {
+					xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+				}
 
-			if (xhr.upload && onProgress) {
-				xhr.upload.onprogress = (e) => {
-					if (e.lengthComputable) {
-						const percent = Math.round((e.loaded / e.total) * 100);
-						onProgress(percent);
+				if (xhr.upload && onProgress) {
+					xhr.upload.onprogress = (e) => {
+						if (e.lengthComputable) {
+							const percent = Math.round((e.loaded / e.total) * 100);
+							onProgress(percent);
+						}
+					};
+				}
+
+				xhr.onload = async () => {
+					try {
+						if (xhr.status === 401) {
+							const newToken = await auth.refreshToken();
+							if (newToken) {
+								try {
+									const retried = await executeUpload(newToken);
+									resolve(retried);
+									return;
+								} catch (retryErr) {
+									reject(retryErr);
+									return;
+								}
+							}
+						}
+
+						const data = JSON.parse(xhr.responseText || "{}");
+						if (xhr.status >= 200 && xhr.status < 300 && data.success && data.image) {
+							resolve(data.image);
+						} else {
+							reject(new Error(data.error || `Upload failed with status ${xhr.status}`));
+						}
+					} catch (err: any) {
+						reject(new Error(`Failed to parse response: ${err.message}`));
 					}
 				};
-			}
 
-			xhr.onload = () => {
-				try {
-					const data = JSON.parse(xhr.responseText || "{}");
-					if (xhr.status >= 200 && xhr.status < 300 && data.success && data.image) {
-						resolve(data.image);
-					} else {
-						reject(new Error(data.error || `Upload failed with status ${xhr.status}`));
-					}
-				} catch (err: any) {
-					reject(new Error(`Failed to parse response: ${err.message}`));
+				xhr.onerror = () => {
+					reject(new Error("Network error during file upload"));
+				};
+
+				const formData = new FormData();
+				formData.append("file", file, file.name);
+				if (categoryId && categoryId !== "uncategorized") {
+					formData.append("category_id", categoryId);
 				}
-			};
 
-			xhr.onerror = () => {
-				reject(new Error("Network error during file upload"));
-			};
+				xhr.send(formData);
+			});
+		};
 
-			const formData = new FormData();
-			formData.append("file", file, file.name);
-			if (categoryId && categoryId !== "uncategorized") {
-				formData.append("category_id", categoryId);
-			}
-
-			xhr.send(formData);
-		});
+		return executeUpload(auth.getToken());
 	}
 
 	/**
@@ -225,7 +238,7 @@ class ImageService {
 		}
 
 		const query = params.toString() ? `?${params.toString()}` : "";
-		const response = await fetch(`${this.apiBase}/images${query}`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images${query}`, {
 			method: "GET",
 			headers: this.getHeaders("application/json")
 		});
@@ -243,7 +256,7 @@ class ImageService {
 	 * Calls GET /api/v1/images/:id
 	 */
 	async getImage(imageId: string): Promise<ImageItem> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
 			method: "GET",
 			headers: this.getHeaders("application/json")
 		});
@@ -284,7 +297,7 @@ class ImageService {
 	 * Calls PATCH /api/v1/images/:id
 	 */
 	async updateCategory(imageId: string, categoryId: string | null): Promise<ImageItem> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
 			method: "PATCH",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify({ category_id: categoryId })
@@ -303,7 +316,7 @@ class ImageService {
 	 * Calls POST /api/v1/images/bulk-assign
 	 */
 	async bulkAssign(imageIds: string[], categoryId: string | null): Promise<number> {
-		const response = await fetch(`${this.apiBase}/images/bulk-assign`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/bulk-assign`, {
 			method: "POST",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify({
@@ -325,7 +338,7 @@ class ImageService {
 	 * Calls DELETE /api/v1/images/:id
 	 */
 	async deleteImage(imageId: string): Promise<void> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
 			method: "DELETE",
 			headers: this.getHeaders("application/json")
 		});
@@ -341,7 +354,7 @@ class ImageService {
 	 * Calls POST /api/v1/images/bulk-delete
 	 */
 	async bulkDelete(imageIds: string[]): Promise<number> {
-		const response = await fetch(`${this.apiBase}/images/bulk-delete`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/bulk-delete`, {
 			method: "POST",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify({ image_ids: imageIds })
@@ -374,7 +387,7 @@ class ImageService {
 		operation: string;
 		params: Record<string, any>;
 	}> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/transform-validate`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}/transform-validate`, {
 			method: "POST",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify({ operation, params })
@@ -401,7 +414,7 @@ class ImageService {
 			category_id?: string | number | null;
 		}
 	): Promise<ImageItem> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/transform`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}/transform`, {
 			method: "POST",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify(payload)
@@ -420,7 +433,7 @@ class ImageService {
 	 * Calls GET /api/v1/images/:id/derivatives
 	 */
 	async getDerivatives(imageId: string): Promise<ImageItem[]> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/derivatives`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}/derivatives`, {
 			method: "GET",
 			headers: this.getHeaders("application/json")
 		});
@@ -438,7 +451,7 @@ class ImageService {
 	 * Calls GET /api/v1/images/:id/descriptors
 	 */
 	async getImageDescriptors(imageId: string): Promise<ImageDescriptorsResponse> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}/descriptors`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}/descriptors`, {
 			method: "GET",
 			headers: this.getHeaders("application/json")
 		});
@@ -459,7 +472,7 @@ class ImageService {
 		imageId: string,
 		payload?: { feature_types?: string[]; force?: boolean }
 	): Promise<ExtractDescriptorsResponse> {
-		const response = await fetch(`${this.apiBase}/descriptors/extract/${encodeURIComponent(imageId)}`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/descriptors/extract/${encodeURIComponent(imageId)}`, {
 			method: "POST",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify(payload || {})
@@ -478,7 +491,7 @@ class ImageService {
 	 * Calls PATCH /api/v1/images/:id
 	 */
 	async updateImage(imageId: string, payload: { category_id?: string | null; filename?: string }): Promise<ImageItem> {
-		const response = await fetch(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}`, {
 			method: "PATCH",
 			headers: this.getHeaders("application/json"),
 			body: JSON.stringify(payload)

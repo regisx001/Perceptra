@@ -6,7 +6,6 @@
 	import { goto } from "$app/navigation";
 	import { onMount } from "svelte";
 	import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
-	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import ThemeToggle from "#lib/components/theme-toggle.svelte";
 
@@ -17,45 +16,37 @@
 
 	onMount(async () => {
 		if (auth.isAuthenticated()) {
-			await goto("/dashboard", { replaceState: true });
-		} else {
-			isChecking = false;
+			const user = await auth.fetchCurrentUser();
+			if (user) {
+				await goto("/dashboard", { replaceState: true });
+				return;
+			}
 		}
+		isChecking = false;
 	});
 </script>
 
 <div class="grid min-h-svh w-full lg:grid-cols-2">
 	<!-- Left / Interactive Authentication Column -->
 	<div class="flex flex-col justify-between p-6 sm:p-10 lg:p-12">
-		<!-- Header: Back to Home + Brand mark on the left, Language switcher on the right -->
+		<!-- Header: Brand mark on the left, Theme + Language switcher on the right -->
 		<header class="flex items-center justify-between gap-4">
-			<div class="flex items-center gap-3">
-				<a
-					href="/"
-					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-border/70 bg-background/80 px-2.5 text-xs font-semibold text-muted-foreground shadow-xs backdrop-blur-xs transition-[color,background-color] hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:scale-[0.97]"
-					aria-label={m.auth_back_home()}
-				>
-					<ArrowLeftIcon class="size-4" />
-					<span class="hidden sm:inline">{m.auth_back_home()}</span>
-				</a>
-
-				<a
-					href="/"
-					class="group inline-flex items-center transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-					aria-label="Home"
-				>
-					<img
-						src="/logo-black.png"
-						alt="Logo"
-						class="h-12 w-auto object-contain transition-transform duration-150 ease-out group-hover:scale-105 group-active:scale-95 dark:hidden"
-					/>
-					<img
-						src="/logo-beige.png"
-						alt="Logo"
-						class="hidden h-12 w-auto object-contain transition-transform duration-150 ease-out group-hover:scale-105 group-active:scale-95 dark:block"
-					/>
-				</a>
-			</div>
+			<a
+				href="/"
+				class="group inline-flex items-center transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+				aria-label="Home"
+			>
+				<img
+					src="/logo-black.png"
+					alt="Logo"
+					class="h-16 sm:h-20 w-auto object-contain transition-transform duration-150 ease-out group-hover:scale-105 group-active:scale-95 dark:hidden"
+				/>
+				<img
+					src="/logo-beige.png"
+					alt="Logo"
+					class="hidden h-16 sm:h-20 w-auto object-contain transition-transform duration-150 ease-out group-hover:scale-105 group-active:scale-95 dark:block"
+				/>
+			</a>
 
 			<div class="flex items-center gap-2">
 				<ThemeToggle />

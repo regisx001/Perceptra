@@ -51,6 +51,61 @@ def test_auth_register_and_login(client):
     assert me_res.get_json()["user"]["email"] == "newuser@example.com"
 
 
+def test_auth_refresh_tokens(client):
+    # Register user
+    reg = client.post(
+        "/api/v1/auth/register",
+        json={"email": "refreshtest@example.com", "password": "password123"},
+    )
+    assert reg.status_code == 201
+    reg_json = reg.get_json()
+    assert "access_token" in reg_json
+    assert "refresh_token" in reg_json
+    refresh_token = reg_json["refresh_token"]
+
+    # 1. Refresh via Authorization header
+    ref_res = client.post(
+        "/api/v1/auth/refresh",
+        headers={"Authorization": f"Bearer {refresh_token}"},
+    )
+    assert ref_res.status_code == 200
+    ref_data = ref_res.get_json()
+    assert ref_data["success"] is True
+    assert "access_token" in ref_data
+    assert "refresh_token" in ref_data
+    new_access_token = ref_data["access_token"]
+
+    # Use new access token on protected route
+    me_res = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {new_access_token}"},
+    )
+    assert me_res.status_code == 200
+    assert me_res.get_json()["user"]["email"] == "refreshtest@example.com"
+
+    # 2. Refresh via JSON body
+    ref_res2 = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": ref_data["refresh_token"]},
+    )
+    assert ref_res2.status_code == 200
+    assert ref_res2.get_json()["success"] is True
+
+    # 3. Reject access token used at refresh endpoint
+    bad_res = client.post(
+        "/api/v1/auth/refresh",
+        headers={"Authorization": f"Bearer {new_access_token}"},
+    )
+    assert bad_res.status_code == 401
+
+    # 4. Reject invalid token
+    invalid_res = client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "invalid.jwt.token"},
+    )
+    assert invalid_res.status_code == 401
+
+
 def test_auth_invalid_credentials(client):
     # Missing fields
     res = client.post("/api/v1/auth/login", json={"email": ""})

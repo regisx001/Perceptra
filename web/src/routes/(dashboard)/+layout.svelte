@@ -5,35 +5,54 @@
 	import SiteHeader from "#lib/components/site-header.svelte";
 	import { auth } from "#lib/auth.js";
 	import { goto } from "$app/navigation";
+	import { page } from "$app/state";
 	import { onMount } from "svelte";
 	import { createHeaderPortal } from "#lib/header-portal.svelte.js";
 
 	let { children }: LayoutProps = $props();
 	let isChecking = $state(true);
+	let isSidebarOpen = $state(true);
+
+	const isTransformPage = $derived(page.url.pathname.startsWith("/dashboard/transform"));
 
 	createHeaderPortal();
 
 	onMount(async () => {
-		// Mock/Session auth validation: in dev mock mode we can either let user through or redirect if strict
-		// If user is not authenticated, redirect to /login
 		if (!auth.isAuthenticated()) {
 			await goto("/login", { replaceState: true });
-		} else {
-			isChecking = false;
+			return;
 		}
+
+		// Validate current session & auto-refresh token if expired
+		const user = await auth.fetchCurrentUser();
+		if (!user) {
+			await goto("/login", { replaceState: true });
+			return;
+		}
+
+		isChecking = false;
 	});
 </script>
 
 {#if !isChecking}
 	<Sidebar.Provider
+		bind:open={isSidebarOpen}
 		style="--sidebar-width: calc(var(--spacing) * 72); --header-height: calc(var(--spacing) * 14);"
 		class="h-svh overflow-hidden"
 	>
 		<AppSidebar variant="inset" />
 		<Sidebar.Inset class="h-full max-h-svh flex flex-col overflow-hidden">
 			<SiteHeader />
-			<div class="flex-1 min-h-0 overflow-y-auto">
-				{@render children()}
+			<div class="flex-1 min-h-0 flex flex-col {isTransformPage ? 'h-full overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto'}">
+				<div
+					class="w-full h-full flex-1 min-h-0 flex flex-col transition-[margin] duration-300 ease-in-out {isTransformPage
+						? 'mx-0'
+						: !isSidebarOpen
+							? 'mx-[5%]'
+							: 'mx-0'}"
+				>
+					{@render children()}
+				</div>
 			</div>
 		</Sidebar.Inset>
 	</Sidebar.Provider>

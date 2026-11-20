@@ -34,10 +34,8 @@ class CategoryService {
 	}
 
 	private getHeaders(): HeadersInit {
-		const token = auth.getToken();
 		return {
-			"Content-Type": "application/json",
-			...(token ? { Authorization: `Bearer ${token}` } : {})
+			"Content-Type": "application/json"
 		};
 	}
 
@@ -50,7 +48,7 @@ class CategoryService {
 		if (options.include_counts !== undefined) params.set("include_counts", String(options.include_counts));
 
 		const queryString = params.toString() ? `?${params.toString()}` : "";
-		const res = await fetch(`${this.apiBase}/categories${queryString}`, {
+		const res = await auth.fetchWithAuth(`${this.apiBase}/categories${queryString}`, {
 			method: "GET",
 			headers: this.getHeaders()
 		});
@@ -66,7 +64,7 @@ class CategoryService {
 	 * Get a single category by ID.
 	 */
 	async getCategory(id: string): Promise<CategoryItem> {
-		const res = await fetch(`${this.apiBase}/categories/${id}`, {
+		const res = await auth.fetchWithAuth(`${this.apiBase}/categories/${id}`, {
 			method: "GET",
 			headers: this.getHeaders()
 		});
@@ -82,7 +80,7 @@ class CategoryService {
 	 * Create a new category.
 	 */
 	async createCategory(payload: CreateCategoryPayload): Promise<CategoryItem> {
-		const res = await fetch(`${this.apiBase}/categories`, {
+		const res = await auth.fetchWithAuth(`${this.apiBase}/categories`, {
 			method: "POST",
 			headers: this.getHeaders(),
 			body: JSON.stringify(payload)
@@ -99,7 +97,7 @@ class CategoryService {
 	 * Update category name and/or parent_id.
 	 */
 	async updateCategory(id: string, payload: UpdateCategoryPayload): Promise<CategoryItem> {
-		const res = await fetch(`${this.apiBase}/categories/${id}`, {
+		const res = await auth.fetchWithAuth(`${this.apiBase}/categories/${id}`, {
 			method: "PATCH",
 			headers: this.getHeaders(),
 			body: JSON.stringify(payload)
@@ -116,7 +114,7 @@ class CategoryService {
 	 * Delete category by ID.
 	 */
 	async deleteCategory(id: string): Promise<void> {
-		const res = await fetch(`${this.apiBase}/categories/${id}`, {
+		const res = await auth.fetchWithAuth(`${this.apiBase}/categories/${id}`, {
 			method: "DELETE",
 			headers: this.getHeaders()
 		});

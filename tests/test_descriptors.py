@@ -111,18 +111,19 @@ def test_engine_lbp_histogram():
 
     assert params["P"] == 8
     assert params["R"] == 1
-    assert params["method"] == "uniform"
-    assert params["bins"] == 10
+    assert params["method"] == "default"
+    assert params["bins"] == 256
 
     bins = f_vals["bins"]
-    assert len(bins) == 10
+    assert len(bins) == 256
     assert abs(sum(bins) - 1.0) < 0.01
 
     labels = f_vals["labels"]
-    assert len(labels) == 10
-    assert labels[-1] == "non-uniform"
+    assert len(labels) == 256
+    assert labels[0] == "0"
+    assert labels[255] == "255"
 
-    assert len(f_vals["vector"]) == 10
+    assert len(f_vals["vector"]) == 256
 
 
 def test_engine_corrupted_image_raises():
