@@ -261,12 +261,18 @@ class ImageService:
         user_id: str,
         category_id: Optional[str] = None,
         uncategorized_only: bool = False,
+        favorites_only: bool = False,
         source_type: Optional[str] = None,
         page: int = 1,
         per_page: int = 24,
     ):
         query = Image.query
-        if source_type == "dataset":
+        if favorites_only:
+            from src.models.favorite import FavoriteImage
+            query = query.join(FavoriteImage, FavoriteImage.image_id == Image.id).filter(
+                FavoriteImage.user_id == user_id
+            )
+        elif source_type == "dataset":
             query = query.filter(Image.source_type == "dataset")
         elif source_type == "all":
             query = query.filter((Image.owner_id == user_id) | (Image.source_type == "dataset"))
@@ -285,6 +291,25 @@ class ImageService:
         return query.order_by(Image.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )
+
+    def toggle_favorite(self, user_id: str, image_id: str) -> bool:
+        """
+        Toggle favorite status of an image for a user. Returns True if now favorited, False if unfavorited.
+        """
+        # Ensure image exists and user can access it (owned or dataset)
+        self.get_user_image(user_id, image_id)
+
+        from src.models.favorite import FavoriteImage
+        fav = FavoriteImage.query.filter_by(user_id=user_id, image_id=image_id).first()
+        if fav:
+            db.session.delete(fav)
+            db.session.commit()
+            return False
+        else:
+            new_fav = FavoriteImage(user_id=user_id, image_id=image_id)
+            db.session.add(new_fav)
+            db.session.commit()
+            return True
 
     def get_user_image(self, user_id: str, image_id: str) -> Image:
         image = Image.query.filter(

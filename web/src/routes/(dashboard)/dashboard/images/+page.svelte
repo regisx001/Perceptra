@@ -17,6 +17,7 @@
 	import FolderIcon from "@lucide/svelte/icons/folder";
 	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
 	import Wand2Icon from "@lucide/svelte/icons/wand-2";
+	import HeartIcon from "@lucide/svelte/icons/heart";
 
 	interface GalleryImage {
 		id: string;
@@ -26,6 +27,7 @@
 		fileSize?: number;
 		mimeType?: string;
 		dimensions?: string;
+		isFavorite?: boolean;
 	}
 
 	const PAGE_SIZE = 25;
@@ -33,6 +35,7 @@
 	let categories = $state<CategoryItem[]>([]);
 	let categoryMap = $state<Record<string, string>>({});
 	let selectedCategoryFilter = $state<string>("all");
+	let showFavoritesOnly = $state(false);
 	let searchQuery = $state("");
 	let currentPage = $state(1);
 	let totalPages = $state(1);
@@ -80,6 +83,7 @@
 			const res = await imageService.listImages({
 				category_id: catId,
 				uncategorized: isUncategorized ? true : undefined,
+				favorites: showFavoritesOnly ? true : undefined,
 				page: targetPage,
 				per_page: PAGE_SIZE
 			});
@@ -91,7 +95,8 @@
 				categoryId: img.category_id,
 				fileSize: img.file_size,
 				mimeType: img.mime_type,
-				dimensions: img.width && img.height ? `${img.width}x${img.height}` : undefined
+				dimensions: img.width && img.height ? `${img.width}x${img.height}` : undefined,
+				isFavorite: img.is_favorite ?? false,
 			}));
 
 			if (reset) {
@@ -115,6 +120,21 @@
 	async function loadMore() {
 		if (isLoading || isLoadingMore || currentPage >= totalPages) return;
 		await fetchImages(false);
+	}
+
+	async function toggleFavorite(img: GalleryImage, e: MouseEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		try {
+			const res = await imageService.toggleFavorite(img.id);
+			img.isFavorite = res.is_favorite;
+			if (showFavoritesOnly && !res.is_favorite) {
+				images = images.filter((i) => i.id !== img.id);
+				totalImages = Math.max(0, totalImages - 1);
+			}
+		} catch (err: any) {
+			console.error("Toggle favorite failed:", err.message);
+		}
 	}
 
 	function promptDelete(img: GalleryImage, e: MouseEvent) {
@@ -200,6 +220,7 @@
 			<select
 				id="category-filter-select"
 				bind:value={selectedCategoryFilter}
+				onchange={() => fetchImages(true)}
 				class="h-8 rounded-md border border-input bg-background/80 px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				aria-label="Category filter"
 			>
@@ -210,6 +231,21 @@
 				{/each}
 			</select>
 		</div>
+
+		<!-- Favorites Filter Toggle Button -->
+		<Button
+			variant={showFavoritesOnly ? "default" : "outline"}
+			size="sm"
+			class="h-8 gap-1.5 px-2.5 text-xs shadow-2xs font-semibold"
+			onclick={() => {
+				showFavoritesOnly = !showFavoritesOnly;
+				fetchImages(true);
+			}}
+			title="Filter by favorites"
+		>
+			<HeartIcon class="size-3.5 {showFavoritesOnly ? 'fill-current' : ''}" />
+			<span class="hidden sm:inline">Favorites</span>
+		</Button>
 
 		<!-- Refresh Button -->
 		<Button
@@ -329,6 +365,16 @@
 								}}
 							>
 								<Wand2Icon class="size-3.5" />
+							</button>
+
+							<!-- Floating Favorite Button -->
+							<button
+								type="button"
+								class="absolute top-2 right-10 size-7 rounded-md bg-background/85 hover:bg-rose-500 hover:text-white text-muted-foreground flex items-center justify-center {img.isFavorite ? 'opacity-100 text-rose-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer z-10"
+								onclick={(e) => toggleFavorite(img, e)}
+								title={img.isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+							>
+								<HeartIcon class="size-3.5 {img.isFavorite ? 'fill-current text-rose-500' : ''}" />
 							</button>
 
 							<!-- Floating Delete Button -->

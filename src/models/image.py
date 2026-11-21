@@ -33,7 +33,12 @@ class Image(db.Model):
     category = db.relationship("Category", backref=db.backref("images", lazy=True))
     parent_image = db.relationship("Image", remote_side=[id], backref=db.backref("derived_images", lazy=True))
 
-    def to_dict(self) -> dict:
+    def to_dict(self, user_id: str | None = None) -> dict:
+        is_favorite = False
+        if user_id:
+            from src.models.favorite import FavoriteImage
+            is_favorite = FavoriteImage.query.filter_by(user_id=user_id, image_id=self.id).first() is not None
+
         return {
             "id": self.id,
             "owner_id": self.owner_id,
@@ -49,6 +54,7 @@ class Image(db.Model):
             "height": self.height,
             "checksum": self.checksum,
             "transformation_params": self.transformation_params,
+            "is_favorite": is_favorite,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

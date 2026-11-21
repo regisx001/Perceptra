@@ -15,6 +15,7 @@ export interface ImageItem {
 	height?: number | null;
 	checksum?: string | null;
 	transformation_params?: any;
+	is_favorite?: boolean;
 	created_at?: string;
 }
 
@@ -128,6 +129,7 @@ export interface BulkDeleteResponse {
 export interface ListImagesOptions {
 	category_id?: string | null;
 	uncategorized?: boolean;
+	favorites?: boolean;
 	page?: number;
 	per_page?: number;
 }
@@ -229,6 +231,9 @@ class ImageService {
 		}
 		if (options.uncategorized) {
 			params.set("uncategorized", "true");
+		}
+		if (options.favorites) {
+			params.set("favorites", "true");
 		}
 		if (options.page !== undefined) {
 			params.set("page", String(options.page));
@@ -484,6 +489,27 @@ class ImageService {
 		}
 
 		return data;
+	}
+
+	/**
+	 * Toggle favorite status of an image.
+	 * Calls POST /api/v1/images/:id/favorite
+	 */
+	async toggleFavorite(imageId: string): Promise<{ is_favorite: boolean; message: string }> {
+		const response = await auth.fetchWithAuth(`${this.apiBase}/images/${encodeURIComponent(imageId)}/favorite`, {
+			method: "POST",
+			headers: this.getHeaders("application/json"),
+		});
+
+		const data = await response.json();
+		if (!response.ok || !data.success) {
+			throw new Error(data.error || `Failed to toggle favorite (${response.status})`);
+		}
+
+		return {
+			is_favorite: Boolean(data.is_favorite),
+			message: data.message,
+		};
 	}
 
 	/**

@@ -1,6 +1,7 @@
 import logging
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import or_
 
@@ -8,6 +9,12 @@ from src.extensions import db
 from src.models.category import Category
 from src.models.image import Image
 from src.models.image_feature import ImageFeature
+from src.models.retrieval import (
+    RetrievalQuery,
+    RetrievalIteration,
+    RetrievalResult,
+    RelevanceFeedback,
+)
 from src.services.descriptor_engine import (
     DescriptorEngine,
     EXTRACTOR_VERSION,
@@ -243,13 +250,84 @@ class QueryService:
         t_sim = (time.perf_counter() - t_sim_start) * 1000.0
         t_total = (time.perf_counter() - t_start) * 1000.0
 
-        # 5. Create Query Session for Relevance Feedback iterations
+        # 5. Persist Retrieval Query, Iteration 0, and Results in Database
         session_id = str(uuid.uuid4())
+        query_record_id = session_id  # Align query record ID with session ID for seamless linking
+        query_storage_key = None
+
+        if query_bytes:
+            # Save query image in queries/<user_id>/<query_id>.jpg
+            try:
+                query_storage_key = f"queries/{user_id}/{query_record_id}.jpg"
+                self.storage.save(query_storage_key, query_bytes, content_type="image/jpeg", overwrite=True)
+            except Exception as e:
+                logger.warning(f"Could not persist uploaded query image to storage: {e}")
+
+        try:
+            now_utc = datetime.now(timezone.utc)
+            db_query = RetrievalQuery(
+                id=query_record_id,
+                user_id=user_id,
+                query_image_id=query_image_id,
+                query_storage_key=query_storage_key,
+                query_source="upload" if query_bytes else "gallery",
+                search_scope=scope,
+                configuration={
+                    "top_k": top_k,
+                    "metric": metric,
+                    "normalization": normalization,
+                    "descriptors": active_descriptors,
+                    "category_id": category_id,
+                },
+                status="completed",
+                created_at=now_utc,
+                completed_at=now_utc,
+            )
+            db.session.add(db_query)
+
+            db_iteration_0 = RetrievalIteration(
+                id=str(uuid.uuid4()),
+                query_id=query_record_id,
+                iteration_number=0,
+                retrieval_method="initial",
+                feature_weights=active_weights,
+                updated_query_vector=query_features,
+                feedback_count=0,
+                execution_time_ms=int(t_total),
+                total_candidates=len(candidate_features_map),
+                results_count=len(top_results),
+                created_at=now_utc,
+            )
+            db.session.add(db_iteration_0)
+            db.session.flush()
+
+            for item in top_results:
+                db_res = RetrievalResult(
+                    id=str(uuid.uuid4()),
+                    iteration_id=db_iteration_0.id,
+                    image_id=item["image_id"],
+                    rank=item["rank"],
+                    similarity_score=float(item["overall_similarity"]),
+                    feature_scores=item.get("feature_scores"),
+                    created_at=now_utc,
+                )
+                db.session.add(db_res)
+
+            db.session.commit()
+            iter_0_id = db_iteration_0.id
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to persist retrieval query in DB: {e}", exc_info=True)
+            iter_0_id = None
+
+        # 6. Create In-Memory Query Session for Fast Relevance Feedback iterations
         cls = self.__class__
         cls._store_session(
             session_id=session_id,
             data={
                 "session_id": session_id,
+                "query_record_id": query_record_id,
+                "latest_iteration_id": iter_0_id,
                 "user_id": user_id,
                 "query_image": query_img_meta,
                 "query_features": query_features,
@@ -389,6 +467,89 @@ class QueryService:
         session["weights"] = updated_weights
         session["query_features"] = refined_query_features
         session["iterations"] = iteration
+
+        # Persist feedback judgments and refined iteration in DB
+        query_record_id = session.get("query_record_id")
+        previous_iteration_id = session.get("latest_iteration_id")
+        now_utc = datetime.now(timezone.utc)
+
+        try:
+            # 1. Save or update judgments in relevance_feedback table against previous_iteration_id
+            if previous_iteration_id:
+                for rid in relevant_ids:
+                    fb = RelevanceFeedback.query.filter_by(
+                        iteration_id=previous_iteration_id, image_id=rid
+                    ).first()
+                    if fb:
+                        fb.judgment = "relevant"
+                        fb.updated_at = now_utc
+                    else:
+                        db.session.add(
+                            RelevanceFeedback(
+                                id=str(uuid.uuid4()),
+                                iteration_id=previous_iteration_id,
+                                image_id=rid,
+                                judgment="relevant",
+                                created_at=now_utc,
+                                updated_at=now_utc,
+                            )
+                        )
+
+                for iid in irrelevant_ids:
+                    fb = RelevanceFeedback.query.filter_by(
+                        iteration_id=previous_iteration_id, image_id=iid
+                    ).first()
+                    if fb:
+                        fb.judgment = "irrelevant"
+                        fb.updated_at = now_utc
+                    else:
+                        db.session.add(
+                            RelevanceFeedback(
+                                id=str(uuid.uuid4()),
+                                iteration_id=previous_iteration_id,
+                                image_id=iid,
+                                judgment="irrelevant",
+                                created_at=now_utc,
+                                updated_at=now_utc,
+                            )
+                        )
+
+            # 2. Insert new iteration record (iteration >= 1)
+            new_iter = RetrievalIteration(
+                id=str(uuid.uuid4()),
+                query_id=query_record_id,
+                iteration_number=iteration,
+                retrieval_method="fre",
+                feature_weights=updated_weights,
+                updated_query_vector=refined_query_features,
+                feedback_count=len(relevant_ids) + len(irrelevant_ids),
+                execution_time_ms=int(t_total),
+                total_candidates=len(candidate_features_map),
+                results_count=len(top_results),
+                created_at=now_utc,
+            )
+            db.session.add(new_iter)
+            db.session.flush()
+
+            # 3. Insert refined results for this iteration
+            for item in top_results:
+                db.session.add(
+                    RetrievalResult(
+                        id=str(uuid.uuid4()),
+                        iteration_id=new_iter.id,
+                        image_id=item["image_id"],
+                        rank=item["rank"],
+                        similarity_score=float(item["overall_similarity"]),
+                        feature_scores=item.get("feature_scores"),
+                        created_at=now_utc,
+                    )
+                )
+
+            db.session.commit()
+            session["latest_iteration_id"] = new_iter.id
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to persist feedback iteration in DB: {e}", exc_info=True)
 
         return {
             "success": True,

@@ -7,6 +7,7 @@
 	import DownloadIcon from "@lucide/svelte/icons/download";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
+	import HeartIcon from "@lucide/svelte/icons/heart";
 
 	let {
 		image,
@@ -24,6 +25,20 @@
 
 	let isDeleteDialogOpen = $state(false);
 	let isDeleting = $state(false);
+	let isTogglingFavorite = $state(false);
+
+	async function handleToggleFavorite() {
+		if (isTogglingFavorite) return;
+		isTogglingFavorite = true;
+		try {
+			const res = await imageService.toggleFavorite(image.id);
+			image.is_favorite = res.is_favorite;
+		} catch (err: any) {
+			console.error("Failed to toggle favorite:", err.message);
+		} finally {
+			isTogglingFavorite = false;
+		}
+	}
 
 	async function confirmDelete() {
 		isDeleting = true;
@@ -80,6 +95,18 @@
 			href="/dashboard/query?image_id={image.id}"
 		>
 			<span>Search Similar</span>
+		</Button>
+
+		<!-- Favorite Toggle -->
+		<Button
+			variant={image.is_favorite ? "default" : "outline"}
+			size="icon"
+			class="size-8 border-border {image.is_favorite ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-500' : 'bg-background text-muted-foreground hover:text-foreground'}"
+			title={image.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
+			onclick={handleToggleFavorite}
+			disabled={isTogglingFavorite}
+		>
+			<HeartIcon class="size-3.5 {image.is_favorite ? 'fill-current' : ''}" />
 		</Button>
 
 		<!-- Transform Image -->

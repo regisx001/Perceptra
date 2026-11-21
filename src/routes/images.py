@@ -54,6 +54,7 @@ def list_images():
     user_id = str(get_jwt_identity())
     category_id = request.args.get("category_id", "").strip() or None
     uncategorized = request.args.get("uncategorized", "false").lower() in {"true", "1", "yes"}
+    favorites = request.args.get("favorites", "false").lower() in {"true", "1", "yes"}
     source_type = request.args.get("source_type", "").strip() or None
     page = max(1, request.args.get("page", 1, type=int))
     per_page = min(100, max(1, request.args.get("per_page", 24, type=int)))
@@ -63,6 +64,7 @@ def list_images():
         user_id=user_id,
         category_id=category_id,
         uncategorized_only=uncategorized,
+        favorites_only=favorites,
         source_type=source_type,
         page=page,
         per_page=per_page,
@@ -70,7 +72,7 @@ def list_images():
 
     return jsonify({
         "success": True,
-        "images": [img.to_dict() for img in pagination.items],
+        "images": [img.to_dict(user_id=user_id) for img in pagination.items],
         "pagination": {
             "page": pagination.page,
             "per_page": pagination.per_page,
@@ -80,13 +82,27 @@ def list_images():
     }), 200
 
 
+@images_bp.route("/<image_id>/favorite", methods=["POST"])
+@jwt_required()
+def toggle_image_favorite(image_id: str):
+    user_id = str(get_jwt_identity())
+    service = get_image_service()
+    is_favorite = service.toggle_favorite(user_id=user_id, image_id=image_id)
+    return jsonify({
+        "success": True,
+        "image_id": image_id,
+        "is_favorite": is_favorite,
+        "message": "Image marked as favorite" if is_favorite else "Image removed from favorites",
+    }), 200
+
+
 @images_bp.route("/<image_id>", methods=["GET"])
 @jwt_required()
 def get_image(image_id: str):
     user_id = str(get_jwt_identity())
     service = get_image_service()
     image = service.get_user_image(user_id=user_id, image_id=image_id)
-    return jsonify({"success": True, "image": image.to_dict()}), 200
+    return jsonify({"success": True, "image": image.to_dict(user_id=user_id)}), 200
 
 
 @images_bp.route("/<image_id>/file", methods=["GET"])
