@@ -45,11 +45,11 @@
 			<SiteHeader />
 			<div class="flex-1 min-h-0 flex flex-col overflow-x-hidden {isTransformPage ? 'h-full overflow-y-auto lg:overflow-hidden' : 'overflow-y-auto'}">
 				<div
-					class="w-full h-full flex-1 min-h-0 flex flex-col mx-auto transition-[max-width] duration-300 ease-in-out {isTransformPage
-						? 'max-w-full'
+					class="w-full h-full flex-1 min-h-0 flex flex-col transition-[padding] duration-300 ease-in-out {isTransformPage
+						? 'px-0'
 						: !isSidebarOpen
-							? 'max-w-[90%]'
-							: 'max-w-full'}"
+							? 'px-[5%]'
+							: 'px-0'}"
 				>
 					{@render children()}
 				</div>
