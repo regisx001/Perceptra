@@ -54,6 +54,7 @@ def list_images():
     user_id = str(get_jwt_identity())
     category_id = request.args.get("category_id", "").strip() or None
     uncategorized = request.args.get("uncategorized", "false").lower() in {"true", "1", "yes"}
+    source_type = request.args.get("source_type", "").strip() or None
     page = max(1, request.args.get("page", 1, type=int))
     per_page = min(100, max(1, request.args.get("per_page", 24, type=int)))
 
@@ -62,6 +63,7 @@ def list_images():
         user_id=user_id,
         category_id=category_id,
         uncategorized_only=uncategorized,
+        source_type=source_type,
         page=page,
         per_page=per_page,
     )

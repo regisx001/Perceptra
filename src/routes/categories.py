@@ -83,18 +83,29 @@ def list_categories():
     user_id = str(get_jwt_identity())
     tree_param = request.args.get("tree", "false").lower() in {"true", "1", "yes"}
     include_counts = request.args.get("include_counts", "false").lower() in {"true", "1", "yes"}
+    scope = request.args.get("scope", "user").lower()
 
-    user_categories = Category.query.filter_by(user_id=user_id).order_by(Category.name.asc()).all()
+    if scope == "dataset":
+        categories_query = Category.query.filter(Category.user_id.is_(None))
+    elif scope == "all":
+        from sqlalchemy import or_
+        categories_query = Category.query.filter(
+            or_(Category.user_id == user_id, Category.user_id.is_(None))
+        )
+    else:
+        # Default: user's personal categories only
+        categories_query = Category.query.filter_by(user_id=user_id)
+
+    user_categories = categories_query.order_by(Category.name.asc()).all()
 
     counts_map = {}
-    if include_counts:
-        # Query count of images for each category owned by this user
-        counts = (
-            db.session.query(Image.category_id, func.count(Image.id))
-            .filter(Image.category_id.in_([c.id for c in user_categories]))
-            .group_by(Image.category_id)
-            .all()
+    if include_counts and user_categories:
+        count_q = db.session.query(Image.category_id, func.count(Image.id)).filter(
+            Image.category_id.in_([c.id for c in user_categories])
         )
+        if scope == "user":
+            count_q = count_q.filter(Image.owner_id == user_id)
+        counts = count_q.group_by(Image.category_id).all()
         counts_map = {cat_id: count for cat_id, count in counts}
 
     if not tree_param:

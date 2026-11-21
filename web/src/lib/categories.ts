@@ -42,10 +42,11 @@ class CategoryService {
 	/**
 	 * Fetch all categories, optionally as a nested tree and with image counts.
 	 */
-	async getCategories(options: { tree?: boolean; include_counts?: boolean } = {}): Promise<CategoryItem[]> {
+	async getCategories(options: { tree?: boolean; include_counts?: boolean; scope?: "user" | "dataset" | "all" } = {}): Promise<CategoryItem[]> {
 		const params = new URLSearchParams();
 		if (options.tree !== undefined) params.set("tree", String(options.tree));
 		if (options.include_counts !== undefined) params.set("include_counts", String(options.include_counts));
+		if (options.scope !== undefined) params.set("scope", options.scope);
 
 		const queryString = params.toString() ? `?${params.toString()}` : "";
 		const res = await auth.fetchWithAuth(`${this.apiBase}/categories${queryString}`, {

@@ -29,6 +29,8 @@
 	import SlidersIcon from "@tabler/icons-svelte/icons/adjustments";
 	import CheckIcon from "@tabler/icons-svelte/icons/check";
 	import TargetIcon from "@tabler/icons-svelte/icons/target";
+	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+	import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
 
 	// State: Configuration & Categories
 	let categories = $state<CategoryItem[]>([]);
@@ -88,10 +90,101 @@
 		Object.values(feedbackMap).filter((v) => v === "irrelevant").length,
 	);
 
+	// Collapsible Settings State & Intent Presets
+	let isSettingsOpen = $state<boolean>(true);
+	let selectedPreset = $state<"balanced" | "color" | "texture" | "custom">("balanced");
+	let isFineTuneOpen = $state<boolean>(false);
+
+	const datasetCategories = $derived(categories.filter((c) => !c.user_id));
+	const userCategories = $derived(categories.filter((c) => !!c.user_id));
+
+	const selectedCategoryLabel = $derived.by(() => {
+		if (selectedCategory === "all") return "All Categories";
+		const found = categories.find((c) => c.id === selectedCategory);
+		return found ? found.name : "Custom";
+	});
+
+	function applyPreset(preset: "balanced" | "color" | "texture" | "custom") {
+		selectedPreset = preset;
+		if (preset === "balanced") {
+			activeDescriptors = {
+				color_histogram: true,
+				color_moments: true,
+				dominant_colors: true,
+				glcm: true,
+				lbp_histogram: true,
+			};
+			activeWeights = {
+				color_histogram: 0.2,
+				color_moments: 0.2,
+				dominant_colors: 0.2,
+				glcm: 0.2,
+				lbp_histogram: 0.2,
+			};
+		} else if (preset === "color") {
+			activeDescriptors = {
+				color_histogram: true,
+				color_moments: true,
+				dominant_colors: true,
+				glcm: true,
+				lbp_histogram: true,
+			};
+			activeWeights = {
+				color_histogram: 0.45,
+				color_moments: 0.15,
+				dominant_colors: 0.3,
+				glcm: 0.05,
+				lbp_histogram: 0.05,
+			};
+		} else if (preset === "texture") {
+			activeDescriptors = {
+				color_histogram: true,
+				color_moments: true,
+				dominant_colors: true,
+				glcm: true,
+				lbp_histogram: true,
+			};
+			activeWeights = {
+				color_histogram: 0.05,
+				color_moments: 0.05,
+				dominant_colors: 0.1,
+				glcm: 0.4,
+				lbp_histogram: 0.4,
+			};
+		} else if (preset === "custom") {
+			isFineTuneOpen = true;
+		}
+	}
+
+	function updateDescriptorWeight(descriptor: string, val: number) {
+		selectedPreset = "custom";
+		activeWeights = {
+			...activeWeights,
+			[descriptor]: Number(val),
+		};
+	}
+
+	const totalActiveWeight = $derived.by(() => {
+		let sum = 0;
+		for (const [k, v] of Object.entries(activeWeights)) {
+			if (activeDescriptors[k]) {
+				sum += Number(v) || 0;
+			}
+		}
+		return sum > 0 ? sum : 1.0;
+	});
+
+	function getWeightPercent(descriptor: string): number {
+		if (!activeDescriptors[descriptor]) return 0;
+		const w = Number(activeWeights[descriptor]) || 0;
+		const total = totalActiveWeight;
+		return Math.round((w / total) * 100);
+	}
+
 	onMount(async () => {
 		try {
 			const [catData, confData] = await Promise.all([
-				categoryService.getCategories({ tree: false }),
+				categoryService.getCategories({ tree: false, scope: "all" }),
 				queryEngineClient.getConfig(),
 			]);
 			categories = catData;
@@ -224,6 +317,9 @@
 			activeWeights = res.active_weights || activeWeights;
 			executionTiming = res.execution_time_ms;
 			totalCandidatesCount = res.total_candidates;
+
+			// Collapse retrieval settings automatically to focus attention on candidate results!
+			isSettingsOpen = false;
 		} catch (err: any) {
 			errorMessage = err.message || "Failed to execute visual query.";
 		} finally {
@@ -603,270 +699,494 @@
 						</Card.Content>
 					</Card.Root>
 
-					<!-- CARD 2: RETRIEVAL CONFIGURATION (Basic & Advanced Tabs) -->
-					<Card.Root
-						class="border-border/80 shadow-xs rounded-xl overflow-hidden bg-card"
-					>
-						<Card.Header
-							class="p-3.5 border-b border-border/50 bg-muted/20"
+					<!-- Action Button: Execute Visual Query in Left Rail -->
+					<div class="pt-1">
+						<Button
+							variant="default"
+							size="lg"
+							class="w-full h-11 text-sm font-bold gap-2 shadow-sm rounded-xl cursor-pointer"
+							disabled={isSearching || (!uploadedFile && !previewUrl && !selectedExistingImage)}
+							onclick={executeSearch}
 						>
-							<Card.Title
-								class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between"
-							>
-								<span>Retrieval Settings</span>
-								<SlidersIcon class="size-3.5" />
-							</Card.Title>
-						</Card.Header>
-
-						<Card.Content class="p-4 space-y-4">
-							<Tabs.Root value="basic" class="w-full flex flex-col">
-								<Tabs.List
-									class="grid grid-cols-2 w-full h-8 mb-3 bg-muted/50 p-0.5 rounded-lg"
-								>
-									<Tabs.Trigger
-										value="basic"
-										class="text-xs font-semibold py-1"
-										>Basic</Tabs.Trigger
-									>
-									<Tabs.Trigger
-										value="advanced"
-										class="text-xs font-semibold py-1"
-										>Advanced</Tabs.Trigger
-									>
-								</Tabs.List>
-
-								<!-- TAB 1: BASIC SETTINGS -->
-								<Tabs.Content
-									value="basic"
-									class="space-y-3.5 focus-visible:outline-none"
-								>
-									<!-- Search Scope -->
-									<div class="space-y-1.5">
-										<label
-											for="scope-selector"
-											class="text-xs font-semibold text-foreground block"
-										>
-											Candidate Scope
-										</label>
-										<select
-											id="scope-selector"
-											bind:value={searchScope}
-											class="w-full h-8.5 text-xs rounded-lg border border-border bg-background px-2.5 font-medium cursor-pointer focus:ring-1 focus:ring-primary"
-										>
-											<option value="both"
-												>Both (GHIM-10K + My Uploads)</option
-											>
-											<option value="ghim10k"
-												>GHIM-10K Reference Dataset Only</option
-											>
-											<option value="my_images"
-												>My Uploaded Images Only</option
-											>
-										</select>
-									</div>
-
-									<!-- Category Filter -->
-									<div class="space-y-1.5">
-										<label
-											for="cat-selector"
-											class="text-xs font-semibold text-foreground block"
-										>
-											Category Filter
-										</label>
-										<select
-											id="cat-selector"
-											bind:value={selectedCategory}
-											class="w-full h-8.5 text-xs rounded-lg border border-border bg-background px-2.5 font-medium cursor-pointer focus:ring-1 focus:ring-primary"
-										>
-											<option value="all"
-												>All Categories (Unrestricted)</option
-											>
-											{#each categories as cat}
-												<option value={cat.id}
-													>{cat.name}</option
-												>
-											{/each}
-										</select>
-									</div>
-
-									<!-- Top-K Results -->
-									<div class="space-y-1.5 pt-1">
-										<div
-											class="flex items-center justify-between text-xs"
-										>
-											<span
-												class="font-semibold text-foreground"
-												>Top-K Returned</span
-											>
-											<span
-												class="font-mono font-bold text-primary"
-												>{topK} images</span
-											>
-										</div>
-										<input
-											type="range"
-											min="4"
-											max="50"
-											step="2"
-											bind:value={topK}
-											class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
-										/>
-										<div
-											class="flex justify-between text-[10px] text-muted-foreground font-mono"
-										>
-											<span>4</span>
-											<span>12 (default)</span>
-											<span>50</span>
-										</div>
-									</div>
-								</Tabs.Content>
-
-								<!-- TAB 2: ADVANCED SETTINGS -->
-								<Tabs.Content
-									value="advanced"
-									class="space-y-3.5 focus-visible:outline-none"
-								>
-									<!-- Descriptors Selection -->
-									<div class="space-y-1.5">
-										<span
-											class="text-xs font-semibold text-foreground block"
-											>Active Descriptors</span
-										>
-										<div class="grid grid-cols-1 gap-1.5">
-											<label
-												class="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-xs cursor-pointer hover:bg-muted/50"
-											>
-												<span class="font-medium"
-													>Color Histogram (HSV 256)</span
-												>
-												<input
-													type="checkbox"
-													bind:checked={
-														activeDescriptors.color_histogram
-													}
-													class="rounded accent-primary"
-												/>
-											</label>
-											<label
-												class="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-xs cursor-pointer hover:bg-muted/50"
-											>
-												<span class="font-medium"
-													>Color Moments (Mean, Std,
-													Skew)</span
-												>
-												<input
-													type="checkbox"
-													bind:checked={
-														activeDescriptors.color_moments
-													}
-													class="rounded accent-primary"
-												/>
-											</label>
-											<label
-												class="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-xs cursor-pointer hover:bg-muted/50"
-											>
-												<span class="font-medium"
-													>Dominant Colors (5
-													Clusters)</span
-												>
-												<input
-													type="checkbox"
-													bind:checked={
-														activeDescriptors.dominant_colors
-													}
-													class="rounded accent-primary"
-												/>
-											</label>
-											<label
-												class="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-xs cursor-pointer hover:bg-muted/50"
-											>
-												<span class="font-medium"
-													>GLCM Texture (4 Angles)</span
-												>
-												<input
-													type="checkbox"
-													bind:checked={
-														activeDescriptors.glcm
-													}
-													class="rounded accent-primary"
-												/>
-											</label>
-											<label
-												class="flex items-center justify-between p-2 rounded-lg border border-border bg-card text-xs cursor-pointer hover:bg-muted/50"
-											>
-												<span class="font-medium"
-													>LBP Texture (256-bin)</span
-												>
-												<input
-													type="checkbox"
-													bind:checked={
-														activeDescriptors.lbp_histogram
-													}
-													class="rounded accent-primary"
-												/>
-											</label>
-										</div>
-									</div>
-
-									<!-- Metric & Normalization -->
-									<div
-										class="space-y-2 pt-1 border-t border-border/60"
-									>
-										<div class="space-y-1">
-											<label
-												for="metric-selector"
-												class="text-xs font-semibold text-foreground block"
-												>Distance / Similarity Metric</label
-											>
-											<select
-												id="metric-selector"
-												bind:value={similarityMetric}
-												class="w-full h-8 text-xs rounded-lg border border-border bg-background px-2 font-medium cursor-pointer"
-											>
-												<option value="cosine"
-													>Cosine Similarity [0, 1]</option
-												>
-												<option value="euclidean"
-													>Inverted Euclidean (1 / [1
-													+ d])</option
-												>
-											</select>
-										</div>
-
-										<div class="space-y-1">
-											<label
-												for="norm-selector"
-												class="text-xs font-semibold text-foreground block"
-												>Vector Normalization</label
-											>
-											<select
-												id="norm-selector"
-												bind:value={normalizationMethod}
-												class="w-full h-8 text-xs rounded-lg border border-border bg-background px-2 font-medium cursor-pointer"
-											>
-												<option value="none"
-													>None (Raw Extracted Vector)</option
-												>
-												<option value="minmax"
-													>Min-Max Normalization [0,
-													1]</option
-												>
-												<option value="standard"
-													>Standardization (Z-Score)</option
-												>
-											</select>
-										</div>
-									</div>
-								</Tabs.Content>
-							</Tabs.Root>
-						</Card.Content>
-					</Card.Root>
+							{#if isSearching}
+								<div class="size-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+								<span>Retrieving Visual Neighbors...</span>
+							{:else}
+								<SparklesIcon class="size-4" />
+								<span>Execute Visual Query</span>
+							{/if}
+						</Button>
+						{#if !uploadedFile && !previewUrl && !selectedExistingImage}
+							<p class="text-2xs text-muted-foreground text-center mt-1.5">
+								Select or upload an image above to run retrieval
+							</p>
+						{/if}
+					</div>
 				</div>
 
 				<!-- ================================================================= -->
-				<!-- COLUMN 2: RETRIEVED NEAREST NEIGHBORS (Right Area: flex-1 full)   -->
+				<!-- COLUMN 2: WORKSPACE & RETRIEVED CANDIDATES (Right Area: flex-1)   -->
 				<!-- ================================================================= -->
 				<div class="flex-1 min-w-0 w-full space-y-4">
+					<!-- CARD: COLLAPSIBLE RETRIEVAL PARAMETERS -->
+					<Card.Root class="border-border/80 shadow-xs rounded-xl overflow-hidden bg-card transition-all duration-200">
+						<!-- Summary Header Bar / Tinker Toggle -->
+						<div
+							class="p-3.5 sm:p-4 bg-muted/20 border-b border-border/50 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none hover:bg-muted/30 transition-colors"
+							onclick={() => (isSettingsOpen = !isSettingsOpen)}
+							role="button"
+							tabindex="0"
+							onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { isSettingsOpen = !isSettingsOpen; e.preventDefault(); } }}
+						>
+							<div class="flex flex-wrap items-center gap-2 sm:gap-2.5 min-w-0">
+								<div class="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+									<SlidersIcon class="size-4" />
+								</div>
+								<div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+									<span class="text-xs font-bold uppercase tracking-wider text-foreground">
+										Retrieval Parameters
+									</span>
+									<span class="text-2xs text-muted-foreground hidden sm:inline">&bull;</span>
+									<!-- Summary Badges -->
+									<div class="flex flex-wrap items-center gap-1.5">
+										<Badge variant="secondary" class="text-2xs font-semibold px-2 py-0.5 rounded-md">
+											{#if selectedPreset === 'balanced'}⚖️ Balanced
+											{:else if selectedPreset === 'color'}🎨 Color Focus
+											{:else if selectedPreset === 'texture'}🧱 Texture Focus
+											{:else}🎛️ Custom Fine-Tuned
+											{/if}
+										</Badge>
+										<Badge variant="outline" class="text-2xs font-mono px-2 py-0.5 rounded-md">
+											{#if searchScope === 'both'}Dataset + Uploads
+											{:else if searchScope === 'ghim10k'}GHIM-10K Only
+											{:else}Uploads Only
+											{/if}
+										</Badge>
+										<Badge variant="outline" class="text-2xs px-2 py-0.5 rounded-md text-muted-foreground">
+											{selectedCategoryLabel}
+										</Badge>
+										<Badge variant="outline" class="text-2xs font-mono font-bold text-primary px-2 py-0.5 rounded-md">
+											Top {topK}
+										</Badge>
+									</div>
+								</div>
+							</div>
+
+							<!-- Action Buttons -->
+							<div class="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									class="h-7.5 px-2.5 text-2xs font-medium gap-1.5 rounded-lg border-border/80 shadow-2xs hover:bg-muted"
+									onclick={(e) => {
+										e.stopPropagation();
+										isSettingsOpen = !isSettingsOpen;
+									}}
+								>
+									<span>{isSettingsOpen ? 'Collapse' : 'Tinker Parameters'}</span>
+									{#if isSettingsOpen}
+										<ChevronUpIcon class="size-3.5" />
+									{:else}
+										<ChevronDownIcon class="size-3.5" />
+									{/if}
+								</Button>
+							</div>
+						</div>
+
+						<!-- Collapsible Content -->
+						{#if isSettingsOpen}
+							<Card.Content class="p-4 sm:p-5 space-y-5 border-t border-border/40">
+								<!-- ROW 1: INTENT-DRIVEN PRESETS -->
+								<div class="space-y-2">
+									<div class="flex items-center justify-between">
+										<span class="text-xs font-semibold text-foreground">1. Retrieval Intent Preset</span>
+										<span class="text-2xs text-muted-foreground">Fast calibrated weighting schemes</span>
+									</div>
+									<div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+										<button
+											type="button"
+											class="p-2.5 rounded-xl border text-left transition-all {selectedPreset === 'balanced' ? 'border-primary bg-primary/5 ring-1 ring-primary/40' : 'border-border/80 bg-card hover:bg-muted/40'}"
+											onclick={() => applyPreset('balanced')}
+										>
+											<div class="flex items-center justify-between">
+												<span class="text-sm">⚖️</span>
+												{#if selectedPreset === 'balanced'}
+													<CheckIcon class="size-3 text-primary" />
+												{/if}
+											</div>
+											<p class="text-xs font-bold text-foreground mt-1">Balanced</p>
+											<p class="text-2xs text-muted-foreground mt-0.5 line-clamp-1">Equal color & texture</p>
+										</button>
+
+										<button
+											type="button"
+											class="p-2.5 rounded-xl border text-left transition-all {selectedPreset === 'color' ? 'border-primary bg-primary/5 ring-1 ring-primary/40' : 'border-border/80 bg-card hover:bg-muted/40'}"
+											onclick={() => applyPreset('color')}
+										>
+											<div class="flex items-center justify-between">
+												<span class="text-sm">🎨</span>
+												{#if selectedPreset === 'color'}
+													<CheckIcon class="size-3 text-primary" />
+												{/if}
+											</div>
+											<p class="text-xs font-bold text-foreground mt-1">Color Focus</p>
+											<p class="text-2xs text-muted-foreground mt-0.5 line-clamp-1">HSV & palette match</p>
+										</button>
+
+										<button
+											type="button"
+											class="p-2.5 rounded-xl border text-left transition-all {selectedPreset === 'texture' ? 'border-primary bg-primary/5 ring-1 ring-primary/40' : 'border-border/80 bg-card hover:bg-muted/40'}"
+											onclick={() => applyPreset('texture')}
+										>
+											<div class="flex items-center justify-between">
+												<span class="text-sm">🧱</span>
+												{#if selectedPreset === 'texture'}
+													<CheckIcon class="size-3 text-primary" />
+												{/if}
+											</div>
+											<p class="text-xs font-bold text-foreground mt-1">Texture Focus</p>
+											<p class="text-2xs text-muted-foreground mt-0.5 line-clamp-1">GLCM & LBP surface</p>
+										</button>
+
+										<button
+											type="button"
+											class="p-2.5 rounded-xl border text-left transition-all {selectedPreset === 'custom' ? 'border-primary bg-primary/5 ring-1 ring-primary/40' : 'border-border/80 bg-card hover:bg-muted/40'}"
+											onclick={() => applyPreset('custom')}
+										>
+											<div class="flex items-center justify-between">
+												<span class="text-sm">🎛️</span>
+												{#if selectedPreset === 'custom'}
+													<CheckIcon class="size-3 text-primary" />
+												{/if}
+											</div>
+											<p class="text-xs font-bold text-foreground mt-1">Custom Weights</p>
+											<p class="text-2xs text-muted-foreground mt-0.5 line-clamp-1">Manual sliders</p>
+										</button>
+									</div>
+								</div>
+
+								<!-- ROW 2: SEARCH SPACE & TARGETS -->
+								<div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+									<!-- Candidate Scope -->
+									<div class="space-y-1.5">
+										<label for="retrieval-scope" class="text-xs font-semibold text-foreground block">
+											Candidate Scope
+										</label>
+										<select
+											id="retrieval-scope"
+											bind:value={searchScope}
+											class="w-full h-8.5 text-xs rounded-lg border border-border bg-background px-2.5 font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+										>
+											<option value="both">Both (GHIM-10K + My Uploads)</option>
+											<option value="ghim10k">GHIM-10K Reference Dataset Only</option>
+											<option value="my_images">My Uploaded Images Only</option>
+										</select>
+									</div>
+
+									<!-- Category Filter with Optgroups -->
+									<div class="space-y-1.5">
+										<label for="retrieval-cat" class="text-xs font-semibold text-foreground block">
+											Category Filter
+										</label>
+										<select
+											id="retrieval-cat"
+											bind:value={selectedCategory}
+											class="w-full h-8.5 text-xs rounded-lg border border-border bg-background px-2.5 font-medium focus:ring-1 focus:ring-primary focus:outline-none"
+										>
+											<option value="all">All Categories (Unrestricted)</option>
+											{#if datasetCategories.length > 0}
+												<optgroup label="GHIM-10K Dataset Classes">
+													{#each datasetCategories as cat}
+														<option value={cat.id}>{cat.name}</option>
+													{/each}
+												</optgroup>
+											{/if}
+											{#if userCategories.length > 0}
+												<optgroup label="My Custom Categories">
+													{#each userCategories as cat}
+														<option value={cat.id}>{cat.name}</option>
+													{/each}
+												</optgroup>
+											{/if}
+										</select>
+									</div>
+
+									<!-- Top-K Returned -->
+									<div class="space-y-1.5">
+										<div class="flex items-center justify-between text-xs">
+											<span class="font-semibold text-foreground">Top-K Returned</span>
+											<span class="font-mono font-bold text-primary">{topK} images</span>
+										</div>
+										<div class="flex items-center gap-1.5">
+											{#each [8, 12, 24, 48] as kVal}
+												<button
+													type="button"
+													class="flex-1 h-7 rounded text-2xs font-mono font-semibold border transition-all {topK === kVal ? 'border-primary bg-primary text-primary-foreground font-bold shadow-2xs' : 'border-border bg-background hover:bg-muted text-foreground'}"
+													onclick={() => (topK = kVal)}
+												>
+													{kVal}
+												</button>
+											{/each}
+										</div>
+									</div>
+								</div>
+
+								<!-- ROW 3: DESCRIPTOR WEIGHTS & FINE-TUNING -->
+								<div class="pt-2 border-t border-border/50 space-y-3">
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-2">
+											<span class="text-xs font-semibold text-foreground">Feature Relevance Weights</span>
+											<button
+												type="button"
+												class="text-2xs text-primary hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+												onclick={() => (isFineTuneOpen = !isFineTuneOpen)}
+											>
+												<span>{isFineTuneOpen ? 'Hide Sliders' : 'Show Sliders & Metric'}</span>
+												{#if isFineTuneOpen}
+													<ChevronUpIcon class="size-3" />
+												{:else}
+													<ChevronDownIcon class="size-3" />
+												{/if}
+											</button>
+										</div>
+										<span class="text-2xs font-mono text-muted-foreground">Proportional distribution</span>
+									</div>
+
+									<!-- Stacked Proportional Bar -->
+									<div class="space-y-1">
+										<div class="w-full h-2.5 rounded-full overflow-hidden flex bg-muted/60">
+											{#if activeDescriptors.color_histogram}
+												<div class="h-full bg-blue-500 transition-all duration-200" style="width: {getWeightPercent('color_histogram')}%"></div>
+											{/if}
+											{#if activeDescriptors.color_moments}
+												<div class="h-full bg-sky-400 transition-all duration-200" style="width: {getWeightPercent('color_moments')}%"></div>
+											{/if}
+											{#if activeDescriptors.dominant_colors}
+												<div class="h-full bg-amber-500 transition-all duration-200" style="width: {getWeightPercent('dominant_colors')}%"></div>
+											{/if}
+											{#if activeDescriptors.glcm}
+												<div class="h-full bg-emerald-500 transition-all duration-200" style="width: {getWeightPercent('glcm')}%"></div>
+											{/if}
+											{#if activeDescriptors.lbp_histogram}
+												<div class="h-full bg-indigo-500 transition-all duration-200" style="width: {getWeightPercent('lbp_histogram')}%"></div>
+											{/if}
+										</div>
+
+										<!-- Legend -->
+										<div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground pt-0.5">
+											<span class="inline-flex items-center gap-1">
+												<span class="size-2 rounded-full bg-blue-500"></span>
+												<span>HSV: {getWeightPercent('color_histogram')}%</span>
+											</span>
+											<span class="inline-flex items-center gap-1">
+												<span class="size-2 rounded-full bg-sky-400"></span>
+												<span>Moments: {getWeightPercent('color_moments')}%</span>
+											</span>
+											<span class="inline-flex items-center gap-1">
+												<span class="size-2 rounded-full bg-amber-500"></span>
+												<span>Dominant: {getWeightPercent('dominant_colors')}%</span>
+											</span>
+											<span class="inline-flex items-center gap-1">
+												<span class="size-2 rounded-full bg-emerald-500"></span>
+												<span>GLCM: {getWeightPercent('glcm')}%</span>
+											</span>
+											<span class="inline-flex items-center gap-1">
+												<span class="size-2 rounded-full bg-indigo-500"></span>
+												<span>LBP: {getWeightPercent('lbp_histogram')}%</span>
+											</span>
+										</div>
+									</div>
+
+									<!-- Sliders & Distance Metric Drawer -->
+									{#if isFineTuneOpen || selectedPreset === 'custom'}
+										<div class="p-3 rounded-xl bg-muted/30 border border-border/70 space-y-3.5 mt-2">
+											<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+												<!-- HSV 256 -->
+												<div class="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+													<div class="flex items-center justify-between text-2xs">
+														<label class="flex items-center gap-1.5 font-medium text-foreground cursor-pointer">
+															<input
+																type="checkbox"
+																bind:checked={activeDescriptors.color_histogram}
+																class="rounded accent-primary size-3.5"
+															/>
+															<span>Color Histogram</span>
+														</label>
+														<span class="font-mono text-muted-foreground">{(activeWeights.color_histogram || 0.2).toFixed(2)}</span>
+													</div>
+													<input
+														type="range"
+														min="0.05"
+														max="1"
+														step="0.05"
+														value={activeWeights.color_histogram || 0.2}
+														oninput={(e) => updateDescriptorWeight('color_histogram', Number((e.target as HTMLInputElement).value))}
+														disabled={!activeDescriptors.color_histogram}
+														class="w-full accent-primary h-1 bg-muted rounded cursor-pointer"
+													/>
+												</div>
+
+												<!-- Moments -->
+												<div class="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+													<div class="flex items-center justify-between text-2xs">
+														<label class="flex items-center gap-1.5 font-medium text-foreground cursor-pointer">
+															<input
+																type="checkbox"
+																bind:checked={activeDescriptors.color_moments}
+																class="rounded accent-primary size-3.5"
+															/>
+															<span>Color Moments</span>
+														</label>
+														<span class="font-mono text-muted-foreground">{(activeWeights.color_moments || 0.2).toFixed(2)}</span>
+													</div>
+													<input
+														type="range"
+														min="0.05"
+														max="1"
+														step="0.05"
+														value={activeWeights.color_moments || 0.2}
+														oninput={(e) => updateDescriptorWeight('color_moments', Number((e.target as HTMLInputElement).value))}
+														disabled={!activeDescriptors.color_moments}
+														class="w-full accent-primary h-1 bg-muted rounded cursor-pointer"
+													/>
+												</div>
+
+												<!-- Dominant -->
+												<div class="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+													<div class="flex items-center justify-between text-2xs">
+														<label class="flex items-center gap-1.5 font-medium text-foreground cursor-pointer">
+															<input
+																type="checkbox"
+																bind:checked={activeDescriptors.dominant_colors}
+																class="rounded accent-primary size-3.5"
+															/>
+															<span>Dominant Colors</span>
+														</label>
+														<span class="font-mono text-muted-foreground">{(activeWeights.dominant_colors || 0.2).toFixed(2)}</span>
+													</div>
+													<input
+														type="range"
+														min="0.05"
+														max="1"
+														step="0.05"
+														value={activeWeights.dominant_colors || 0.2}
+														oninput={(e) => updateDescriptorWeight('dominant_colors', Number((e.target as HTMLInputElement).value))}
+														disabled={!activeDescriptors.dominant_colors}
+														class="w-full accent-primary h-1 bg-muted rounded cursor-pointer"
+													/>
+												</div>
+
+												<!-- GLCM -->
+												<div class="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+													<div class="flex items-center justify-between text-2xs">
+														<label class="flex items-center gap-1.5 font-medium text-foreground cursor-pointer">
+															<input
+																type="checkbox"
+																bind:checked={activeDescriptors.glcm}
+																class="rounded accent-primary size-3.5"
+															/>
+															<span>GLCM Texture</span>
+														</label>
+														<span class="font-mono text-muted-foreground">{(activeWeights.glcm || 0.2).toFixed(2)}</span>
+													</div>
+													<input
+														type="range"
+														min="0.05"
+														max="1"
+														step="0.05"
+														value={activeWeights.glcm || 0.2}
+														oninput={(e) => updateDescriptorWeight('glcm', Number((e.target as HTMLInputElement).value))}
+														disabled={!activeDescriptors.glcm}
+														class="w-full accent-primary h-1 bg-muted rounded cursor-pointer"
+													/>
+												</div>
+
+												<!-- LBP -->
+												<div class="space-y-1 bg-card p-2 rounded-lg border border-border/60">
+													<div class="flex items-center justify-between text-2xs">
+														<label class="flex items-center gap-1.5 font-medium text-foreground cursor-pointer">
+															<input
+																type="checkbox"
+																bind:checked={activeDescriptors.lbp_histogram}
+																class="rounded accent-primary size-3.5"
+															/>
+															<span>LBP Texture</span>
+														</label>
+														<span class="font-mono text-muted-foreground">{(activeWeights.lbp_histogram || 0.2).toFixed(2)}</span>
+													</div>
+													<input
+														type="range"
+														min="0.05"
+														max="1"
+														step="0.05"
+														value={activeWeights.lbp_histogram || 0.2}
+														oninput={(e) => updateDescriptorWeight('lbp_histogram', Number((e.target as HTMLInputElement).value))}
+														disabled={!activeDescriptors.lbp_histogram}
+														class="w-full accent-primary h-1 bg-muted rounded cursor-pointer"
+													/>
+												</div>
+
+												<!-- Metric & Normalization -->
+												<div class="space-y-2 bg-card p-2 rounded-lg border border-border/60">
+													<div class="space-y-1">
+														<label for="metric-choice" class="text-2xs font-semibold text-foreground block">Similarity Metric</label>
+														<select
+															id="metric-choice"
+															bind:value={similarityMetric}
+															class="w-full h-6.5 text-2xs rounded border border-border bg-background px-1.5 font-medium"
+														>
+															<option value="cosine">Cosine Similarity [0, 1]</option>
+															<option value="euclidean">Inverted Euclidean (1 / [1 + d])</option>
+														</select>
+													</div>
+													<div class="space-y-1">
+														<label for="norm-choice" class="text-2xs font-semibold text-foreground block">Vector Normalization</label>
+														<select
+															id="norm-choice"
+															bind:value={normalizationMethod}
+															class="w-full h-6.5 text-2xs rounded border border-border bg-background px-1.5 font-medium"
+														>
+															<option value="none">None (Raw Vectors)</option>
+															<option value="minmax">Min-Max Normalization</option>
+															<option value="standard">Standardization (Z-Score)</option>
+														</select>
+													</div>
+												</div>
+											</div>
+										</div>
+									{/if}
+								</div>
+
+								<!-- Action Footer: Quick Execute & Collapse -->
+								<div class="flex items-center justify-between pt-2 border-t border-border/40">
+									<Button
+										variant="ghost"
+										size="sm"
+										class="text-xs text-muted-foreground h-8 cursor-pointer"
+										onclick={() => (isSettingsOpen = false)}
+									>
+										<span>Collapse Panel</span>
+									</Button>
+									<Button
+										variant="default"
+										size="sm"
+										class="h-8 px-4 text-xs font-semibold gap-1.5 shadow-2xs cursor-pointer"
+										disabled={isSearching}
+										onclick={executeSearch}
+									>
+										{#if isSearching}
+											<div class="size-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"></div>
+											<span>Retrieving...</span>
+										{:else}
+											<SparklesIcon class="size-3.5" />
+											<span>Apply & Execute Query</span>
+										{/if}
+									</Button>
+								</div>
+							</Card.Content>
+						{/if}
+					</Card.Root>
+
 					<Card.Root
 						class="border-border/80 shadow-xs rounded-xl overflow-hidden bg-card min-h-[580px] flex flex-col"
 					>

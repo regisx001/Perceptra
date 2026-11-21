@@ -261,15 +261,25 @@ class ImageService:
         user_id: str,
         category_id: Optional[str] = None,
         uncategorized_only: bool = False,
+        source_type: Optional[str] = None,
         page: int = 1,
         per_page: int = 24,
     ):
-        query = Image.query.filter_by(owner_id=user_id)
+        query = Image.query
+        if source_type == "dataset":
+            query = query.filter(Image.source_type == "dataset")
+        elif source_type == "all":
+            query = query.filter((Image.owner_id == user_id) | (Image.source_type == "dataset"))
+        else:
+            # Default: strictly user's own library images (uploads & transforms)
+            query = query.filter(Image.owner_id == user_id, Image.source_type.in_(["upload", "derived"]))
 
         if uncategorized_only:
             query = query.filter(Image.category_id.is_(None))
         elif category_id:
-            self._verify_category_ownership(user_id, category_id)
+            cat = Category.query.filter_by(id=category_id).first()
+            if not cat or (cat.user_id != user_id and cat.user_id is not None):
+                raise ResourceNotFoundError("Target category does not exist.")
             query = query.filter_by(category_id=category_id)
 
         return query.order_by(Image.created_at.desc()).paginate(
@@ -277,7 +287,14 @@ class ImageService:
         )
 
     def get_user_image(self, user_id: str, image_id: str) -> Image:
-        image = Image.query.filter_by(id=image_id, owner_id=user_id).first()
+        image = Image.query.filter(
+            (Image.id == image_id)
+            & (
+                (Image.owner_id == user_id)
+                | (Image.owner_id.is_(None))
+                | (Image.source_type == "dataset")
+            )
+        ).first()
         if not image:
             raise ResourceNotFoundError("Image not found.")
         return image
