@@ -255,9 +255,25 @@
 						<!-- Descriptors Display based on activeTab -->
 						{#if activeTab === "color"}
 							<div class="space-y-6">
-								{#if descriptors.dominant_colors}
-									<DominantColorsCard data={descriptors.dominant_colors} />
-								{/if}
+								<DominantColorsCard
+									{descriptors}
+									{isExtracting}
+									onExtractCluster={async (k) => {
+										if (!image) return;
+										isExtracting = true;
+										try {
+											const featureKey = k === 5 ? "dominant_colors" : `dominant_colors_${k}`;
+											await imageService.extractDescriptors(image.id, { feature_types: [featureKey], force: true });
+											const updated = await imageService.getImageDescriptors(image.id);
+											descriptors = updated.descriptors || {};
+										} catch (err: any) {
+											console.error(`Error extracting ${k}-cluster dominant colors:`, err);
+											alert(`Extraction failed: ${err.message || "Unknown error"}`);
+										} finally {
+											isExtracting = false;
+										}
+									}}
+								/>
 							</div>
 						{:else if activeTab === "texture"}
 							<div class="space-y-6">

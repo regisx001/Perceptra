@@ -1,0 +1,43 @@
+services:
+  perceptra:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: perceptra:latest
+    container_name: perceptra-app
+    restart: unless-stopped
+    ports:
+      - "${PROD_PORT:-5555}:5555"
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.production
+        required: false
+    environment:
+      - FLASK_ENV=production
+      - PORT=5555
+      - GUNICORN_BIND=0.0.0.0:5555
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-2}
+      - GUNICORN_THREADS=${GUNICORN_THREADS:-4}
+      - DATABASE_URL=sqlite:////app/instance/perceptra.db
+      - STORAGE_PROTOCOL=file
+      - STORAGE_BASE_PATH=/app/storage
+      - FRONTEND_DIST_DIR=/app/web_dist
+      - SECRET_KEY=${SECRET_KEY:-prod-secret-key-change-in-production-at-least-32-bytes}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-prod-jwt-secret-key-change-in-production-at-least-32-bytes}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - perceptra_data:/app/storage
+      - perceptra_db:/app/instance
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/api/v1/version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  perceptra_data:
+    name: perceptra_storage_data
+  perceptra_db:
+    name: perceptra_sqlite_db

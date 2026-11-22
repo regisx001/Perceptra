@@ -2,7 +2,13 @@ import math
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 
-COLOR_FEATURE_TYPES = {"color_histogram", "color_moments", "dominant_colors"}
+COLOR_FEATURE_TYPES = {
+    "color_histogram",
+    "color_moments",
+    "dominant_colors",
+    "dominant_colors_10",
+    "dominant_colors_20",
+}
 TEXTURE_FEATURE_TYPES = {"glcm", "lbp_histogram"}
 
 

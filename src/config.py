@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file located at the project root
+# Load environment variables from unified .env files located at the project root
+flask_env = os.getenv("FLASK_ENV", "development")
+env_mode_file = BASE_DIR / f".env.{flask_env}"
+if env_mode_file.exists():
+    load_dotenv(env_mode_file)
 load_dotenv(BASE_DIR / ".env")
 
 
@@ -34,3 +38,6 @@ class Config:
         for ext in os.getenv("ALLOWED_EXTENSIONS", "png,jpg,jpeg,webp,bmp,tiff,gif").split(",")
         if ext.strip()
     }
+
+    # Frontend static distribution path (SPA)
+    FRONTEND_DIST_DIR = os.getenv("FRONTEND_DIST_DIR", str(BASE_DIR / "web" / "build"))

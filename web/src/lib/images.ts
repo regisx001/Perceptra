@@ -72,6 +72,8 @@ export interface DescriptorsMap {
 	color_histogram?: ColorHistogramFeature;
 	color_moments?: ColorMomentsFeature;
 	dominant_colors?: DominantColorsFeature;
+	dominant_colors_10?: DominantColorsFeature;
+	dominant_colors_20?: DominantColorsFeature;
 	glcm?: GlcmFeature;
 	lbp_histogram?: LbpHistogramFeature;
 	[key: string]: any;

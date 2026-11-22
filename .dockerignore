@@ -1,0 +1,24 @@
+.git
+.github
+.agents
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.venv
+tests
+instance/*.db
+perceptra.db
+web/node_modules
+web/.svelte-kit
+web/build
+storage/*
+!storage/.gitkeep
+
+# Environment files
+.env
+.env.development
+.env.local
+.env.*.local
+!.env.production
+!.env.example

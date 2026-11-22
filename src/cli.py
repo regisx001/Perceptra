@@ -44,7 +44,9 @@ def dev_cmd(port=7000, host="127.0.0.1"):
     _run_dev(port=port, host=host)
 
 
-def _run_dev(port=7000, host="127.0.0.1"):
+def _run_dev(port=None, host="127.0.0.1"):
+    if port is None:
+        port = int(os.getenv("DEV_PORT", os.getenv("PORT", 7000)))
     os.environ.setdefault("FLASK_APP", "src.app:create_app")
     cmd = ["flask", "--app", "src.app:create_app", "run", "--port", str(port), "--host", host, "--debug"] + sys.argv[1:]
     sys.exit(subprocess.call(cmd))
