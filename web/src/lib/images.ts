@@ -16,6 +16,7 @@ export interface ImageItem {
 	checksum?: string | null;
 	transformation_params?: any;
 	is_favorite?: boolean;
+	favorited_at?: string;
 	created_at?: string;
 }
 

@@ -288,6 +288,12 @@ class ImageService:
                 raise ResourceNotFoundError("Target category does not exist.")
             query = query.filter_by(category_id=category_id)
 
+        if favorites_only:
+            from src.models.favorite import FavoriteImage
+            return query.order_by(FavoriteImage.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+
         return query.order_by(Image.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
         )

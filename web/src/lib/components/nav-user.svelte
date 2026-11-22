@@ -6,7 +6,17 @@
 	import { goto } from "$app/navigation";
 	import * as m from "#lib/paraglide/messages.js";
 
-	let { user }: { user: { name: string; email: string; avatar: string } } = $props();
+	let {
+		user,
+	}: {
+		user: {
+			name: string;
+			email: string;
+			avatar?: string;
+			avatarLight?: string;
+			avatarDark?: string;
+		};
+	} = $props();
 
 	async function handleLogout() {
 		auth.clearSession();
@@ -24,11 +34,24 @@
 				class="flex flex-1 items-center gap-2.5 min-w-0 group group-data-[collapsible=icon]:flex-none group-data-[collapsible=icon]:justify-center"
 				title={`${user.name} (${user.email})`}
 			>
-				<Avatar.Root class="size-8 rounded-full border shrink-0">
-					<Avatar.Image src={user.avatar} alt={user.name} />
-					<Avatar.Fallback class="rounded-full font-semibold text-xs bg-muted">
-						{user.name.substring(0, 2).toUpperCase()}
-					</Avatar.Fallback>
+				<Avatar.Root class="size-8 rounded-full border border-sidebar-border shrink-0 overflow-hidden bg-sidebar-accent/50 flex items-center justify-center p-1">
+					{#if user.avatar}
+						<Avatar.Image src={user.avatar} alt={user.name} />
+						<Avatar.Fallback class="rounded-full font-semibold text-xs bg-muted">
+							{user.name.substring(0, 2).toUpperCase()}
+						</Avatar.Fallback>
+					{:else}
+						<img
+							src={user.avatarLight || "/favicon-light-32x32.png"}
+							alt={user.name}
+							class="size-full object-contain dark:hidden"
+						/>
+						<img
+							src={user.avatarDark || "/favicon-dark-32x32.png"}
+							alt={user.name}
+							class="hidden size-full object-contain dark:block"
+						/>
+					{/if}
 				</Avatar.Root>
 				<div class="grid flex-1 text-start text-xs leading-tight min-w-0 group-data-[collapsible=icon]:hidden">
 					<span class="truncate font-semibold text-foreground text-sm group-hover:text-primary transition-colors">{user.name}</span>

@@ -4,15 +4,14 @@
 	import UploadIcon from "@tabler/icons-svelte/icons/upload";
 	import FolderTreeIcon from "@tabler/icons-svelte/icons/folder";
 	import TransformIcon from "@tabler/icons-svelte/icons/transform";
-	import HelpIcon from "@tabler/icons-svelte/icons/help";
-	import SettingsIcon from "@tabler/icons-svelte/icons/settings";
+	import HeartIcon from "@tabler/icons-svelte/icons/heart";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
 	import NavMain from "./nav-main.svelte";
-	import NavSecondary from "./nav-secondary.svelte";
 	import NavUser from "./nav-user.svelte";
 	import { auth } from "#lib/auth.js";
 	import * as m from "#lib/paraglide/messages.js";
 	import type { ComponentProps } from "svelte";
+	import { page } from "$app/state";
 
 	const currentUser = auth.getUser();
 
@@ -44,24 +43,12 @@
 		},
 	]);
 
-	let navSecondary = $derived([
-		{
-			title: m.nav_settings(),
-			url: "/settings",
-			icon: SettingsIcon,
-		},
-		{
-			title: m.nav_docs(),
-			url: "/docs",
-			icon: HelpIcon,
-		},
-	]);
-
 	const sidebarData = {
 		user: {
 			name: currentUser?.email ? currentUser.email.split("@")[0] : "Researcher",
 			email: currentUser?.email || "researcher@perceptra.local",
-			avatar: "/favicon-light-32x32.png",
+			avatarLight: "/favicon-light-32x32.png",
+			avatarDark: "/favicon-dark-32x32.png",
 		},
 	};
 
@@ -90,9 +77,8 @@
 								alt="Perceptra Logo"
 								class="hidden size-7 w-auto object-contain dark:block shrink-0 group-data-[collapsible=icon]:size-6"
 							/>
-							<div class="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
+							<div class="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
 								<span class="font-bold tracking-tight text-sm text-foreground">Perceptra</span>
-								<span class="text-[11px] text-muted-foreground font-medium">Group 13 &bull; GHIM-10K</span>
 							</div>
 						</a>
 					{/snippet}
@@ -103,7 +89,36 @@
 
 	<Sidebar.Content>
 		<NavMain items={navMain} />
-		<NavSecondary items={navSecondary} class="mt-auto" />
+
+		<!-- Collections / Favorites Section -->
+		<div class="px-3 pt-3 pb-1 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-1.5">
+			<div class="flex items-center gap-2">
+				<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 shrink-0 group-data-[collapsible=icon]:hidden">
+					Collections
+				</span>
+				<div class="h-px w-full bg-sidebar-border/60"></div>
+			</div>
+		</div>
+
+		<Sidebar.Group class="py-0">
+			<Sidebar.GroupContent>
+				<Sidebar.Menu>
+					<Sidebar.MenuItem>
+						<Sidebar.MenuButton
+							isActive={page.url.pathname.startsWith("/dashboard/favorites")}
+							tooltipContent="Favorites"
+						>
+							{#snippet child({ props })}
+								<a href="/dashboard/favorites" {...props}>
+									<HeartIcon />
+									<span>Favorites</span>
+								</a>
+							{/snippet}
+						</Sidebar.MenuButton>
+					</Sidebar.MenuItem>
+				</Sidebar.Menu>
+			</Sidebar.GroupContent>
+		</Sidebar.Group>
 	</Sidebar.Content>
 
 	<Sidebar.Footer class="border-t border-sidebar-border p-2 group-data-[collapsible=icon]:p-1.5">

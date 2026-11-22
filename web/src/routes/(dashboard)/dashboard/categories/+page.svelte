@@ -905,7 +905,7 @@
 										<img
 											src={img.url}
 											alt={img.filename}
-											class="size-full object-cover group-hover:scale-105 transition-transform duration-300"
+											class="size-full object-cover"
 											loading="lazy"
 											onerror={(e) => {
 												const target = e.currentTarget as HTMLImageElement;

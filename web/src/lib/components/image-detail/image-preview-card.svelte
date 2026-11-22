@@ -74,7 +74,7 @@
 		<img
 			src={imageUrl}
 			alt={image.filename}
-			class="max-h-[320px] w-auto max-w-full rounded-lg object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+			class="max-h-[320px] w-auto max-w-full rounded-lg object-contain"
 			loading="eager"
 		/>
 

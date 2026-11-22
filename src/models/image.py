@@ -35,9 +35,13 @@ class Image(db.Model):
 
     def to_dict(self, user_id: str | None = None) -> dict:
         is_favorite = False
+        favorited_at = None
         if user_id:
             from src.models.favorite import FavoriteImage
-            is_favorite = FavoriteImage.query.filter_by(user_id=user_id, image_id=self.id).first() is not None
+            fav = FavoriteImage.query.filter_by(user_id=user_id, image_id=self.id).first()
+            if fav:
+                is_favorite = True
+                favorited_at = fav.created_at.isoformat() if fav.created_at else None
 
         return {
             "id": self.id,
@@ -55,6 +59,7 @@ class Image(db.Model):
             "checksum": self.checksum,
             "transformation_params": self.transformation_params,
             "is_favorite": is_favorite,
+            "favorited_at": favorited_at,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

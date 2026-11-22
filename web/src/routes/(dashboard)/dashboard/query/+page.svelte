@@ -749,7 +749,7 @@
 														item.image_id,
 													)}
 													alt={item.filename}
-													class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+													class="w-full h-full object-cover"
 													loading="lazy"
 												/>
 
@@ -916,7 +916,7 @@
 							<img
 								src={imageService.getImageFileUrl(img.id)}
 								alt={img.filename}
-								class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+								class="w-full h-full object-cover"
 							/>
 							<div
 								class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-semibold"

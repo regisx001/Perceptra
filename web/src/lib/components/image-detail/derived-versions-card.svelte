@@ -50,7 +50,7 @@
 							<img
 								src={imageService.getImageUrl(item.id)}
 								alt={item.filename}
-								class="h-full w-full object-contain transition-transform group-hover:scale-105"
+								class="h-full w-full object-contain"
 								loading="lazy"
 							/>
 						</div>
