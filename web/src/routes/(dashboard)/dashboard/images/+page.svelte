@@ -2,7 +2,6 @@
 	import { onMount } from "svelte";
 	import * as m from "#lib/paraglide/messages.js";
 	import { Button } from "#lib/components/ui/button/index.js";
-	import * as Card from "#lib/components/ui/card/index.js";
 	import { Input } from "#lib/components/ui/input/index.js";
 	import * as AlertDialog from "#lib/components/ui/alert-dialog/index.js";
 	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
@@ -43,6 +42,33 @@
 	let isLoading = $state(false);
 	let isLoadingMore = $state(false);
 	let loadMoreTriggerRef = $state<HTMLElement | null>(null);
+
+	// Grid columns preference (default: 4)
+	let columnsPerRow = $state<number>(4);
+
+	const gridColsClass = $derived.by(() => {
+		switch (columnsPerRow) {
+			case 2:
+				return "grid-cols-1 sm:grid-cols-2";
+			case 3:
+				return "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+			case 4:
+				return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
+			case 5:
+				return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+			case 6:
+				return "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6";
+			default:
+				return "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
+		}
+	});
+
+	function setColumns(cols: number) {
+		columnsPerRow = cols;
+		try {
+			localStorage.setItem("perceptra_gallery_cols", String(cols));
+		} catch {}
+	}
 
 	// Deletion state
 	let isDeleteDialogOpen = $state(false);
@@ -186,6 +212,16 @@
 	});
 
 	onMount(async () => {
+		try {
+			const savedCols = localStorage.getItem("perceptra_gallery_cols");
+			if (savedCols) {
+				const parsed = Number(savedCols);
+				if ([2, 3, 4, 5, 6].includes(parsed)) {
+					columnsPerRow = parsed;
+				}
+			}
+		} catch {}
+
 		await loadCategories();
 		await fetchImages(true);
 	});
@@ -276,9 +312,9 @@
 		<!-- Top Welcome & Page Header Bar -->
 		<div class="flex flex-col gap-2 px-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
 			<div>
-				<div class="flex items-center gap-2.5">
+				<div class="flex items-baseline gap-2.5">
 					<h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{m.images_title()}</h1>
-					<span class="inline-flex items-center font-mono text-xs px-2.5 py-0.5 rounded-full bg-secondary border border-border/80 text-secondary-foreground font-medium">
+					<span class="font-mono text-xs text-muted-foreground font-medium">
 						{m.images_total_counter({ count: totalImages })}
 					</span>
 				</div>
@@ -286,21 +322,37 @@
 					{m.images_subtitle()}
 				</p>
 			</div>
+
+			<!-- Columns per row selector parameter (Default: 4) -->
+			<div class="flex items-center gap-2 pt-2 sm:pt-0">
+				<label for="gallery-cols-select" class="text-xs text-muted-foreground font-medium shrink-0">Per row:</label>
+				<select
+					id="gallery-cols-select"
+					value={columnsPerRow}
+					onchange={(e) => setColumns(Number(e.currentTarget.value))}
+					class="h-8 rounded-md border border-input bg-background/80 px-2.5 text-xs font-mono text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+					aria-label="Images per row"
+				>
+					{#each [2, 3, 4, 5, 6] as cols}
+						<option value={cols}>{cols}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 
 		<!-- Dashboard Core Analytics & Controls -->
 		<div class="flex flex-col gap-4 px-4 py-4 md:gap-6 md:py-6 lg:px-6">
 
 	<!-- Images Grid -->
-	<Card.Root class="border border-border/80 bg-card/60 backdrop-blur-xs shadow-xs p-5 sm:p-6">
-		{#if isLoading}
-			<!-- Loading Skeleton (2 rows of 5) -->
-			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4.5 sm:gap-5">
-				{#each Array(10) as _, i}
-					<div class="flex flex-col rounded-lg border border-border/60 overflow-hidden shadow-2xs">
-						<Skeleton class="aspect-4/3 w-full" />
-						<div class="p-2.5 space-y-1 bg-background/60">
-							<Skeleton class="h-3 w-3/4 rounded-xs" />
+	{#if isLoading}
+			<!-- Loading Skeleton -->
+			<div class="grid {gridColsClass} gap-4 sm:gap-5">
+				{#each Array(columnsPerRow * 2) as _, i}
+					<div class="flex flex-col rounded-xl border border-border/60 overflow-hidden bg-card shadow-2xs">
+						<Skeleton class="aspect-16/10 w-full" />
+						<div class="p-3.5 sm:p-4 space-y-2">
+							<Skeleton class="h-4 w-3/4 rounded-xs" />
+							<Skeleton class="h-3 w-1/2 rounded-xs" />
 						</div>
 					</div>
 				{/each}
@@ -328,15 +380,15 @@
 				</Button>
 			</div>
 		{:else}
-			<!-- Render Image Cards: 5 images per row on desktop -->
-			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4.5 sm:gap-5">
+			<!-- Render Image Cards: Dynamic columns per row (default 4) -->
+			<div class="grid {gridColsClass} gap-4 sm:gap-5">
 				{#each filteredImages as img (img.id)}
 					<a
 						href="/dashboard/images/{img.id}"
-						class="group relative flex flex-col rounded-lg border border-border/70 bg-card overflow-hidden shadow-2xs hover:shadow-xs hover:border-primary/40 transition-all text-left"
+						class="group relative flex flex-col rounded-xl border border-border/80 bg-card overflow-hidden shadow-2xs hover:shadow-md hover:border-primary/50 transition-all text-left"
 					>
 						<!-- Image Thumbnail with fallback -->
-						<div class="aspect-4/3 w-full overflow-hidden bg-muted relative">
+						<div class="aspect-16/10 w-full overflow-hidden bg-muted/40 relative">
 							<img
 								src={img.url}
 								alt={img.filename}
@@ -356,7 +408,7 @@
 							<!-- Floating Action Buttons -->
 							<button
 								type="button"
-								class="absolute top-2 left-2 size-7 rounded-md bg-background/85 hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer z-10"
+								class="absolute top-2.5 left-2.5 size-7 rounded-full bg-black/60 hover:bg-primary hover:text-white text-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md shadow-xs cursor-pointer z-10"
 								title="Transform in Studio"
 								onclick={(e) => {
 									e.preventDefault();
@@ -370,7 +422,7 @@
 							<!-- Floating Favorite Button -->
 							<button
 								type="button"
-								class="absolute top-2 right-10 size-7 rounded-md bg-background/85 hover:bg-rose-500 hover:text-white text-muted-foreground flex items-center justify-center {img.isFavorite ? 'opacity-100 text-rose-500' : 'opacity-0 group-hover:opacity-100'} transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer z-10"
+								class="absolute top-2.5 right-10.5 size-7 rounded-full bg-black/60 hover:bg-rose-500 hover:text-white text-white/90 flex items-center justify-center {img.isFavorite ? 'opacity-100 text-rose-500' : 'opacity-0 group-hover:opacity-100'} transition-all backdrop-blur-md shadow-xs cursor-pointer z-10"
 								onclick={(e) => toggleFavorite(img, e)}
 								title={img.isFavorite ? "Remove from Favorites" : "Add to Favorites"}
 							>
@@ -380,7 +432,7 @@
 							<!-- Floating Delete Button -->
 							<button
 								type="button"
-								class="absolute top-2 right-2 size-7 rounded-md bg-background/85 hover:bg-destructive hover:text-destructive-foreground text-muted-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs shadow-2xs cursor-pointer z-10"
+								class="absolute top-2.5 right-2.5 size-7 rounded-full bg-black/60 hover:bg-destructive hover:text-white text-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md shadow-xs cursor-pointer z-10"
 								onclick={(e) => promptDelete(img, e)}
 								title="Delete Image"
 							>
@@ -388,19 +440,19 @@
 							</button>
 						</div>
 
-						<!-- Card Details -->
-						<div class="p-2.5 bg-background/80 backdrop-blur-xs flex flex-col gap-1">
-							<p class="truncate text-xs font-semibold text-foreground group-hover:text-primary transition-colors" title={img.filename}>
+						<!-- Card Details (Matching Reference Design) -->
+						<div class="p-3.5 sm:p-4 flex flex-col gap-1.5 bg-card">
+							<h3 class="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors" title={img.filename}>
 								{img.filename}
-							</p>
-							<div class="flex items-center justify-between text-[11px] text-muted-foreground">
-								<span class="truncate max-w-[120px]">
+							</h3>
+							<div class="flex items-center justify-between text-xs text-muted-foreground">
+								<span class="truncate max-w-[150px]">
 									{img.categoryId && categoryMap[img.categoryId]
 										? categoryMap[img.categoryId]
 										: "Uncategorized"}
 								</span>
 								{#if img.dimensions}
-									<span class="font-mono text-[10px] opacity-80">{img.dimensions}</span>
+									<span class="font-mono text-2xs opacity-80 shrink-0">{img.dimensions}</span>
 								{/if}
 							</div>
 						</div>
@@ -439,7 +491,6 @@
 				</div>
 			{/if}
 		{/if}
-	</Card.Root>
 </div>
 </div>
 </div>

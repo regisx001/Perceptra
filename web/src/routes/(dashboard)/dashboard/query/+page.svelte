@@ -16,7 +16,7 @@
 	import { categoryService, type CategoryItem } from "#lib/categories.js";
 
 	// Tabler & Lucide Icons
-	import SparklesIcon from "@tabler/icons-svelte/icons/sparkles";
+	import SearchIcon from "@tabler/icons-svelte/icons/search";
 	import AdjustmentsHorizontalIcon from "@tabler/icons-svelte/icons/adjustments-horizontal";
 	import PhotoIcon from "@tabler/icons-svelte/icons/photo";
 	import UploadIcon from "@tabler/icons-svelte/icons/upload";
@@ -382,8 +382,8 @@
 				></div>
 				<span>Retrieving...</span>
 			{:else}
-				<SparklesIcon class="size-3.5" />
-				<span>Execute Query</span>
+				<SearchIcon class="size-3.5" />
+				<span>Search Similar</span>
 			{/if}
 		</Button>
 	</div>
@@ -611,7 +611,7 @@
 						</Card.Content>
 					</Card.Root>
 
-					<!-- Action Button: Execute Visual Query in Left Rail -->
+					<!-- Action Button: Search Similar in Left Rail -->
 					<div class="pt-1">
 						<Button
 							variant="default"
@@ -627,10 +627,10 @@
 								<div
 									class="size-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"
 								></div>
-								<span>Retrieving Visual Neighbors...</span>
+								<span>Searching Similar...</span>
 							{:else}
-								<SparklesIcon class="size-4" />
-								<span>Execute Visual Query</span>
+								<SearchIcon class="size-4" />
+								<span>Search Similar</span>
 							{/if}
 						</Button>
 						{#if !uploadedFile && !previewUrl && !selectedExistingImage}
@@ -664,10 +664,10 @@
 					/>
 
 					{#if isSearching || results.length > 0}
-						<div class="space-y-4 pt-2">
-							<!-- Results Header & Relevance Feedback Bar -->
+						<div class="space-y-4 pt-2 {relevantCount > 0 || irrelevantCount > 0 ? 'pb-28' : 'pb-6'}">
+							<!-- Results Header Bar -->
 							<div
-								class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+								class="flex items-center justify-between gap-3"
 							>
 								<div class="flex items-center gap-2">
 									<h3
@@ -683,57 +683,17 @@
 											</span>
 										{/if}
 									</h3>
-
-									{#if precisionAtK !== null}
-										<span
-											class="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400"
-										>
-											Precision@{results.length}: {(
-												precisionAtK * 100
-											).toFixed(1)}%
-										</span>
-									{/if}
 								</div>
 
-								<!-- Relevance Feedback Submission Controls -->
-								<div class="flex items-center gap-2">
-									{#if relevantCount > 0 || irrelevantCount > 0}
-										<div
-											class="flex items-center gap-1.5 text-xs font-medium mr-1"
-										>
-											<span
-												class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-2xs"
-											>
-												+{relevantCount} Rel
-											</span>
-											<span
-												class="inline-flex items-center px-2 py-0.5 rounded bg-destructive/10 text-destructive font-bold text-2xs"
-											>
-												-{irrelevantCount} Irrel
-											</span>
-										</div>
-
-										<Button
-											variant="default"
-											size="sm"
-											class="h-7.5 px-3 text-xs font-semibold gap-1.5 shadow-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-											disabled={isSubmittingFeedback}
-											onclick={submitRelevanceFeedback}
-										>
-											{#if isSubmittingFeedback}
-												<div
-													class="size-3 border-2 border-white border-t-transparent rounded-full animate-spin"
-												></div>
-												<span>Estimating...</span>
-											{:else}
-												<RefreshDotIcon class="size-3.5" />
-												<span
-													>Re-estimate &amp; Re-rank</span
-												>
-											{/if}
-										</Button>
-									{/if}
-								</div>
+								{#if precisionAtK !== null}
+									<span
+										class="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400"
+									>
+										Precision@{results.length}: {(
+											precisionAtK * 100
+										).toFixed(1)}%
+									</span>
+								{/if}
 							</div>
 
 							{#if isSearching}
@@ -1079,4 +1039,56 @@
 			</div>
 		</Dialog.Content>
 	</Dialog.Root>
+{/if}
+
+<!-- Floating Relevance Feedback Action Dock -->
+{#if relevantCount > 0 || irrelevantCount > 0}
+	<div
+		class="fixed bottom-8 z-40 left-1/2 -translate-x-1/2 pointer-events-none transition-all duration-300"
+	>
+		<div
+			class="pointer-events-auto flex items-center gap-3.5 sm:gap-4 px-5 py-2.5 sm:px-6 sm:py-3 rounded-2xl bg-card/95 border border-border shadow-2xl backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/10 animate-in fade-in slide-in-from-bottom-4 duration-200"
+			role="region"
+			aria-label="Relevance feedback actions"
+		>
+			<div class="flex items-center gap-2.5 pr-3 border-r border-border/80">
+				<span class="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+					+{relevantCount} Relevant
+				</span>
+				<span class="text-muted-foreground/40 text-sm">&bull;</span>
+				<span class="font-mono text-sm font-semibold text-rose-600 dark:text-rose-400">
+					-{irrelevantCount} Irrelevant
+				</span>
+			</div>
+
+			<button
+				type="button"
+				class="text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted/60 cursor-pointer font-medium"
+				onclick={() => {
+					feedbackMap = {};
+				}}
+				title="Clear all marked feedback"
+			>
+				Clear
+			</button>
+
+			<Button
+				variant="default"
+				size="default"
+				class="h-10 px-4.5 text-sm font-bold gap-2 shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl cursor-pointer"
+				disabled={isSubmittingFeedback}
+				onclick={submitRelevanceFeedback}
+			>
+				{#if isSubmittingFeedback}
+					<div
+						class="size-4 border-2 border-white border-t-transparent rounded-full animate-spin"
+					></div>
+					<span>Re-ranking...</span>
+				{:else}
+					<RefreshDotIcon class="size-4" />
+					<span>Re-estimate &amp; Re-rank</span>
+				{/if}
+			</Button>
+		</div>
+	</div>
 {/if}

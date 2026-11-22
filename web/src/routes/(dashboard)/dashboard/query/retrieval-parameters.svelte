@@ -898,7 +898,7 @@
 												step="0.05"
 												value={weight.toFixed(2)}
 												disabled={!isEnabled}
-												class="w-13 h-6.5 text-right px-1 text-xs font-mono font-medium rounded-md border border-border/80 bg-background disabled:bg-transparent disabled:border-transparent text-foreground"
+												class="w-14 h-7 text-center px-1 text-xs font-mono font-medium rounded-md border border-border/80 bg-background disabled:bg-transparent disabled:border-transparent text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 												onchange={(e) =>
 													handleWeightChange(
 														feat.id,
@@ -1002,7 +1002,7 @@
 												step="0.05"
 												value={weight.toFixed(2)}
 												disabled={!isEnabled}
-												class="w-13 h-6.5 text-right px-1 text-xs font-mono font-medium rounded-md border border-border/80 bg-background disabled:bg-transparent disabled:border-transparent text-foreground"
+												class="w-14 h-7 text-center px-1 text-xs font-mono font-medium rounded-md border border-border/80 bg-background disabled:bg-transparent disabled:border-transparent text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 												onchange={(e) =>
 													handleWeightChange(
 														feat.id,
