@@ -1,7 +1,7 @@
 import os
 
 # Server socket
-bind = os.getenv("GUNICORN_BIND", "0.0.0.0:7000")
+bind = os.getenv("GUNICORN_BIND", "0.0.0.0:5555")
 
 # Worker processes & threads
 workers = int(os.getenv("GUNICORN_WORKERS", 2))

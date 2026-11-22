@@ -1,7 +1,8 @@
 import logging
+import os
 import sys
 import time
-from flask import Flask, g, request
+from flask import Flask, g, request, send_from_directory
 from flask_cors import CORS
 from src.config import Config
 from src.extensions import db, migrate, bcrypt, jwt
@@ -72,18 +73,6 @@ def create_app(config_class=Config):
     app.register_blueprint(history_bp, url_prefix="/api/v1/retrieval-history")
     app.register_blueprint(analytics_bp, url_prefix="/api/v1/analytics")
 
-    @app.route("/")
-    def index():
-        return {
-            "status": "ok",
-            "message": "Backend initialized with SQLAlchemy, Flask-Migrate, and Auth",
-            "version": "1.0.0",
-            "active_api_versions": ["v1"],
-            "endpoints": {
-                "v1": "/api/v1",
-            },
-        }
-
     @app.route("/api/v1/version")
     def api_version():
         return {
@@ -92,6 +81,34 @@ def create_app(config_class=Config):
             "supported_versions": ["v1"],
             "status": "active",
         }
+
+    # Static Frontend SPA Serving (fallback when static build is present)
+    frontend_dist = app.config.get("FRONTEND_DIST_DIR")
+    if frontend_dist and os.path.isdir(frontend_dist) and os.path.exists(os.path.join(frontend_dist, "index.html")):
+        @app.route("/", defaults={"path": ""})
+        @app.route("/<path:path>")
+        def serve_frontend_spa(path):
+            # Don't intercept API routes or API versions
+            if path.startswith("api/") or path == "api":
+                return {"error": "API route not found"}, 404
+
+            target_file = os.path.join(frontend_dist, path)
+            if path != "" and os.path.exists(target_file) and not os.path.isdir(target_file):
+                return send_from_directory(frontend_dist, path)
+
+            return send_from_directory(frontend_dist, "index.html")
+    else:
+        @app.route("/")
+        def index():
+            return {
+                "status": "ok",
+                "message": "Backend initialized with SQLAlchemy, Flask-Migrate, and Auth",
+                "version": "1.0.0",
+                "active_api_versions": ["v1"],
+                "endpoints": {
+                    "v1": "/api/v1",
+                },
+            }
 
     app.logger.info("Flask application initialized successfully.")
     return app

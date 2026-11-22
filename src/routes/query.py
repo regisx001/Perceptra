@@ -31,7 +31,7 @@ def get_config():
     return jsonify({
         "success": True,
         "supported_descriptors": sorted(list(SUPPORTED_FEATURE_TYPES)),
-        "color_descriptors": ["color_histogram", "color_moments", "dominant_colors"],
+        "color_descriptors": ["color_histogram", "color_moments", "dominant_colors", "dominant_colors_10", "dominant_colors_20"],
         "texture_descriptors": ["glcm", "lbp_histogram"],
         "similarity_metrics": [
             {"id": "cosine", "label": "Cosine Similarity", "default": True},

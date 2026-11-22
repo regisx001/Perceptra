@@ -12,6 +12,7 @@ class TestConfig:
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     STORAGE_PROTOCOL = "file"
+    FRONTEND_DIST_DIR = None
 
 
 @pytest.fixture

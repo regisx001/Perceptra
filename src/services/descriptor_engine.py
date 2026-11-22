@@ -27,6 +27,8 @@ SUPPORTED_FEATURE_TYPES = {
     "color_histogram",
     "color_moments",
     "dominant_colors",
+    "dominant_colors_10",
+    "dominant_colors_20",
     "glcm",
     "lbp_histogram",
 }
@@ -319,7 +321,11 @@ class DescriptorEngine:
         if "color_moments" in requested:
             results["color_moments"] = cls.extract_color_moments(rgb_arr)
         if "dominant_colors" in requested:
-            results["dominant_colors"] = cls.extract_dominant_colors(rgb_arr)
+            results["dominant_colors"] = cls.extract_dominant_colors(rgb_arr, k=5)
+        if "dominant_colors_10" in requested:
+            results["dominant_colors_10"] = cls.extract_dominant_colors(rgb_arr, k=10)
+        if "dominant_colors_20" in requested:
+            results["dominant_colors_20"] = cls.extract_dominant_colors(rgb_arr, k=20)
         if "glcm" in requested:
             results["glcm"] = cls.extract_glcm(rgb_arr)
         if "lbp_histogram" in requested:
