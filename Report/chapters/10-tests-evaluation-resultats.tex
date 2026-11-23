@@ -3,106 +3,198 @@
 
 \section{Banc d'Essais et Suite de Tests Automatisés (Pytest)}
 
-Pour garantir la résilience, la conformité algorithmique et la non-régression du système au fil des évolutions, Perceptra intègre une suite exhaustive de tests unitaires et d'intégration exécutée sous \textbf{pytest}.
+Pour garantir la résilience, la conformité algorithmique et la non-régression du système au fil des évolutions du code, Perceptra intègre une suite exhaustive de tests unitaires et d'intégration automatisés exécutée sous \textbf{pytest}.
 
-L'ensemble des \textbf{80 tests automatisés} s'exécute avec un taux de réussite de \textbf{100\,\%} en 9,06 secondes. La couverture valide spécifiquement~:
+L'ensemble des \textbf{80 tests automatisés} s'exécute avec un taux de réussite de \textbf{100\,\%} en 9,06 secondes. La couverture valide rigoureusement~:
 \begin{itemize}
-    \item \textbf{Déterminisme des Descripteurs (\texttt{test\_descriptors.py})~:} Vérification que l'histogramme HSV, les moments, le GLCM et le LBP extraits d'une même image témoin produisent exactement les mêmes coefficients à $10^{-6}$ près.
-    \item \textbf{Moteur de Pertinence FRE (\texttt{test\_relevance\_feedback.py})~:} Contrôle de la décroissance de la dispersion intra-classe, de la régularité du déplacement du centroïde de requête, de la positivité des poids de Fisher et de la conservation de la contrainte $\sum w_j = 1.0$.
-    \item \textbf{Intégrité Géométrique (\texttt{test\_transform\_engine.py})~:} Validation des limites d'interpolation lors des rotations, recadrages et transformations affines.
-    \item \textbf{Sécurité et Contrôle d'Accès (\texttt{test\_auth.py})~:} Refus systématique des requêtes non signées, rejet des jetons expirés et étanchéité des ressources entre utilisateurs distincts.
+    \item \textbf{Déterminisme des Descripteurs (\texttt{test\_descriptors.py})~:} Vérification que l'histogramme HSV, les moments de couleur, les couleurs dominantes KMeans, le GLCM et le LBP extraits d'une même image témoin produisent exactement les mêmes signatures numériques à $10^{-6}$ près.
+    \item \textbf{Moteur de Pertinence FRE (\texttt{test\_relevance\_feedback.py})~:} Contrôle de la décroissance de la dispersion intra-classe, de la régularité du déplacement du centroïde de requête, de la positivité des poids de Fisher et du respect absolu de la contrainte de fermeture convexe $\sum w_j = 1.0$.
+    \item \textbf{Moteur de Similarité (\texttt{test\_similarity\_engine.py})~:} Validation des propriétés métriques (positivité, identité des indiscernables, symétrie) pour les distances cosinus et euclidiennes, ainsi que le respect des bornes de similarité dans $[0, 1]$.
+    \item \textbf{Intégrité Géométrique (\texttt{test\_transform\_engine.py})~:} Contrôle des interpolations et des délimitations de canevas lors des rotations continues, recadrages et transformations affines.
+    \item \textbf{Sécurité et Contrôle d'Accès (\texttt{test\_auth.py})~:} Refus systématique des requêtes non signées, rejet des jetons JWT expirés et étanchéité stricte des ressources privées entre utilisateurs.
 \end{itemize}
 
-\section{Protocole d'Évaluation Quantitative sur GHIM-10K}
+\section{Protocole d'Évaluation et Environnement Expérimental}
 
-Pour évaluer objectivement l'efficacité du moteur CBIR et mesurer l'apport de la méthode \textbf{Feature Relevance Estimation} assignée au Groupe~13, nous avons déployé un protocole d'évaluation expérimental rigoureux sur la collection de référence \textbf{GHIM-10K} (10\,000 images réparties en 20 classes thématiques de 500 images).
+Afin d'évaluer objectivement l'efficacité de la recherche par similarité visuelle et de quantifier avec rigueur l'apport du moteur \textbf{Feature Relevance Estimation (FRE)} assigné au Groupe~13, nous avons déployé un banc d'essai expérimental complet sur la collection de référence \textbf{GHIM-10K}~\cite{kaggle_ghim10k}.
 
-\subsection{Définition des Métriques d'Évaluation}
-Soit une image requête $q$ appartenant à une classe de vérité terrain $\mathcal{C}_q$. Pour un nombre de résultats renvoyés fixé à $K \in \{5, 10, 20, 30, 40, 50\}$~:
-\begin{enumerate}
-    \item \textbf{Précision au rang $K$ ($P@K$)~:} Proportion d'images pertinentes parmi les $K$ images les mieux classées~:
-    \begin{equation}
-    P@K = \frac{|\{i \in \text{Top-}K \mid \text{classe}(i) = \mathcal{C}_q\}|}{K}
-    \end{equation}
-    \item \textbf{Rappel au rang $K$ ($R@K$)~:} Proportion d'images pertinentes retrouvées parmi la totalité des images de cette classe dans la base ($N_{\mathcal{C}_q} = 500$)~:
-    \begin{equation}
-    R@K = \frac{|\{i \in \text{Top-}K \mid \text{classe}(i) = \mathcal{C}_q\}|}{N_{\mathcal{C}_q}}
-    \end{equation}
-    \item \textbf{Précision Moyenne (Average Precision -- AP)~:}
-    \begin{equation}
-    AP = \sum_{k=1}^K P@k \cdot \Delta R@k, \quad \text{où } \Delta R@k = R@k - R@(k-1)
-    \end{equation}
-\end{enumerate}
-
-\section{Résultats Expérimentaux et Analyse Comparative}
-
-Les résultats quantitatifs obtenus sur 100 requêtes réparties sur les 20 classes du dataset sont consignés dans le tableau~\ref{tab:resultats_benchmarks} et mis en perspective graphique sur la figure~\ref{fig:pr_curves}.
+\subsection{Spécifications de l'Environnement de Benchmark}
+Le banc d'essai a été exécuté dans des conditions d'évaluation standardisées et reproductibles, dont les caractéristiques matérielles et logicielles sont récapitulées dans le tableau~\ref{tab:specs_eval}.
 
 \begin{table}[H]
 \centering
 \rowcolors{2}{LightGray}{white}
-\begin{tabularx}{\textwidth}{>{\bfseries}p{4.2cm}ccccc}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{5.5cm}X}
 \toprule
 \rowcolor{TableHeader}
-\color{white}Méthode / Configuration & \color{white}$P@5$ & \color{white}$P@10$ & \color{white}$P@20$ & \color{white}$P@50$ & \color{white}MAP@20 \\
+\color{white}Paramètre d'Évaluation & \color{white}Configuration / Valeur Mesurée \\
 \midrule
-Recherche Simple (Uniforme) & 62,0\,\% & 58,2\,\% & 51,4\,\% & 38,1\,\% & 54,8\,\% \\
-Feedback FRE (Itération 1) & 78,4\,\% & 73,4\,\% & 67,1\,\% & 52,3\,\% & 71,2\,\% \\
-Feedback FRE (Itération 2) & \textbf{89,2\,\%} & \textbf{85,1\,\%} & \textbf{79,0\,\%} & \textbf{63,4\,\%} & \textbf{82,6\,\%} \\
-\midrule
-\rowcolor{SoftRed}
-\textbf{Gain Absolu (Itér. 2 vs Init.)} & \textbf{+27,2\,\%} & \textbf{+26,9\,\%} & \textbf{+27,6\,\%} & \textbf{+25,3\,\%} & \textbf{+27,8\,\%} \\
+Système d'Exploitation & Linux 6.18.55-1-MANJARO (x86\_64) \\
+Environnement d'Exécution & CPython 3.13.14 (Optimisé sous \texttt{uv}) \\
+Ressources Processeur & 8 c\oe{}urs logiques (x86\_64) \\
+Mémoire Vive (RAM) & 15,4 Go DDR4 \\
+Moteur de Persistance & Stockage local hybride + SQLite WAL mode (\texttt{perceptra.db}) \\
+Corpus Évalué & \textbf{GHIM-10K} (10\,021 images, 20 catégories thématiques) \\
+Vecteurs Descripteurs Indexés & \textbf{70\,021 signatures} stockées en base relationnelle \\
+Durée Totale du Benchmark & \textbf{299,90 secondes} ($\approx 5$ minutes d'exécution continue) \\
 \bottomrule
 \end{tabularx}
-\caption{Évaluation comparative de la précision moyenne sur le jeu de données GHIM-10K}
-\label{tab:resultats_benchmarks}
+\caption{Spécifications de l'environnement matériel et logiciel du benchmark Perceptra}
+\label{tab:specs_eval}
+\end{table}
+
+\subsection{Formalisation des Métriques de Performance}
+Soit une image requête $q$ appartenant à une catégorie de vérité terrain $\mathcal{C}_q$. Pour un seuil de coupure $K \in \{5, 10, 20, 50\}$~:
+\begin{enumerate}
+    \item \textbf{Précision au rang $K$ ($P@K$)~:} Ratio d'images pertinentes parmi les $K$ premiers résultats ordonnés~:
+    \begin{equation}
+    P@K = \frac{|\{i \in \text{Top-}K \mid \text{catégorie}(i) = \mathcal{C}_q\}|}{K}
+    \end{equation}
+    \item \textbf{Rappel au rang $K$ ($R@K$)~:} Proportion d'images pertinentes retrouvées par rapport à la taille totale de la catégorie dans la base ($N_{\mathcal{C}_q} = 500$)~:
+    \begin{equation}
+    R@K = \frac{|\{i \in \text{Top-}K \mid \text{catégorie}(i) = \mathcal{C}_q\}|}{N_{\mathcal{C}_q}}
+    \end{equation}
+    \item \textbf{Précision Moyenne (Average Precision -- AP@K)~:} Mesure synthétique intégrant la sensibilité à l'ordre d'apparition des résultats pertinents~:
+    \begin{equation}
+    \text{AP}@K = \frac{1}{\min(K, |\mathcal{C}_q|)} \sum_{k=1}^K P@k \cdot \mathbb{I}(\text{catégorie}(k) = \mathcal{C}_q)
+    \end{equation}
+    La moyenne arithmétique sur l'ensemble des requêtes fournit la \textbf{Mean Average Precision} ($\text{MAP}@20$).
+\end{enumerate}
+
+\section{Profilage des Performances du Moteur d'Extraction}
+
+L'évaluation de la latence computationnelle du moteur \texttt{DescriptorEngine} a été mesurée par micro-profilage haute résolution sur les flux d'images brutes lues depuis le disque. Le tableau~\ref{tab:bench_descriptors} présente les statistiques de latence et les débits effectifs obtenus.
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{LightGray}{white}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{>{\bfseries}lcccccc}
+\toprule
+\rowcolor{TableHeader}
+\color{white}Descripteur / Étape & \color{white}Moy. (ms) & \color{white}Méd. (ms) & \color{white}Min (ms) & \color{white}Max (ms) & \color{white}P95 (ms) & \color{white}Débit (img/s) \\
+\midrule
+Décodage \& EXIF (RGB) & 3,37 & 2,88 & 2,31 & 10,45 & 5,76 & 296,4 \\
+Histogramme HSV (256-D) & 1,29 & 1,29 & 1,20 & 1,35 & 1,35 & 777,0 \\
+Matrices de Co-occurrence GLCM & 1,47 & 1,45 & 1,34 & 1,65 & 1,64 & 681,9 \\
+Histogramme LBP (256-D) & 11,21 & 11,14 & 10,64 & 11,85 & 11,85 & 89,2 \\
+Moments de Couleur (9-D) & 16,98 & 16,83 & 13,96 & 19,54 & 19,33 & 58,9 \\
+Couleurs Dominantes ($k=5$) & 18,76 & 16,99 & 9,46 & 42,13 & 31,31 & 53,3 \\
+Couleurs Dominantes ($k=10$) & 19,79 & 19,31 & 12,11 & 29,27 & 26,52 & 50,5 \\
+\midrule
+\rowcolor{SoftRed}
+\textbf{Pipeline Complet d'Extraction} & \textbf{100,59} & \textbf{98,80} & \textbf{86,98} & \textbf{115,07} & \textbf{114,32} & \textbf{9,9} \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Latences computationnelles réelles et débit d'extraction des signatures visuelles}
+\label{tab:bench_descriptors}
+\end{table}
+
+\noindent\textbf{Analyse des performances d'extraction~:}
+\begin{itemize}
+    \item \textbf{Efficacité Extrême de l'Histogramme et du GLCM~:} L'histogramme HSV s'exécute en seulement \textbf{1,29 ms} (débit de 777 img/s) et le GLCM en \textbf{1,47 ms} (débit de 681,9 img/s), bénéficiant directement des implémentations C compilées sous-jacentes d'OpenCV et de Scikit-Image.
+    \item \textbf{Coût Modéré des Approches Itératives~:} Le calcul des moments de Stricker \& Orengo (16,98 ms) et le partitionnement $K$-Means (18,76 ms pour $k=5$) requièrent des boucles itératives sur les pixels normalisés, mais demeurent largement sous le seuil des 20 millisecondes.
+    \item \textbf{Bilan Global Pipeline~:} L'extraction complète des 5 familles de descripteurs s'effectue en \textbf{100,59 ms} en moyenne par image, garantissant une indexation fluide en arrière-plan sans blocage de l'interface utilisateur.
+\end{itemize}
+
+\section{Efficacité Comparée : Fusion Multimodale vs Descripteurs Isolés}
+
+Le tableau~\ref{tab:bench_modalities} consigne les résultats d'efficacité obtenus sur les catégories de vérité terrain ($N_{\mathcal{C}} = 500$ images par classe), en comparant la fusion multimodale complète aux descripteurs individuels isolés et en confrontant deux métriques de distance.
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{LightGray}{white}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{>{\bfseries}lcccccc}
+\toprule
+\rowcolor{TableHeader}
+\color{white}Configuration / Descripteur & \color{white}$P@5$ & \color{white}$P@10$ & \color{white}$P@20$ & \color{white}$P@50$ & \color{white}MAP@20 & \color{white}Temps \\
+\midrule
+\textbf{Fusion Multimodale (Cosinus)} & \textbf{52,5\,\%} & \textbf{43,2\,\%} & \textbf{34,8\,\%} & \textbf{29,8\,\%} & \textbf{71,4\,\%} & 875,6 ms \\
+Fusion Multimodale (Euclidienne) & 42,0\,\% & 35,2\,\% & 27,3\,\% & 22,2\,\% & 66,1\,\% & 824,1 ms \\
+Histogramme HSV Seul (256-D) & 48,0\,\% & 37,0\,\% & 29,0\,\% & 23,4\,\% & 67,9\,\% & 465,4 ms \\
+Moments de Couleur Seuls (9-D) & 43,5\,\% & 34,5\,\% & 25,6\,\% & 21,3\,\% & 69,7\,\% & 127,1 ms \\
+Couleurs Dominantes ($k=5$) & 41,0\,\% & 30,5\,\% & 23,1\,\% & 18,2\,\% & 67,2\,\% & 143,1 ms \\
+Texture LBP Seule (256-D) & 47,5\,\% & 38,8\,\% & 34,6\,\% & 27,3\,\% & 65,3\,\% & 246,3 ms \\
+Texture GLCM Seule & 12,0\,\% & 12,8\,\% & 11,4\,\% & 9,7\,\% & 25,0\,\% & 137,4 ms \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Comparaison de l'efficacité de recherche selon la modalité et la métrique sur GHIM-10K}
+\label{tab:bench_modalities}
+\end{table}
+
+\noindent\textbf{Enseignements scientifiques majeurs~:}
+\begin{enumerate}
+    \item \textbf{Supériorité Nette de la Fusion Multimodale~:} La combinaison convexe de la couleur et de la texture surpasse tous les descripteurs individuels, atteignant \textbf{52,5\,\%} de précision à $P@5$ et \textbf{71,4\,\%} de MAP@20. L'adjonction des motifs LBP et GLCM permet de discriminer des images possédant une palette chromatique semblable mais des contenus structurels distincts.
+    \item \textbf{Avantage Déterminant de la Métrique Cosinus~:} La distance cosinus surpasse nettement la distance euclidienne de \textbf{+10,5 points} à $P@5$ (52,5\,\% vs 42,0\,\%) et de \textbf{+5,3 points} en MAP@20 (71,4\,\% vs 66,1\,\%). En espace multidimensionnel clairsemé (histogrammes normalisés $L_1$), la similarité angulaire élimine les biais de magnitude et évite l'écrasement des distances induit par la norme $L_2$.
+    \item \textbf{Limites de la Texture Isolée (GLCM)~:} Utilisée seule, la matrice GLCM n'obtient que 12,0\,\% de précision à $P@5$. Les métriques globales de Haralick (contraste, homogénéité) ne capturent pas l'identité chromatique~; néanmoins, associées aux moments et aux histogrammes, elles fournissent une régularisation indispensable contre les faux positifs.
+\end{enumerate}
+
+\section{Progression du Feedback FRE (Groupe 13) et Convergence}
+
+Le tableau~\ref{tab:bench_fre} documente l'impact quantitatif de la contribution spécifique du \textbf{Groupe~13} au fil de sessions interactives multi-tours basées sur l'algorithme \textbf{Feature Relevance Estimation}.
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{LightGray}{white}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{>{\bfseries}lcccccc}
+\toprule
+\rowcolor{TableHeader}
+\color{white}Session de Recherche & \color{white}$P@5$ & \color{white}$P@10$ & \color{white}$P@20$ & \color{white}$P@50$ & \color{white}MAP@20 & \color{white}Latence \\
+\midrule
+Recherche Initiale (Itér. 0) & 52,5\,\% & 43,2\,\% & 34,8\,\% & 29,8\,\% & 71,4\,\% & 928,3 ms \\
+Feedback FRE (Itération 1) & 64,0\,\% & 48,5\,\% & 40,0\,\% & 32,3\,\% & 75,8\,\% & 1\,117,6 ms \\
+Feedback FRE (Itération 2) & \textbf{73,5\,\%} & \textbf{52,8\,\%} & \textbf{41,1\,\%} & \textbf{32,4\,\%} & \textbf{81,7\,\%} & 1\,121,6 ms \\
+\midrule
+\rowcolor{SoftRed}
+\textbf{Gain Absolu (Itér. 2 vs Init.)} & \textbf{+21,0\,\%} & \textbf{+9,6\,\%} & \textbf{+6,3\,\%} & \textbf{+2,6\,\%} & \textbf{+10,3\,\%} & --- \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Progression quantitative de la précision sous l'effet du Feature Relevance Estimation}
+\label{tab:bench_fre}
 \end{table}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.76\textwidth]{images/11-courbes-precision-recall-evaluation.png}
-\caption{Courbes de précision moyenne au rang $K$ montrant l'apport massif du feedback FRE}
+\includegraphics[width=0.95\textwidth]{images/11-courbes-precision-recall-evaluation.png}
+\caption{Synthèse expérimentale sur GHIM-10K : (A) Progression de la précision au fil des itérations FRE ; (B) Comparatif des modalités de descripteurs et des métriques de distance}
 \label{fig:pr_curves}
 \end{figure}
 
-L'examen des courbes met en évidence deux enseignements cardinaux~:
-\begin{enumerate}
-    \item \textbf{Bond Spectaculaire de Précision dès la Première Itération~:} L'application du critère de Fisher et de la compacité intra-classe fait bondir la précision $P@10$ de \textbf{58,2\,\%} à \textbf{73,4\,\%}, soit un gain immédiat de \textbf{+15,2 points de pourcentage}.
-    \item \textbf{Convergence et Saturation Positive à l'Itération 2~:} À la deuxième itération, la précision $P@10$ atteint \textbf{85,1\,\%} (près de 9 images sur 10 retournées dans le peloton de tête appartiennent à la catégorie désirée), démontrant une stabilisation rapide sans divergence.
-\end{enumerate}
+\noindent\textbf{Gains quantitatifs majeurs apportés par FRE~:}
+\begin{itemize}
+    \item \textbf{Bond Massif de Précision au Sommet ($\Delta P@5 = \mathbf{+21,0\,\%}$)~:} La précision sur les 5 premières images passe de 52,5\,\% à \textbf{73,5\,\%} en seulement deux itérations de rétroaction. Près de 3 images sur 4 affichées en tête de classement sont rigoureusement pertinentes.
+    \item \textbf{Progression Constante du Pelotone de Tête ($\Delta P@10 = \mathbf{+9,6\,\%}$)~:} À $K=10$, la précision s'élève de 43,2\,\% à \textbf{52,8\,\%}, confirmant l'élimination progressive des faux positifs au bénéfice d'images partageant la structure sémantique cible.
+    \item \textbf{Amélioration Globale de l'Ordonnancement ($\Delta \text{MAP}@20 = \mathbf{+10,3\,\%}$)~:} La précision moyenne atteint \textbf{81,7\,\%}, prouvant que le ratio de Fisher et la translation adaptative du centroïde guident efficacement la recherche vers le sous-espace d'intérêt de l'utilisateur.
+    \item \textbf{Convergence Rapide en Deux Itérations~:} Dès l'itération 1, le gain est de $+11,5\,\%$ sur $P@5$, et se stabilise à l'itération 2 sans divergence numérique, validant la pertinence du lissage bayésien avec mémoire d'inertie ($\beta = 0.3$).
+\end{itemize}
 
-\section{Profilage des Performances Computationnelles}
+\section{Profilage de Bout en Bout et Diagnostic de Scalabilité}
 
-Le tableau~\ref{tab:profiling_temps} détaille le profilage temporel des différentes étapes opérationnelles, mesuré sur un processeur standard (Intel Core i7 12-c\oe{}urs, 16 Go de RAM, SSD NVMe).
+Le tableau~\ref{tab:profiling_e2e} expose le profilage temporel détaillé d'une session de recherche complète exécutée de bout en bout sur l'ensemble de la collection de 10\,003 images candidates indexées.
 
 \begin{table}[H]
 \centering
 \rowcolors{2}{LightGray}{white}
-\begin{tabularx}{\textwidth}{>{\bfseries}p{4.5cm}p{2.8cm}X}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{5.5cm}p{3.0cm}X}
 \toprule
 \rowcolor{TableHeader}
-\color{white}Opération Algorithmique & \color{white}Temps Moyen & \color{white}Facteur Limitatif / Optimisation \\
+\color{white}Composant Opérationnel & \color{white}Temps Mesuré & \color{white}Détails et Nature du Traitement \\
 \midrule
-Décodage \& EXIF RGB & 3,2 ms & Optimisation en C++ sous Pillow et OpenCV. \\
-Extraction Histogramme HSV & 2,8 ms & Redimensionnement $256 \times 256$ sous \texttt{cv2.calcHist}. \\
-Calcul Moments de Couleur & 1,4 ms & Calculs vectoriels NumPy purs sur canaux normalisés. \\
-Partitionnement MiniBatchKMeans & 4,6 ms & Sous-échantillonnage $128 \times 128$ et taille de lot 2\,048. \\
-Matrices de Co-occurrence GLCM & 4,1 ms & Quantification $L=32$ et \texttt{skimage.feature.graycomatrix}. \\
-Extraction Histogramme LBP & 3,5 ms & Opérateur \texttt{local\_binary\_pattern} en C Cython. \\
-\midrule
-\rowcolor{SoftRed}
-\textbf{Total Extraction par Image} & \textbf{19,6 ms} & \textbf{Traitement temps réel inférieur à 20 millisecondes.} \\
-\midrule
-Balayage Vectoriel (10\,000 images) & 38,4 ms & Produit scalaire matriciel vectorisé sous NumPy. \\
-Calcul FRE + Lissage Bayésien & 2,1 ms & Manipulation de matrices légères sur $\mathcal{R}$ et $\mathcal{I}$. \\
-Tri et Ordonnancement Top-20 & 1,2 ms & Algorithme ArgSort hautement optimisé. \\
-\midrule
-\rowcolor{SoftRed}
-\textbf{Latence Totale Session Recherche} & \textbf{41,7 ms} & \textbf{Réponse quasi-instantanée ressentie par le client.} \\
+Résolution des Descripteurs Requête & 1,8 ms & Chargement en mémoire vive des signatures vectorielles de l'image de requête. \\
+Calcul de Similarité Vectorielle & 8\,812,5 ms & Balayage matriciel complet sur 10\,003 candidats et calcul des similarités multi-descripteurs. \\
+Session de Recherche Complète (API) & 10\,761,7 ms & Requête HTTP de bout en bout~: lectures SQLite, filtrage, calculs, ordonnancement et journalisation de session. \\
 \bottomrule
 \end{tabularx}
-\caption{Bilan de profilage temporel des modules algorithmiques de Perceptra}
-\label{tab:profiling_temps}
+\caption{Profilage de latence de bout en bout du service de recherche Perceptra}
+\label{tab:profiling_e2e}
 \end{table}
 
-Avec une latence globale de réponse de \textbf{41,7 millisecondes} pour interroger une collection de 10\,000 images, Perceptra délivre une expérience de navigation ultra-fluide, largement sous le seuil critique des 100 millisecondes.
+\noindent\textbf{Diagnostic d'ingénierie et justification de la feuille de route~:}
+Le calcul de similarité vectorielle brute sur 10\,003 candidats en mémoire via un balayage exhaustif $\mathcal{O}(N \cdot D)$ consomme \textbf{8,81 secondes}. Cette charge s'explique par la désérialisation dynamique des colonnes JSON de SQLite et l'évaluation répétée de 5 métriques pour chaque paire candidat-requête. 
+
+Ce diagnostic expérimental valide parfaitement la feuille de route architecturale définie pour la version 2.0 (Chapitre~\ref{chap:conclusion})~: l'intégration d'un moteur d'indexation vectorielle approchée (\textbf{FAISS / HNSW}) permettra de découpler la recherche du volume brut de la base relationnelle et d'abaisser cette latence sous la barre des 10 millisecondes sur plus d'un million d'images.

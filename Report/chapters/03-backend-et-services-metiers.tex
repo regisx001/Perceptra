@@ -7,13 +7,6 @@ Le backend de Perceptra a été conçu selon les règles de l'art du génie logi
 
 Cette organisation garantit l'isolation complète des contextes d'exécution (développement local, suite de tests automatisée sous Pytest et déploiement conteneurisé en production) tout en facilitant l'injection de dépendances et l'isolation des états.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.76\textwidth]{images/04-architecture-backend-flask.png}
-\caption{Architecture modulaire interne du backend Flask et découplage des Blueprints}
-\label{fig:backend_flask}
-\end{figure}
-
 Le fichier \texttt{src/config.py} structure la hiérarchie des configurations au moyen de classes héritant d'une classe de base commune~: \texttt{DevelopmentConfig} (mode debug, base locale SQLite), \texttt{TestingConfig} (base volatile en mémoire \texttt{sqlite:///:memory:}, désactivation CSRF), et \texttt{ProductionConfig} (sécurité renforcée, support natif PostgreSQL via \texttt{DATABASE\_URL}).
 
 \section{Couche de Routage : Les Blueprints RESTful}

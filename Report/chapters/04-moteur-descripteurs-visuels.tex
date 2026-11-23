@@ -3,7 +3,7 @@
 
 \section{Architecture du Moteur d'Extraction : \texttt{DescriptorEngine}}
 
-L'efficacité et la reproductibilité d'un système CBIR reposent sur la rigueur de son moteur de caractérisation visuelle. Dans Perceptra, cette responsabilité est dévolue à la classe sans état \texttt{DescriptorEngine} (\texttt{src/services/descriptor\_engine.py}).
+L'efficacité et la reproductibilité d'un système de recherche visuelle reposent sur la rigueur de son moteur de caractérisation. Dans Perceptra, cette responsabilité est dévolue à la classe sans état \texttt{DescriptorEngine} (\texttt{src/services/descriptor\_engine.py}).
 
 Conçu pour fonctionner de manière strictement déterministe, le moteur reçoit en entrée le flux brut d'octets (\textit{raw bytes}) d'une image matricielle et produit en sortie un dictionnaire structuré contenant les hyperparamètres d'extraction, les données statistiques détaillées et le vecteur numérique normalisé prêt pour l'indexation.
 

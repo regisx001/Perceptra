@@ -5,32 +5,25 @@
 
 La conception architecturale de la plateforme \textbf{Perceptra} obéit à des impératifs d'ingénierie logicielle stricts~: haute modularité, découplage fort entre l'interface utilisateur et le moteur de calcul scientifique, déterminisme des algorithmes de traitement d'images, extensibilité horizontale et simplicité de déploiement.
 
-Pour répondre à ces exigences tout en assurant une expérience utilisateur fluide et sans latence perceptible lors du traitement de requêtes complexes sur 10\,000 images, Perceptra est structuré selon un patron d'architecture distribuée \textbf{N-Tiers} articulé autour d'API RESTful sans état (\textit{stateless}).
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.78\textwidth]{images/00-architecture-globale-perceptra.png}
-\caption{Architecture globale du système Perceptra et interactions inter-composants}
-\label{fig:arch_globale}
-\end{figure}
-
-Comme l'illustre la figure~\ref{fig:system_ntiers}, le système est découpé en quatre strates logiques indépendantes, garantissant une séparation rigoureuse des responsabilités (\textit{Separation of Concerns} -- SoC)~:
+Pour répondre à ces exigences tout en assurant une expérience utilisateur fluide et sans latence perceptible lors du traitement de requêtes complexes sur 10\,000 images, Perceptra est structuré selon un patron d'architecture distribuée \textbf{N-Tiers} articulé autour d'API RESTful sans état (\textit{stateless}), illustré sur la figure~\ref{fig:system_ntiers}.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.78\textwidth]{images/03-architecture-systeme-n-tiers.png}
-\caption{Décomposition architecturale en couches logiques N-Tiers}
+\caption{Décomposition architecturale globale en couches logiques N-Tiers}
 \label{fig:system_ntiers}
 \end{figure}
 
+Le système est découpé en quatre strates logiques indépendantes, garantissant une séparation rigoureuse des responsabilités (\textit{Separation of Concerns} -- SoC)~:
+
 \subsection{1. Couche Présentation (Frontend Web)}
-Hébergée sur le navigateur du client, cette couche est intégralement construite avec le framework \textbf{SvelteKit 3} exploitant le nouveau moteur de réactivité fine \textbf{Svelte 5} (système des \textit{Runes}~: \texttt{\$state}, \texttt{\$derived}, \texttt{\$effect}). Elle assure l'affichage interactif de la galerie de médias, le studio de retouche d'image non destructif, le tableau de bord de recherche CBIR avec curseurs dynamiques, et l'internationalisation native bilingue (Français/Anglais) propulsée par \textit{Paraglide-JS}.
+Hébergée sur le navigateur du client, cette couche est intégralement construite avec le framework \textbf{SvelteKit 3} exploitant le nouveau moteur de réactivité fine \textbf{Svelte 5} (système des \textit{Runes}~: \texttt{\$state}, \texttt{\$derived}, \texttt{\$effect}). Elle assure l'affichage interactif de la galerie de médias, le studio de retouche d'image non destructif, le tableau de bord de recherche visuelle avec curseurs dynamiques, et l'internationalisation native bilingue (Français/Anglais) propulsée par \textit{Paraglide-JS}.
 
 \subsection{2. Couche Exposition et Routage (Passerelle API REST)}
 Cette couche constitue le point d'entrée unique des communications client-serveur. Elle est orchestrée par le serveur WSGI de production \textbf{Gunicorn} relayé par un reverse proxy \textbf{Nginx} ou le serveur de développement Vite. Elle prend en charge la validation cryptographique des jetons JWT (\texttt{Flask-JWT-Extended}), la gestion des politiques CORS et le routage modulaire par Blueprints.
 
 \subsection{3. Couche Métier et Calcul Scientifique (Service Layer)}
-Cœur algorithmique de l'application, cette couche encapsule l'ensemble des règles métier, des opérations géométriques sur les images et des calculs vectoriels intensifs~: \texttt{ImageService} et \texttt{StorageService} pour la gestion physique et le contrôle d'intégrité SHA-256, \texttt{TransformEngine} pour les retouches, \texttt{DescriptorEngine} pour l'extraction de bas niveau, \texttt{SimilarityEngine} pour les métriques de distance, et \texttt{FeatureRelevanceEstimator} pour la boucle FRE du Groupe~13.
+C\oe{}ur algorithmique de l'application, cette couche encapsule l'ensemble des règles métier, des opérations géométriques sur les images et des calculs vectoriels intensifs~: \texttt{ImageService} et \texttt{StorageService} pour la gestion physique et le contrôle d'intégrité SHA-256, \texttt{TransformEngine} pour les retouches, \texttt{DescriptorEngine} pour l'extraction de bas niveau, \texttt{SimilarityEngine} pour les métriques de distance, et \texttt{FeatureRelevanceEstimator} pour la boucle FRE du Groupe~13.
 
 \subsection{4. Couche Données et Persistance (Persistence Layer)}
 Perceptra adopte une stratégie de persistance hybride~: les flux binaires d'images sont organisés sur le disque physique au sein d'une arborescence partitionnée \texttt{/storage/}, tandis que les métadonnées administratives, la hiérarchie des catégories, les comptes utilisateurs et les signatures vectorielles JSON sont persistés dans une base relationnelle \textbf{SQLite} (optimisée en mode journalier WAL) ou \textbf{PostgreSQL}, orchestrée par l'ORM \textbf{SQLAlchemy 2.0} et versionnée par \textbf{Flask-Migrate}.

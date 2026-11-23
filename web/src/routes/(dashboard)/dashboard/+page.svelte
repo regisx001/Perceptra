@@ -34,12 +34,10 @@
 
 		<!-- Dashboard Core Analytics & Controls -->
 		<div class="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-			<!-- Section 1: KPI Overview Cards (Real data from SQLite /api/v1/analytics/overview) -->
-			<SectionCards />
-
-			<!-- Section 2: Interactive Query Traffic & Search Activity Timeline -->
-			<div class="px-4 lg:px-6">
-				<ChartAreaInteractive />
+			<!-- Section 1 & 2: 2x2 KPI Overview Cards + Interactive Query Traffic Timeline -->
+			<div class="grid grid-cols-1 items-stretch gap-4 px-4 lg:grid-cols-2 lg:gap-6 lg:px-6">
+				<SectionCards class="h-full" />
+				<ChartAreaInteractive class="h-full" />
 			</div>
 
 			<!-- Section 3: Deep Analytics (Feedback ratio & Sequential Latency Trendline) -->

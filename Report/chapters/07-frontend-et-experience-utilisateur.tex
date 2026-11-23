@@ -5,13 +5,6 @@
 
 L'application web de Perceptra (\texttt{web/}) repose sur une stack front-end d'avant-garde combinant \textbf{SvelteKit 3} et le moteur de réactivité unifié \textbf{Svelte 5}. Contrairement aux frameworks historiques basés sur un DOM virtuel lourd (Virtual DOM comme React ou Vue), Svelte compile les composants en instructions JavaScript chirurgicales directes, offrant des performances d'affichage optimales indispensables pour manipuler des collections de milliers d'images.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.78\textwidth]{images/08-architecture-frontend-sveltekit.png}
-\caption{Architecture réactive du frontend SvelteKit et organisation des composants}
-\label{fig:frontend_arch}
-\end{figure}
-
 Le développement exploite exhaustivement les \textbf{Runes} introduites par Svelte~5~:
 \begin{itemize}
     \item \texttt{\$state()} : Déclaration explicite des variables d'état réactives (ex: images sélectionnées, filtres actifs, résultats)~;
@@ -43,7 +36,7 @@ L'interface de Perceptra s'articule autour de trois espaces majeurs~:
 \subsection{2. Modale de Retouche et Caractérisation (\texttt{ImageDetailModal})}
 Visualiseur exhaustif des caractéristiques physiques et atelier complet de transformation non destructive~: recadrage avec règle des tiers, curseurs de redimensionnement proportionnel et rotations libres.
 
-\subsection{3. Studio de Recherche CBIR et Rétroaction (\texttt{/search})}
+\subsection{3. Studio de Recherche Visuelle et Rétroaction (\texttt{/search})}
 \begin{enumerate}
     \item \textbf{Dépôt de la Requête Visuelle~:} Glisser-déposer d'une image locale ou sélection dans la galerie.
     \item \textbf{Panneau de Configuration des Poids~:} Curseurs ergonomiques pour doser l'influence relative de chaque descripteur.

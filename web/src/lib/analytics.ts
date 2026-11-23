@@ -51,10 +51,30 @@ export interface LatencyPoint {
 	created_at: string;
 }
 
+export interface LatencyStage {
+	id: string;
+	name: string;
+	short_name: string;
+	ms: number;
+	percentage: number;
+	description: string;
+	complexity: string;
+	color: string;
+}
+
+export interface StageBreakdown {
+	extraction_ms: number;
+	db_fetch_ms: number;
+	similarity_ms: number;
+	reranking_ms: number;
+	stages: LatencyStage[];
+}
+
 export interface AnalyticsPerformance {
 	average_ms: number;
 	min_ms: number;
 	max_ms: number;
+	stage_breakdown?: StageBreakdown;
 	recent_latencies: LatencyPoint[];
 }
 

@@ -6,6 +6,13 @@
 	import * as Chart from "#lib/components/ui/chart/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { analyticsClient, type AnalyticsActivity } from "#lib/analytics.js";
+	import { cn } from "#lib/utils.js";
+
+	interface Props {
+		class?: string;
+	}
+
+	let { class: className = "" }: Props = $props();
 
 	let activityData = $state<AnalyticsActivity | null>(null);
 	let isLoading = $state(true);
@@ -45,7 +52,7 @@
 	} satisfies Chart.ChartConfig;
 </script>
 
-<Card.Root class="@container/card">
+<Card.Root class={cn("@container/card flex flex-col justify-between", className)}>
 	<Card.Header class="flex flex-col items-start gap-4 @[767px]/card:flex-row @[767px]/card:items-center">
 		<div>
 			<Card.Title>Visual Search &amp; Refinement Volume</Card.Title>
@@ -65,8 +72,8 @@
 			</div>
 		</Card.Action>
 	</Card.Header>
-	<Card.Content class="px-2 pt-4 sm:px-6 sm:pt-6">
-		<Chart.Container config={chartConfig} class="aspect-auto h-[260px] w-full">
+	<Card.Content class="px-2 pt-4 sm:px-6 sm:pt-6 flex-1 flex flex-col justify-end">
+		<Chart.Container config={chartConfig} class="aspect-auto h-[260px] w-full flex-1 min-h-[200px]">
 			<AreaChart
 				legend
 				data={formattedTimeline}

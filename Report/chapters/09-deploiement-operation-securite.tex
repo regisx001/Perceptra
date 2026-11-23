@@ -7,13 +7,6 @@ Pour assurer une portabilité totale du système et éliminer les disparités d'
 
 Cette approche sépare la compilation des dépendances de la phase d'exécution finale, réduisant la taille de l'image de production et minimisant la surface d'attaque.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.78\textwidth]{images/10-deploiement-docker-infra.png}
-\caption{Infrastructure de déploiement et orchestration sous Docker Compose}
-\label{fig:docker_infra}
-\end{figure}
-
 Le processus d'assemblage comprend trois étages successifs~:
 \begin{enumerate}
     \item \textbf{Étage 1 (Frontend Builder - Bun/Node)~:} Télécharge les dépendances npm, compile les traductions Paraglide-JS, et produit les artefacts minifiés de l'application SvelteKit dans \texttt{web/build/}.

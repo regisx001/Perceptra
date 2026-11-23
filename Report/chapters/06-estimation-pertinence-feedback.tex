@@ -5,7 +5,7 @@
 
 Au sein de l'architecture de Perceptra, le module \textbf{Feature Relevance Estimation (FRE)} constitue la contribution scientifique et algorithmique assignée de manière exclusive au \textbf{Groupe 13}.
 
-Les systèmes CBIR classiques considèrent invariablement que tous les descripteurs visuels possèdent un pouvoir discriminant équivalent. Or, l'intention de l'utilisateur est fondamentalement contextuelle~: lors de la recherche de couchers de soleil, la teinte globale et la saturation sont déterminantes, tandis que pour des textures régulières (tissus, façades), le GLCM et le LBP sont prépondérants.
+Les moteurs conventionnels de recherche par l'image considèrent invariablement que tous les descripteurs visuels possèdent un pouvoir discriminant équivalent. Or, l'intention de l'utilisateur est fondamentalement contextuelle~: lors de la recherche de couchers de soleil, la teinte globale et la saturation sont déterminantes, tandis que pour des textures régulières (tissus, façades), le GLCM et le LBP sont prépondérants.
 
 L'algorithme \textbf{FRE} formalise mathématiquement cette intuition~: il observe les images annotées par l'utilisateur (pertinentes ou rejetées), quantifie la pertinence relative de chaque descripteur à partir de sa variance et de son pouvoir séparateur, et reconfigure automatiquement l'espace métrique pour les itérations suivantes.
 
@@ -87,3 +87,5 @@ refined_q = alpha_query * q_vec + (1.0 - alpha_query) * mu_r
 # Lissage avec la configuration a priori
 blended = beta_prior * prior_w + (1.0 - beta_prior) * norm_estimated[ft]
 \end{lstlisting}
+
+Comme le démontrent les benchmarks rigoureux détaillés au chapitre~\ref{chap:evaluation}, cette formulation produit un bond de précision spectaculaire de \textbf{+21,0\,\%} sur le peloton de tête ($P@5$ passant de $52,5\,\%$ à $73,5\,\%$) et une progression de \textbf{+10,3\,\%} en $\text{MAP}@20$, avec une convergence optimale atteinte dès la deuxième itération.

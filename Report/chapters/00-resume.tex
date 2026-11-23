@@ -1,33 +1,33 @@
 \chapter*{Résumé}
 \addcontentsline{toc}{chapter}{Résumé}
 
-Ce rapport présente l'analyse architecturale, logicielle et opérationnelle complète de la plateforme \textbf{Perceptra}, un système de recherche d'images par le contenu visuel (\textit{Content-Based Image Retrieval} -- CBIR) développé par le \textbf{Groupe~13} au sein de la Faculté des Sciences et Techniques de Tanger (FSTT) pour l'année universitaire 2026--2027.
+Ce rapport présente l'analyse architecturale, logicielle et opérationnelle complète de la plateforme \textbf{Perceptra}, un système de recherche d'images par le contenu et similarité visuelle développé par le \textbf{Groupe~13} au sein de la Faculté des Sciences et Techniques de Tanger (FSTT) pour l'année universitaire 2026--2027.
 
 Pour surmonter le \textit{fossé sémantique} (\textit{semantic gap}) sans dépendre d'annotations textuelles manuelles, Perceptra combine cinq descripteurs visuels déterministes~: histogrammes de couleur HSV (768-D), moments statistiques de Stricker \& Orengo (9-D), couleurs dominantes par partitionnement \textit{MiniBatchKMeans}, matrices de co-occurrence de niveaux de gris (GLCM de Haralick) et motifs binaires locaux (LBP 256-D).
 
 L'apport algorithmique majeur du Groupe~13 réside dans la conception du moteur d'estimation de pertinence des descripteurs (\textbf{\textit{Feature Relevance Estimation} -- FRE}). En analysant en direct les rétroactions de l'utilisateur (images pertinentes et non-pertinentes) via un ratio de Fisher, une modélisation de dispersion intra-classe inverse et un lissage bayésien avec mémoire d'inertie, le système ajuste dynamiquement la pondération des caractéristiques tout en translatant le centroïde de la requête.
 
-Sur le plan architectural, Perceptra associe un \textbf{Backend RESTful} en Python 3.13 sous Flask 3 structuré en couche de services découplés avec OpenCV et scikit-learn, un \textbf{Frontend réactif} en SvelteKit 3 et Svelte 5 Runes avec Shadcn-Svelte, Tailwind CSS 4 et Paraglide-JS, ainsi qu'une persistance hybride (fichiers vérifiés par SHA-256 et base relationnelle SQLAlchemy). Sur le jeu de référence \textbf{GHIM-10K} (10\,000 images), la précision au rang 10 ($P@10$) progresse de \textbf{58,2\,\%} à \textbf{85,1\,\%} après deux itérations de feedback FRE (+26,9 points de gain).
+Sur le plan architectural, Perceptra associe un \textbf{Backend RESTful} en Python 3.13 sous Flask 3 structuré en couche de services découplés avec OpenCV et scikit-learn, un \textbf{Frontend réactif} en SvelteKit 3 et Svelte 5 Runes avec Shadcn-Svelte, Tailwind CSS 4 et Paraglide-JS, ainsi qu'une persistance hybride (fichiers vérifiés par SHA-256 et base relationnelle SQLAlchemy). Sur le jeu de référence \textbf{GHIM-10K} (10\,021 images réparties en 20 classes), la précision au rang 5 ($P@5$) progresse de \textbf{52,5\,\%} à \textbf{73,5\,\%} (+21,0 points de gain) et la précision moyenne $\text{MAP}@20$ grimpe de \textbf{71,4\,\%} à \textbf{81,7\,\%} après deux itérations de feedback FRE.
 
 \vspace{0.2cm}
-\noindent\textbf{Mots-clés~:} CBIR, Feature Relevance Estimation (FRE), Relevance Feedback, GLCM, LBP, Svelte 5 Runes, Flask, GHIM-10K, Architecture logicielle.
+\noindent\textbf{Mots-clés~:} Recherche visuelle, similarité de contenu, Feature Relevance Estimation (FRE), Relevance Feedback, GLCM, LBP, Svelte 5 Runes, Flask, GHIM-10K, Architecture logicielle.
 
 \vspace{0.3cm}
 \begin{infobox}{Apport principal du Groupe 13}
-Formalisation mathématique et réalisation logicielle d'un moteur d'estimation de pertinence des descripteurs (\textit{Feature Relevance Estimation}), transformant la recherche statique en un dialogue adaptatif convergent et élevant la précision de plus de 26 points sur GHIM-10K.
+Formalisation mathématique et réalisation logicielle d'un moteur d'estimation de pertinence des descripteurs (\textit{Feature Relevance Estimation}), transformant la recherche statique en un dialogue adaptatif convergent et élevant la précision $P@5$ de plus de 21 points de pourcentage sur GHIM-10K.
 \end{infobox}
 
 \newpage
 \chapter*{Abstract}
 \addcontentsline{toc}{chapter}{Abstract}
 
-This report delivers a thorough architectural, algorithmic, and engineering analysis of \textbf{Perceptra}, an advanced Content-Based Image Retrieval (CBIR) platform integrating user-centric interactive learning through Relevance Feedback. Developed as the capstone project for Group~13 at the Faculty of Sciences and Techniques of Tangier (FSTT), Perceptra directly bridges the \textit{semantic gap} between low-level pixel data and human subjective visual concepts.
+This report delivers a thorough architectural, algorithmic, and engineering analysis of \textbf{Perceptra}, an advanced visual search and image similarity platform integrating user-centric interactive learning through Relevance Feedback. Developed as the capstone project for Group~13 at the Faculty of Sciences and Techniques of Tangier (FSTT), Perceptra directly bridges the \textit{semantic gap} between low-level pixel data and human subjective visual concepts.
 
 Rather than relying on manual textual metadata, Perceptra extracts a multi-faceted feature representation combining 768-D L1-normalized HSV color histograms, 9-D HSV statistical color moments, dominant color centroids via MiniBatchKMeans clustering, multi-directional Gray-Level Co-occurrence Matrices (GLCM), and 256-bin Local Binary Patterns (LBP).
 
 Group~13's specialized contribution centers on the design and execution of the \textbf{Feature Relevance Estimation (FRE)} engine. By continuously assessing user feedback (positive and negative visual samples) via a Fisher-inspired discriminant ratio, intra-class variance modeling, and Bayesian smoothing, the retrieval system adaptively refines feature weights and shifts the query centroid towards the user's intended target subspace.
 
-Architecturally, the application adopts a modern decoupled paradigm: a Python 3.13 Flask backend designed under the Service Layer pattern with OpenCV, scikit-image, and scikit-learn; a high-performance frontend powered by SvelteKit 3 and Svelte 5 Runes alongside Tailwind CSS 4 and Shadcn-Svelte; and a hybrid storage layer backed by SHA-256 content verification and SQLAlchemy relational persistence. Rigorous quantitative benchmarks on the 10,000-image GHIM-10K collection demonstrate an increase in Precision@10 from 58.2\% to 85.1\% after two feedback iterations.
+Architecturally, the application adopts a modern decoupled paradigm: a Python 3.13 Flask backend designed under the Service Layer pattern with OpenCV, scikit-image, and scikit-learn; a high-performance frontend powered by SvelteKit 3 and Svelte 5 Runes alongside Tailwind CSS 4 and Shadcn-Svelte; and a hybrid storage layer backed by SHA-256 content verification and SQLAlchemy relational persistence. Rigorous quantitative benchmarks on the 10,021-image GHIM-10K collection demonstrate an increase in Precision@5 from 52.5\% to 73.5\% (+21.0 percentage points) and MAP@20 reaching 81.7\% (+10.3 points gain) after two feedback iterations.
 
 \vspace{0.4cm}
-\noindent\textbf{Keywords:} Content-Based Image Retrieval (CBIR), Feature Relevance Estimation (FRE), Interactive Relevance Feedback, Computer Vision, Texture Analysis, Svelte 5, Flask, GHIM-10K Dataset.
+\noindent\textbf{Keywords:} Visual Information Retrieval, Content Similarity, Feature Relevance Estimation (FRE), Interactive Relevance Feedback, Computer Vision, Texture Analysis, Svelte 5, Flask, GHIM-10K Dataset.

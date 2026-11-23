@@ -148,7 +148,7 @@ digraph G {{
 compile_dot(dot_01, f"{IMAGES_DIR}/01-perceptra-pipeline-fonctionnel.png")
 
 # -------------------------------------------------------------
-# 02: Cadre Conceptuel CBIR & Semantic Gap
+# 02: Cadre Conceptuel Recherche Visuelle & Semantic Gap
 # -------------------------------------------------------------
 dot_02 = f"""
 digraph G {{
@@ -569,7 +569,7 @@ digraph G {{
     }}
 
     subgraph cluster_retrieval {{
-        label = "Entités Recherche CBIR & Relevance Feedback";
+        label = "Entités Recherche Visuelle & Relevance Feedback";
         fontname="Helvetica-Bold"; fontsize=11; fontcolor="{PRIMARY}";
         style="solid,rounded"; color="{PRIMARY}"; bgcolor="#F5F3FF";
 
@@ -659,95 +659,160 @@ digraph G {{
 compile_dot(dot_10, f"{IMAGES_DIR}/10-deploiement-docker-infra.png")
 
 # -------------------------------------------------------------
-# 11: Graphique Précision / Rappel (Généré avec PIL)
+# 11: Graphique Précision / Rappel (Généré avec PIL avec données réelles)
 # -------------------------------------------------------------
 def generate_pr_curves(filepath: str):
-    width, height = 900, 520
+    # Two-panel high quality chart: Left = FRE Iteration Progression, Right = Descriptors Comparison
+    width, height = 1100, 560
     img = Image.new("RGB", (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
     try:
         font_title = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf', 16)
-        font_label = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf', 12)
-        font_ticks = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf', 10)
-    except:
-        font_title = font_label = font_ticks = ImageFont.load_default()
+        font_subtitle = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf', 12)
+        font_label = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf', 10)
+        font_ticks = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans.ttf', 9)
+        font_val = ImageFont.truetype('/usr/share/fonts/dejavu-sans-fonts/DejaVuSans-Bold.ttf', 9)
+    except Exception:
+        font_title = font_subtitle = font_label = font_ticks = font_val = ImageFont.load_default()
 
-    # Title
-    draw.text((width // 2 - 240, 20), "Évaluation Quantitative : Précision Moyenne @ K sur GHIM-10K", fill=(38, 42, 52), font=font_title)
+    # Main Super Title
+    draw.text((width // 2 - 270, 16), "Résultats Expérimentaux Réels sur le Dataset GHIM-10K (10 021 images)", fill=(30, 41, 59), font=font_title)
 
-    # Plot area
-    ox, oy = 90, 430
-    pw, ph = 740, 350
+    # ---------------- PANEL 1 (LEFT): FRE Progression (P@5, P@10, P@20, P@50) ----------------
+    ox1, oy1 = 70, 470
+    pw1, ph1 = 440, 360
+
+    # Subtitle Panel 1
+    draw.text((ox1 + 40, 52), "A. Progression de la Précision selon les Itérations FRE", fill=(72, 61, 139), font=font_subtitle)
 
     # Axes
-    draw.line([(ox, oy), (ox + pw, oy)], fill=(96, 102, 112), width=2)
-    draw.line([(ox, oy), (ox, oy - ph)], fill=(96, 102, 112), width=2)
+    draw.line([(ox1, oy1), (ox1 + pw1, oy1)], fill=(148, 163, 184), width=2)
+    draw.line([(ox1, oy1), (ox1, oy1 - ph1)], fill=(148, 163, 184), width=2)
 
-    # Gridlines and Y ticks (Precision: 0.0 to 1.0)
-    for i in range(6):
-        val = i * 0.2
-        y = oy - int(i * 0.2 * ph)
-        draw.line([(ox, y), (ox + pw, y)], fill=(240, 242, 246), width=1)
-        draw.text((ox - 45, y - 6), f"{val:.1f}", fill=(96, 102, 112), font=font_ticks)
+    # Gridlines and Y ticks (0% to 80%)
+    y_ticks = [0.0, 0.2, 0.4, 0.6, 0.8]
+    for val in y_ticks:
+        y = oy1 - int((val / 0.85) * ph1)
+        draw.line([(ox1, y), (ox1 + pw1, y)], fill=(241, 245, 249), width=1)
+        draw.text((ox1 - 42, y - 6), f"{int(val*100)} %", fill=(100, 116, 139), font=font_ticks)
 
-    draw.text((ox - 75, oy - ph // 2 - 10), "Précision", fill=(72, 61, 139), font=font_label)
+    draw.text((ox1 - 55, oy1 - ph1 // 2 - 10), "Précision", fill=(72, 61, 139), font=font_label)
 
-    # X ticks (K values: 5, 10, 20, 30, 40, 50)
-    k_vals = [5, 10, 20, 30, 40, 50]
-    x_coords = []
+    # X ticks (K in [5, 10, 20, 50])
+    k_vals = [5, 10, 20, 50]
+    x_coords1 = []
     for idx, k in enumerate(k_vals):
-        x = ox + int(idx * (pw / (len(k_vals) - 1)))
-        x_coords.append(x)
-        draw.line([(x, oy), (x, oy + 5)], fill=(96, 102, 112), width=2)
-        draw.text((x - 8, oy + 10), f"K={k}", fill=(96, 102, 112), font=font_ticks)
+        x = ox1 + int(idx * (pw1 / (len(k_vals) - 1)))
+        x_coords1.append(x)
+        draw.line([(x, oy1), (x, oy1 + 5)], fill=(148, 163, 184), width=2)
+        draw.text((x - 12, oy1 + 10), f"K={k}", fill=(100, 116, 139), font=font_ticks)
 
-    draw.text((ox + pw // 2 - 40, oy + 35), "Nombre de résultats retournés (K)", fill=(72, 61, 139), font=font_label)
+    draw.text((ox1 + pw1 // 2 - 70, oy1 + 32), "Rang d'évaluation (Top-K)", fill=(72, 61, 139), font=font_label)
 
-    # Data series
-    # 1. Simple CBIR (sans feedback)
-    y_simple = [0.62, 0.58, 0.51, 0.46, 0.42, 0.38]
-    # 2. FRE Iteration 1
-    y_fre_1 = [0.78, 0.73, 0.67, 0.61, 0.56, 0.52]
-    # 3. FRE Iteration 2
-    y_fre_2 = [0.89, 0.85, 0.79, 0.73, 0.68, 0.63]
+    # Real data from BENCHMARK_RESULTS.md (Section 4)
+    # Iter 0: P@5=52.5%, P@10=43.2%, P@20=34.8%, P@50=29.8%
+    # Iter 1: P@5=64.0%, P@10=48.5%, P@20=40.0%, P@50=32.3%
+    # Iter 2: P@5=73.5%, P@10=52.8%, P@20=41.1%, P@50=32.4%
+    y_iter0 = [0.525, 0.432, 0.348, 0.298]
+    y_iter1 = [0.640, 0.485, 0.400, 0.323]
+    y_iter2 = [0.735, 0.528, 0.411, 0.324]
 
-    series = [
-        ("Recherche Simple (Sans Feedback)", y_simple, (156, 163, 175), "circle"),
-        ("FRE Itération 1 (Pondération Adaptative)", y_fre_1, (48, 104, 178), "square"),
-        ("FRE Itération 2 (Convergence Optimale)", y_fre_2, (72, 61, 139), "triangle"),
+    series1 = [
+        ("Recherche Initiale (Iter 0)", y_iter0, (148, 163, 184), "circle"),
+        ("FRE Itération 1 (+11.5% P@5)", y_iter1, (59, 130, 246), "square"),
+        ("FRE Itération 2 (+21.0% P@5)", y_iter2, (72, 61, 139), "triangle"),
     ]
 
-    for name, data, col, marker in series:
+    for name, data, col, marker in series1:
         points = []
-        for x, val in zip(x_coords, data):
-            y = oy - int(val * ph)
+        for x, val in zip(x_coords1, data):
+            y = oy1 - int((val / 0.85) * ph1)
             points.append((x, y))
 
-        # Draw lines
         for i in range(len(points) - 1):
             draw.line([points[i], points[i+1]], fill=col, width=3)
 
-        # Draw markers
-        for x, y in points:
+        for (x, y), val in zip(points, data):
             if marker == "circle":
                 draw.ellipse([x-5, y-5, x+5, y+5], fill=col, outline=(255, 255, 255), width=2)
             elif marker == "square":
                 draw.rectangle([x-5, y-5, x+5, y+5], fill=col, outline=(255, 255, 255), width=2)
             elif marker == "triangle":
                 draw.polygon([(x, y-6), (x-6, y+5), (x+6, y+5)], fill=col, outline=(255, 255, 255))
+            
+            # Draw numerical percentage text
+            offset_y = -18 if marker == "triangle" else (6 if marker == "circle" else -14)
+            draw.text((x - 12, y + offset_y), f"{val*100:.1f}%", fill=col, font=font_val)
 
-    # Legend
-    leg_x, leg_y = ox + 320, 65
-    draw.rectangle([leg_x - 10, leg_y - 10, leg_x + 390, leg_y + 80], fill=(246, 247, 250), outline=(203, 213, 225), width=1)
-    for idx, (name, _, col, marker) in enumerate(series):
-        ly = leg_y + idx * 24
-        draw.line([(leg_x, ly + 6), (leg_x + 25, ly + 6)], fill=col, width=3)
-        draw.ellipse([leg_x + 10, ly + 3, leg_x + 16, ly + 9], fill=col)
-        draw.text((leg_x + 35, ly), name, fill=(38, 42, 52), font=font_ticks)
+    # Legend Panel 1
+    leg1_x, leg1_y = ox1 + 10, 80
+    draw.rectangle([leg1_x, leg1_y, leg1_x + 230, leg1_y + 68], fill=(248, 250, 252), outline=(226, 232, 240), width=1)
+    for idx, (name, _, col, marker) in enumerate(series1):
+        ly = leg1_y + 8 + idx * 19
+        draw.line([(leg1_x + 8, ly + 5), (leg1_x + 24, ly + 5)], fill=col, width=3)
+        draw.ellipse([leg1_x + 13, ly + 2, leg1_x + 19, ly + 8], fill=col)
+        draw.text((leg1_x + 32, ly), name, fill=(30, 41, 59), font=font_ticks)
+
+    # ---------------- PANEL 2 (RIGHT): Descriptors Comparison (Bar Chart) ----------------
+    ox2, oy2 = 590, 470
+    pw2, ph2 = 470, 360
+
+    # Subtitle Panel 2
+    draw.text((ox2 + 40, 52), "B. Comparatif des Descripteurs : P@5 & MAP@20 (%)", fill=(72, 61, 139), font=font_subtitle)
+
+    # Axes
+    draw.line([(ox2, oy2), (ox2 + pw2, oy2)], fill=(148, 163, 184), width=2)
+    draw.line([(ox2, oy2), (ox2, oy2 - ph2)], fill=(148, 163, 184), width=2)
+
+    # Gridlines and Y ticks (0% to 80%)
+    for val in y_ticks:
+        y = oy2 - int((val / 0.85) * ph2)
+        draw.line([(ox2, y), (ox2 + pw2, y)], fill=(241, 245, 249), width=1)
+        draw.text((ox2 - 38, y - 6), f"{int(val*100)} %", fill=(100, 116, 139), font=font_ticks)
+
+    # Data from BENCHMARK_RESULTS.md (Section 3)
+    # Modalities: [Multimodal Cosine, Multimodal Euc, Color Hist, Moments, Dominant k=5, LBP, GLCM]
+    labels_bars = ["Fusion (Cos)", "Fusion (Euc)", "Histo HSV", "Moments", "Dominant", "LBP", "GLCM"]
+    p5_vals = [0.525, 0.420, 0.480, 0.435, 0.410, 0.475, 0.120]
+    map_vals = [0.714, 0.661, 0.679, 0.697, 0.672, 0.653, 0.250]
+
+    n_groups = len(labels_bars)
+    group_width = pw2 / n_groups
+    bar_w = 12
+
+    for idx, (label, p5, map20) in enumerate(zip(labels_bars, p5_vals, map_vals)):
+        gx = ox2 + idx * group_width + 12
+
+        # P@5 bar
+        h_p5 = int((p5 / 0.85) * ph2)
+        y_p5 = oy2 - h_p5
+        draw.rectangle([gx, y_p5, gx + bar_w, oy2], fill=(59, 130, 246), outline=(37, 99, 235))
+        draw.text((gx - 3, y_p5 - 12), f"{p5*100:.0f}", fill=(37, 99, 235), font=font_ticks)
+
+        # MAP@20 bar
+        h_map = int((map20 / 0.85) * ph2)
+        y_map = oy2 - h_map
+        draw.rectangle([gx + bar_w + 3, y_map, gx + 2 * bar_w + 3, oy2], fill=(72, 61, 139), outline=(55, 48, 107))
+        draw.text((gx + bar_w, y_map - 12), f"{map20*100:.0f}", fill=(72, 61, 139), font=font_ticks)
+
+        # X label
+        draw.text((gx - 6, oy2 + 10), label, fill=(71, 85, 105), font=font_ticks)
+
+    draw.text((ox2 + pw2 // 2 - 80, oy2 + 32), "Configurations et Descripteurs", fill=(72, 61, 139), font=font_label)
+
+    # Legend Panel 2
+    leg2_x, leg2_y = ox2 + 250, 80
+    draw.rectangle([leg2_x, leg2_y, leg2_x + 180, leg2_y + 50], fill=(248, 250, 252), outline=(226, 232, 240), width=1)
+    
+    draw.rectangle([leg2_x + 8, leg2_y + 10, leg2_x + 22, leg2_y + 22], fill=(59, 130, 246))
+    draw.text((leg2_x + 30, leg2_y + 10), "Précision @ 5 (P@5)", fill=(30, 41, 59), font=font_ticks)
+
+    draw.rectangle([leg2_x + 8, leg2_y + 28, leg2_x + 22, leg2_y + 40], fill=(72, 61, 139))
+    draw.text((leg2_x + 30, leg2_y + 28), "Précision Moyenne (MAP@20)", fill=(30, 41, 59), font=font_ticks)
 
     img.save(filepath)
-    print(f"Generated PR curves: {filepath}")
+    print(f"Generated PR curves with real benchmark data: {filepath}")
 
 generate_pr_curves(f"{IMAGES_DIR}/11-courbes-precision-recall-evaluation.png")
 

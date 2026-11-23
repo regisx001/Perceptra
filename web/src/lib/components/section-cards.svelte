@@ -11,6 +11,13 @@
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
 	import { analyticsClient, type AnalyticsOverview } from "#lib/analytics.js";
+	import { cn } from "#lib/utils.js";
+
+	interface Props {
+		class?: string;
+	}
+
+	let { class: className = "" }: Props = $props();
 
 	let overview = $state<AnalyticsOverview | null>(null);
 	let isLoading = $state(true);
@@ -28,10 +35,10 @@
 </script>
 
 <div
-	class="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4"
+	class={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 sm:grid-rows-2", className)}
 >
 	<!-- Card 1: Total Visual Searches -->
-	<Card.Root class="@container/card">
+	<Card.Root class="@container/card justify-between">
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<SearchIcon class="size-4 text-primary" />
@@ -60,7 +67,7 @@
 	</Card.Root>
 
 	<!-- Card 2: Feedback & FRE Iterations -->
-	<Card.Root class="@container/card">
+	<Card.Root class="@container/card justify-between">
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<ThumbUpIcon class="size-4 text-primary" />
@@ -90,7 +97,7 @@
 	</Card.Root>
 
 	<!-- Card 3: Average Iterations per Search -->
-	<Card.Root class="@container/card">
+	<Card.Root class="@container/card justify-between">
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<TargetIcon class="size-4 text-primary" />
@@ -118,7 +125,7 @@
 	</Card.Root>
 
 	<!-- Card 4: Mean Retrieval Latency -->
-	<Card.Root class="@container/card">
+	<Card.Root class="@container/card justify-between">
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<RefreshDotIcon class="size-4 text-primary" />

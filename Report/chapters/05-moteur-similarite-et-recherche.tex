@@ -1,4 +1,4 @@
-\chapter{Moteur de Similarité et Recherche CBIR}
+\chapter{Moteur de Similarité et Recherche par l'Image}
 \label{chap:recherche}
 
 \section{Espaces Métriques et Mesures de Proximité}
@@ -7,13 +7,6 @@ La recherche par le contenu nécessite de projeter les images au sein d'un espac
 
 Soit $\mathbf{q} \in \mathbb{R}^D$ le vecteur représentant la requête visuelle de l'utilisateur et $\mathbf{c} \in \mathbb{R}^D$ le vecteur correspondant à une image candidate issue de la collection indexée.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.60\textwidth]{images/06-pipeline-recherche-similarite.png}
-\caption{Pipeline de mise en correspondance vectorielle et d'ordonnancement Top-K}
-\label{fig:pipeline_similarite}
-\end{figure}
-
 Toutes les mesures de proximité dans Perceptra sont calibrées pour appartenir strictement à l'intervalle $[0, 1]$, où la valeur $1.0$ indique une identité visuelle parfaite et $0.0$ une divergence totale.
 
 \begin{infobox}{Métrique Cosinus Normalisée (Défaut)}
@@ -21,6 +14,7 @@ La similarité cosinus mesure l'angle géométrique entre deux vecteurs indépen
 \begin{equation}
 \cos(\mathbf{q}, \mathbf{c}) = \frac{\mathbf{q} \cdot \mathbf{c}}{\|\mathbf{q}\|_2 \cdot \|\mathbf{c}\|_2} \implies S_{\text{cos}}(\mathbf{q}, \mathbf{c}) = \frac{1 + \cos(\mathbf{q}, \mathbf{c})}{2} \in [0, 1]
 \end{equation}
+Les évaluations expérimentales sur GHIM-10K confirment la supériorité systématique de la similarité cosinus, surpassant la distance euclidienne de plus de 10 points de précision ($P@5 = 52,5\,\%$ contre $42,0\,\%$).
 \end{infobox}
 
 \begin{infobox}{Métrique Euclidienne Inversée}

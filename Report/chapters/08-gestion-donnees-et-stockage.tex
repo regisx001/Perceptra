@@ -38,7 +38,7 @@ Le tableau~\ref{tab:entites_db} synthétise le rôle et les contraintes des enti
 
 \section{Stratégie de Stockage Hybride et Intégrité Binaire}
 
-Perceptra refuse le stockage direct des flux binaires dans la base de données (colonnes \textit{BLOB}), qui dégrade les tampons mémoire. Le système met en œuvre une \textbf{architecture de stockage hybride}~:
+Perceptra refuse le stockage direct des flux binaires dans la base de données (colonnes \textit{BLOB}), qui dégrade les tampons mémoire. Le système met en \oe{}uvre une \textbf{architecture de stockage hybride}~:
 \begin{enumerate}
     \item \textbf{Plan de Données (Système de Fichiers)~:} Les fichiers images bruts sont enregistrés directement sur le volume physique sous des clés UUID4 horodatées (\texttt{storage/uploads/YYYY/MM/<uuid>.<ext>}).
     \item \textbf{Plan de Contrôle (Base SQL)~:} La base de données ne stocke que le descripteur d'accès logique (\texttt{storage\_key}), l'empreinte cryptographique SHA-256, les dimensions et les signatures vectorielles.
@@ -47,6 +47,6 @@ Perceptra refuse le stockage direct des flux binaires dans la base de données (
 
 \section{Ingestion du Dataset GHIM-10K et Migrations}
 
-Le jeu de données de référence \textbf{GHIM-10K}~\cite{kaggle_ghim10k} rassemble \textbf{10\,000 images} photographiques réparties en 20 classes thématiques de 500 images chacune (avions, navires, automobiles, feux d'artifice, fleurs, chevaux, montagnes, etc.).
+Le jeu de données de référence \textbf{GHIM-10K}~\cite{kaggle_ghim10k} rassemble \textbf{10\,021 images} photographiques réparties en 20 classes thématiques (avions, navires, automobiles, feux d'artifice, fleurs, chevaux, montagnes, etc.), totalisant \textbf{70\,021 vecteurs de descripteurs} indexés dans la table \texttt{image\_features}.
 
 Le service \texttt{DatasetService} (\texttt{src/services/dataset\_service.py}) ingère et pré-indexe cette volumétrie par blocs transactionnels de 500 enregistrements (\texttt{db.session.bulk\_save\_objects}). L'opération s'exécute en environ 18 minutes sur un processeur multi-c\oe{}urs standard, pour un volume de base de données final inférieur à 65 mégaoctets. Les modifications de schéma sont rigoureusement versionnées et appliquées via \textbf{Flask-Migrate} / Alembic.
