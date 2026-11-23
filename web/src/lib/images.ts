@@ -129,6 +129,27 @@ export interface BulkDeleteResponse {
 	error?: string;
 }
 
+export interface PhotoAdjustments {
+	// Light
+	brightness?: number;
+	contrast?: number;
+	exposure?: number;
+	highlights?: number;
+	shadows?: number;
+	whites?: number;
+	blacks?: number;
+	// Color
+	saturation?: number;
+	vibrance?: number;
+	hue?: number;
+	temperature?: number;
+	tint?: number;
+	// Detail
+	sharpness?: number;
+	clarity?: number;
+	blur?: number;
+}
+
 export interface ListImagesOptions {
 	category_id?: string | null;
 	uncategorized?: boolean;

@@ -1,28 +1,26 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { AreaChart } from "layerchart";
 	import * as Card from "#lib/components/ui/card/index.js";
+	import * as Chart from "#lib/components/ui/chart/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { Progress } from "#lib/components/ui/progress/index.js";
-	import { analyticsClient, type AnalyticsFeedback, type AnalyticsDescriptors, type AnalyticsPerformance } from "#lib/analytics.js";
-	import SlidersIcon from "@tabler/icons-svelte/icons/adjustments";
+	import { analyticsClient, type AnalyticsFeedback, type AnalyticsPerformance } from "#lib/analytics.js";
 	import ActivityIcon from "@tabler/icons-svelte/icons/activity";
 	import CheckCircleIcon from "@tabler/icons-svelte/icons/circle-check";
 	import ClockIcon from "@tabler/icons-svelte/icons/clock";
 
 	let feedbackStats = $state<AnalyticsFeedback | null>(null);
-	let descriptorStats = $state<AnalyticsDescriptors | null>(null);
 	let performanceStats = $state<AnalyticsPerformance | null>(null);
 	let isLoading = $state(true);
 
 	onMount(async () => {
 		try {
-			const [fb, desc, perf] = await Promise.all([
+			const [fb, perf] = await Promise.all([
 				analyticsClient.getFeedback(),
-				analyticsClient.getDescriptors(),
 				analyticsClient.getPerformance(),
 			]);
 			feedbackStats = fb;
-			descriptorStats = desc;
 			performanceStats = perf;
 		} catch (e) {
 			console.error("Failed to load deep analytics:", e);
@@ -36,6 +34,33 @@
 		if (!feedbackStats?.feature_weight_evolution) return [];
 		return Object.entries(feedbackStats.feature_weight_evolution);
 	});
+
+	// Sequential Latency Trendline data across recent iterations
+	const latencyTrendData = $derived.by(() => {
+		const raw = performanceStats?.recent_latencies;
+		if (!raw || raw.length === 0) {
+			return [
+				{ index: 1, step: "#1", label: "Iter #1", latency: 0, candidates: 0 },
+				{ index: 2, step: "#2", label: "Iter #2", latency: 0, candidates: 0 },
+				{ index: 3, step: "#3", label: "Iter #3", latency: 0, candidates: 0 },
+				{ index: 4, step: "#4", label: "Iter #4", latency: 0, candidates: 0 },
+			];
+		}
+		// Sort chronologically (oldest to newest) for sequential progression
+		return [...raw]
+			.reverse()
+			.map((item, idx) => ({
+				index: idx + 1,
+				step: `#${idx + 1}`,
+				label: `Iter #${item.iteration_number}`,
+				latency: Math.round(item.execution_time_ms ?? 0),
+				candidates: item.candidates ?? 0,
+			}));
+	});
+
+	const chartConfig = {
+		latency: { label: "Latency (ms)", color: "var(--primary)" },
+	} satisfies Chart.ChartConfig;
 </script>
 
 <div class="grid grid-cols-1 gap-4 px-4 lg:px-6 md:grid-cols-2 lg:grid-cols-3">
@@ -93,57 +118,8 @@
 		</Card.Content>
 	</Card.Root>
 
-	<!-- Panel 2: Descriptor Strategy & Preferences -->
-	<Card.Root>
-		<Card.Header>
-			<div class="flex items-center justify-between">
-				<Card.Title class="flex items-center gap-2 text-base">
-					<SlidersIcon class="size-4 text-primary" />
-					Descriptor Combinations
-				</Card.Title>
-				<Badge variant="outline" class="text-xs">
-					Hybrid: {descriptorStats?.categories.hybrid ?? 0}
-				</Badge>
-			</div>
-			<Card.Description>
-				Color vs. Texture vs. Hybrid visual search usage
-			</Card.Description>
-		</Card.Header>
-		<Card.Content class="flex flex-col gap-3">
-			<div class="flex flex-col gap-2">
-				{#if descriptorStats?.descriptor_usage}
-					{#each Object.entries(descriptorStats.descriptor_usage) as [desc, count]}
-						<div class="flex items-center justify-between text-xs">
-							<span class="font-mono text-muted-foreground truncate">{desc}</span>
-							<Badge variant="secondary" class="font-mono text-[11px]">
-								{count} queries
-							</Badge>
-						</div>
-					{/each}
-				{:else}
-					<div class="text-xs text-muted-foreground">No queries recorded yet.</div>
-				{/if}
-			</div>
-
-			<div class="mt-auto grid grid-cols-3 gap-1.5 pt-2 border-t border-border/40 text-center text-xs">
-				<div class="rounded-md bg-muted/40 p-1.5">
-					<div class="text-[10px] text-muted-foreground">Color Only</div>
-					<div class="font-semibold">{descriptorStats?.categories.color_only ?? 0}</div>
-				</div>
-				<div class="rounded-md bg-muted/40 p-1.5">
-					<div class="text-[10px] text-muted-foreground">Texture Only</div>
-					<div class="font-semibold">{descriptorStats?.categories.texture_only ?? 0}</div>
-				</div>
-				<div class="rounded-md bg-muted/40 p-1.5">
-					<div class="text-[10px] text-muted-foreground">Hybrid (Both)</div>
-					<div class="font-semibold">{descriptorStats?.categories.hybrid ?? 0}</div>
-				</div>
-			</div>
-		</Card.Content>
-	</Card.Root>
-
-	<!-- Panel 3: System Latency & Retrieval Performance -->
-	<Card.Root class="md:col-span-2 lg:col-span-1">
+	<!-- Panel 2: System Latency & Retrieval Performance (takes 2 columns) -->
+	<Card.Root class="md:col-span-2 lg:col-span-2">
 		<Card.Header>
 			<div class="flex items-center justify-between">
 				<Card.Title class="flex items-center gap-2 text-base">
@@ -180,22 +156,59 @@
 				</div>
 			</div>
 
-			<!-- Recent Execution Timeline Snippet -->
-			<div class="flex flex-col gap-1.5 pt-1 text-xs">
-				<span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-					Recent Iterations Latency Log
-				</span>
-				<div class="max-h-24 overflow-y-auto flex flex-col gap-1 pr-1 font-mono text-[11px]">
-					{#if performanceStats?.recent_latencies && performanceStats.recent_latencies.length > 0}
-						{#each performanceStats.recent_latencies.slice(0, 4) as item}
-							<div class="flex items-center justify-between rounded bg-muted/30 px-2 py-1">
-								<span>Iter #{item.iteration_number} ({item.candidates} cands)</span>
-								<span class="font-semibold text-primary">{item.execution_time_ms} ms</span>
-							</div>
-						{/each}
-					{:else}
-						<div class="text-muted-foreground text-xs py-2">No queries logged yet.</div>
-					{/if}
+			<!-- Sequential Latency Trendline (Area Chart with Average Latency Reference Line) -->
+			<div class="flex flex-col gap-1.5 pt-1">
+				<div class="flex items-center justify-between text-xs">
+					<span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+						Sequential Latency Trendline
+					</span>
+					<div class="flex items-center gap-2 text-[10px] text-muted-foreground">
+						<span class="inline-flex items-center gap-1">
+							<span class="size-2 rounded-full bg-primary"></span> Latency
+						</span>
+						<span class="inline-flex items-center gap-1 font-mono text-amber-500">
+							<span class="inline-block w-3 border-t-2 border-dashed border-amber-500"></span> Avg ({performanceStats?.average_ms ?? 0}ms)
+						</span>
+					</div>
+				</div>
+
+				<div class="rounded-lg border border-border/50 bg-muted/20 p-2">
+					<Chart.Container config={chartConfig} class="aspect-auto h-[140px] w-full">
+						<AreaChart
+							data={latencyTrendData}
+							x="step"
+							y="latency"
+							series={[
+								{
+									key: "latency",
+									label: "Latency (ms)",
+									color: chartConfig.latency.color,
+								},
+							]}
+							grid={true}
+							rule={{
+								y: performanceStats?.average_ms ?? 0,
+								class: "stroke-amber-500 stroke-dashed [stroke-dasharray:4_4] opacity-80 stroke-[1.5]",
+							}}
+							props={{
+								xAxis: {
+									format: (v) => `${v}`,
+								},
+								yAxis: {
+									format: (v) => `${v}ms`,
+								},
+							}}
+						>
+							{#snippet tooltip()}
+								<Chart.Tooltip
+									labelFormatter={(v) => {
+										const item = latencyTrendData.find((d) => d.step === v);
+										return item ? `${item.label} (${item.candidates} candidates)` : `${v}`;
+									}}
+								/>
+							{/snippet}
+						</AreaChart>
+					</Chart.Container>
 				</div>
 			</div>
 		</Card.Content>

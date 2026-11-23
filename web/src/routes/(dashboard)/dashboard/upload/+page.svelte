@@ -27,7 +27,7 @@
 		file: File;
 		name: string;
 		sizeStr: string;
-		status: "Pending" | "Uploading" | "Completed" | "Error";
+		status: "Pending" | "Uploading" | "Processing" | "Completed" | "Error";
 		progress: number;
 		thumbnailUrl?: string;
 		error?: string;
@@ -80,7 +80,23 @@
 	}
 
 	onMount(() => {
+		try {
+			const saved = localStorage.getItem("perceptra_upload_auto_process");
+			if (saved !== null) {
+				processAfterUpload = saved === "true";
+			} else {
+				processAfterUpload = true; // default automatically on
+			}
+		} catch {
+			processAfterUpload = true;
+		}
 		loadCategories();
+	});
+
+	$effect(() => {
+		try {
+			localStorage.setItem("perceptra_upload_auto_process", String(processAfterUpload));
+		} catch {}
 	});
 
 	let selectedCategoryLabel = $derived(() => {
@@ -168,12 +184,24 @@
 					item.file,
 					targetCat,
 					(percent) => {
-						item.progress = Math.max(10, Math.min(95, percent));
+						item.progress = Math.max(10, Math.min(processAfterUpload ? 75 : 95, percent));
 					}
 				);
+				item.uploadedImage = uploaded;
+
+				// If automated image processing is enabled, trigger descriptor extraction
+				if (processAfterUpload && uploaded?.id) {
+					item.status = "Processing";
+					item.progress = 85;
+					try {
+						await imageService.extractDescriptors(uploaded.id);
+					} catch (extractErr: any) {
+						console.warn("Auto-processing descriptor extraction failed:", extractErr.message);
+					}
+				}
+
 				item.progress = 100;
 				item.status = "Completed";
-				item.uploadedImage = uploaded;
 			} catch (err: any) {
 				item.status = "Error";
 				item.progress = 0;
@@ -399,12 +427,20 @@
 
 					<!-- Processing Switch -->
 					<div class="space-y-2">
-						<div class="text-xs sm:text-sm font-medium text-foreground">{m.upload_process_after()}</div>
-						<div class="flex items-start gap-3 rounded-lg border border-border/70 p-3 bg-muted/20">
+						<div class="flex items-center justify-between">
+							<span class="text-xs sm:text-sm font-semibold text-foreground">{m.upload_process_after()}</span>
+							<span class="text-2xs font-mono px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-colors {processAfterUpload ? 'bg-primary/15 text-primary font-bold border border-primary/30' : 'bg-muted text-muted-foreground border border-border'}">
+								{#if processAfterUpload}
+									<span class="size-1.5 rounded-full bg-primary animate-pulse"></span>
+								{/if}
+								{processAfterUpload ? "Auto-On" : "Disabled"}
+							</span>
+						</div>
+						<div class="flex items-start gap-3 rounded-lg border p-3 transition-all cursor-pointer {processAfterUpload ? 'border-primary/50 bg-primary/[0.04] shadow-xs' : 'border-border/70 bg-muted/20 hover:bg-muted/30'}">
 							<Switch
 								id="process-toggle"
 								bind:checked={processAfterUpload}
-								class="mt-0.5"
+								class="mt-0.5 cursor-pointer"
 							/>
 							<label
 								for="process-toggle"
@@ -529,6 +565,11 @@
 											<Badge variant="secondary" class="font-medium text-xs bg-primary/10 text-primary border-primary/20 gap-1">
 												<Loader2Icon class="size-3 animate-spin" />
 												{m.upload_status_uploading()}
+											</Badge>
+										{:else if item.status === "Processing"}
+											<Badge variant="secondary" class="font-medium text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 gap-1">
+												<Loader2Icon class="size-3 animate-spin" />
+												<span>Processing...</span>
 											</Badge>
 										{:else if item.status === "Completed"}
 											<Badge variant="secondary" class="font-medium text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">

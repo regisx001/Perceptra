@@ -189,5 +189,132 @@ describe('Image Transformation Studio Tests', () => {
 			expect(list).toHaveLength(2);
 			expect(list[0].id).toBe('derived-1');
 		});
+
+		it('calls transformImage with photographic adjustments', async () => {
+			const mockAdjustDerived: ImageItem = {
+				id: 'derived-adj-1',
+				owner_id: 'user-1',
+				parent_image_id: 'img-123',
+				filename: 'nature_adjusted.jpg',
+				storage_key: 'derived/user-1/nature_adjusted.jpg',
+				source_type: 'derived',
+				processing_status: 'completed',
+				mime_type: 'image/jpeg',
+				file_size: 1400000,
+				width: 1920,
+				height: 1080,
+				created_at: '2026-11-23T00:00:00Z',
+				transformation_params: {
+					operation: 'adjust',
+					params: {
+						adjustments: {
+							brightness: 15,
+							contrast: 20,
+							exposure: 10,
+							vibrance: 25,
+							sharpness: 30
+						}
+					}
+				}
+			};
+
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: true,
+				json: vi.fn().mockResolvedValue({
+					success: true,
+					image: mockAdjustDerived
+				})
+			});
+
+			const result = await imageService.transformImage('img-123', {
+				operation: 'adjust',
+				params: {
+					adjustments: {
+						brightness: 15,
+						contrast: 20,
+						exposure: 10,
+						vibrance: 25,
+						sharpness: 30
+					}
+				},
+				filename: 'nature_adjusted.jpg'
+			});
+
+			expect(result.id).toBe('derived-adj-1');
+			expect(result.transformation_params?.operation).toBe('adjust');
+			expect(global.fetch).toHaveBeenCalledWith(
+				'/api/v1/images/img-123/transform',
+				expect.objectContaining({
+					method: 'POST',
+					body: JSON.stringify({
+						operation: 'adjust',
+						params: {
+							adjustments: {
+								brightness: 15,
+								contrast: 20,
+								exposure: 10,
+								vibrance: 25,
+								sharpness: 30
+							}
+						},
+						filename: 'nature_adjusted.jpg'
+					})
+				})
+			);
+		});
+
+		it('calls transformImage with multi-step pipeline stacking', async () => {
+			const mockPipelineDerived: ImageItem = {
+				id: 'derived-pipe-1',
+				owner_id: 'user-1',
+				parent_image_id: 'img-123',
+				filename: 'nature_pipelined.jpg',
+				storage_key: 'derived/user-1/nature_pipelined.jpg',
+				source_type: 'derived',
+				processing_status: 'completed',
+				mime_type: 'image/jpeg',
+				file_size: 980000,
+				width: 1024,
+				height: 1024,
+				created_at: '2026-11-23T00:00:00Z',
+				transformation_params: {
+					operation: 'pipeline',
+					params: {
+						steps: [
+							{ operation: 'crop', params: { x: 100, y: 100, width: 1024, height: 1024 } },
+							{ operation: 'adjust', params: { adjustments: { contrast: 25, saturation: 15 } } }
+						]
+					}
+				}
+			};
+
+			global.fetch = vi.fn().mockResolvedValue({
+				ok: true,
+				json: vi.fn().mockResolvedValue({
+					success: true,
+					image: mockPipelineDerived
+				})
+			});
+
+			const result = await imageService.transformImage('img-123', {
+				operation: 'pipeline',
+				params: {
+					steps: [
+						{ operation: 'crop', params: { x: 100, y: 100, width: 1024, height: 1024 } },
+						{ operation: 'adjust', params: { adjustments: { contrast: 25, saturation: 15 } } }
+					]
+				},
+				filename: 'nature_pipelined.jpg'
+			});
+
+			expect(result.id).toBe('derived-pipe-1');
+			expect(result.transformation_params?.operation).toBe('pipeline');
+			expect(global.fetch).toHaveBeenCalledWith(
+				'/api/v1/images/img-123/transform',
+				expect.objectContaining({
+					method: 'POST'
+				})
+			);
+		});
 	});
 });

@@ -3,6 +3,7 @@
 	import * as m from '#lib/paraglide/messages.js';
 	import { useLocale } from '#lib/i18n.svelte.js';
 	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
 	import { auth, type User } from '#lib/auth.js';
 	import { onMount } from 'svelte';
 	import ThemeToggle from '#lib/components/theme-toggle.svelte';
@@ -24,6 +25,13 @@
 	import ThumbsDownIcon from '@lucide/svelte/icons/thumbs-down';
 	import FolderIcon from '@tabler/icons-svelte/icons/folder';
 	import SearchIcon from '@lucide/svelte/icons/search';
+	import ActivityIcon from '@tabler/icons-svelte/icons/activity';
+	import CropIcon from '@tabler/icons-svelte/icons/crop';
+	import UploadIcon from '@tabler/icons-svelte/icons/upload';
+	import Maximize2Icon from '@lucide/svelte/icons/maximize-2';
+	import XIcon from '@lucide/svelte/icons/x';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import SlidersIcon from '@tabler/icons-svelte/icons/adjustments';
 
 	const locale = useLocale();
 	let currentUser = $state<User | null>(null);
@@ -50,6 +58,139 @@
 			// Guest visitor
 		}
 	});
+
+	// Real Application Pages Showcase Catalog
+	interface AppScreen {
+		id: string;
+		title: string;
+		badge: string;
+		path: string;
+		image: string;
+		description: string;
+		tags: string[];
+		actionHref: string;
+		actionLabel: string;
+		keyFeatures: { label: string; detail: string }[];
+	}
+
+	const showcaseScreens: AppScreen[] = [
+		{
+			id: 'query',
+			title: 'Visual Query Studio',
+			badge: 'Multi-Descriptor Engine',
+			path: '/dashboard/query',
+			image: '/showcase/query-studio.jpg',
+			description: 'Interactive query composition with live feature tuning. Upload any reference image or pick from library, dial in descriptor weights (HSV, Moments, Dominant Colors, GLCM, LBP), and run sub-20ms cosine similarity searches with Rocchio relevance feedback.',
+			tags: ['Balanced & Custom Presets', 'Dynamic Weight Sliders', 'Candidate Scope Filtering', 'Rocchio Relevance Loop'],
+			actionHref: '/dashboard/query',
+			actionLabel: 'Open Query Studio',
+			keyFeatures: [
+				{ label: 'Feature Sliders', detail: 'Calibrate color vs texture weights on the fly' },
+				{ label: 'Scope Control', detail: 'Filter candidates across GHIM-10K and personal uploads' },
+				{ label: 'Top-K Partitioning', detail: 'Retrieve 8, 12, 24, or 48 nearest visual neighbors' }
+			]
+		},
+		{
+			id: 'images',
+			title: 'Justified Photo Wall & Batch Operations',
+			badge: 'Google Photos Layout',
+			path: '/dashboard/images',
+			image: '/showcase/gallery-photos.jpg',
+			description: 'A responsive justified photo wall modeled after Google Photos that preserves native aspect ratios without distortion. Includes hover/tap top-left checkmark badges and a floating batch action bar for moving images to collections and deleting.',
+			tags: ['Aspect Ratio Preserved', 'Multi-Select Checkmarks', 'Batch Collection Assign', 'Batch Delete Modal', 'Infinite Scroll'],
+			actionHref: '/dashboard/images',
+			actionLabel: 'Explore Image Gallery',
+			keyFeatures: [
+				{ label: 'Zero Cropping', detail: 'Dynamic row height respects natural portrait and landscape aspect ratios' },
+				{ label: 'Google Photos Multi-Select', detail: 'Checkmark badges trigger instant floating action bar' },
+				{ label: 'Batch Collections', detail: 'Assign dozens of images to categories in a single operation' }
+			]
+		},
+		{
+			id: 'overview',
+			title: 'Telemetry & Sequential Latency Trendline',
+			badge: 'Live Telemetry & SLAs',
+			path: '/dashboard',
+			image: '/showcase/overview-dark.png',
+			description: 'Comprehensive operational telemetry dashboard. Real-time AreaChart tracking sequential retrieval iterations with horizontal dashed average latency reference lines, search volume timelines, and relevance judgment ratio distributions.',
+			tags: ['Sequential Latency Trendline', 'Average Latency Reference Line', 'Search Traffic AreaChart', 'FRE Ratio Gauge'],
+			actionHref: '/dashboard',
+			actionLabel: 'View Telemetry Dashboard',
+			keyFeatures: [
+				{ label: 'Sequential Trendline', detail: 'AreaChart showing chronological latency spikes with average SLA line' },
+				{ label: 'Relevance Feedback Ratio', detail: 'Monitors relevant vs irrelevant judgment metrics for FRE Group 13' },
+				{ label: 'Activity Timeline', detail: 'Daily search frequency and Feature Relevance Estimation iterations' }
+			]
+		},
+		{
+			id: 'inspection',
+			title: 'Deep Feature Analysis & Color Clustering',
+			badge: 'MiniBatchKMeans & 256 Bins',
+			path: '/dashboard/images/[id]',
+			image: '/showcase/image-descriptors.jpg',
+			description: 'Inspect extracted high-dimensional descriptors for any image. Visualizes clustered dominant color centroids via MiniBatchKMeans (k=5) with exact hex codes and percentages, alongside continuous 256-bin HSV frequency distribution curves.',
+			tags: ['MiniBatchKMeans (k=5)', 'RGB & Hex Proportions', '256-Bin Continuous HSV Curves', 'GLCM Texture Energy'],
+			actionHref: '/dashboard/images',
+			actionLabel: 'Inspect Sample Image',
+			keyFeatures: [
+				{ label: 'Dominant Color Palette', detail: 'MiniBatchKMeans clustering with RGB/Hex values and proportions' },
+				{ label: 'HSV Continuous Curves', detail: 'Full 256-bin Hue, Saturation, and Value spectrum graph' },
+				{ label: 'Lineage & Similarity', detail: 'One-click similar image retrieval and non-destructive image transform' }
+			]
+		},
+		{
+			id: 'transform',
+			title: 'Interactive Image Transform Studio',
+			badge: 'Client-Side Canvas 2D',
+			path: '/dashboard/transform',
+			image: '/showcase/image-transform.jpg',
+			description: 'In-browser non-destructive image pre-processing. Crop to preset ratios (1:1, 16:9, 9:16), rotate, flip, shear, scale, and apply affine matrix transforms before running feature extraction and CBIR queries.',
+			tags: ['Crop & Aspect Presets', 'Rotate, Flip & Shear', 'Affine Matrix Transforms', 'Interactive Canvas Zoom'],
+			actionHref: '/dashboard/transform',
+			actionLabel: 'Launch Transform Studio',
+			keyFeatures: [
+				{ label: 'Aspect Ratio Presets', detail: 'Square 1:1, Landscape 16:9, and Portrait 9:16 crop presets' },
+				{ label: 'Affine Matrix Controls', detail: 'Interactive numeric rotation, shear, and affine transforms' },
+				{ label: 'Derived Image Export', detail: 'Save transformed variations to test transform invariant retrieval' }
+			]
+		},
+		{
+			id: 'upload',
+			title: 'High-Throughput Batch Ingestion Queue',
+			badge: 'Automated Extraction',
+			path: '/dashboard/upload',
+			image: '/showcase/upload-queue.png',
+			description: 'Drag-and-drop batch ingestion with automatic descriptor extraction. Features a toggleable Auto-On descriptor pipeline, target category routing, and real-time per-file progress meters with failure recovery.',
+			tags: ['Drag & Drop Multi-file', 'Auto-On Extraction Toggle', 'Target Category Selector', 'Real-time Progress Bars'],
+			actionHref: '/dashboard/upload',
+			actionLabel: 'Upload Your Dataset',
+			keyFeatures: [
+				{ label: 'Auto-Processing Switch', detail: 'Toggle immediate background extraction of Color, GLCM, and LBP descriptors' },
+				{ label: 'Folder & Category Routing', detail: 'Assign newly uploaded batches directly to existing or new categories' },
+				{ label: 'Resilient Queue', detail: 'Per-file status indicators (Pending, Processing, Done) with failure recovery' }
+			]
+		},
+		{
+			id: 'categories',
+			title: 'Category Hierarchy & Collections',
+			badge: 'Semantic Partitioning',
+			path: '/dashboard/categories',
+			image: '/showcase/categories-hierarchy.jpg',
+			description: 'Organize your visual collection into nested category structures and root folder partitions. Search categories in real-time, view image assignment counts, and explore categorized assets in clean grids.',
+			tags: ['Nested Category Tree', 'Root & Subfolder Partitions', 'Instant Search Filter', 'Categorized vs Uncategorized KPIs'],
+			actionHref: '/dashboard/categories',
+			actionLabel: 'Manage Collections',
+			keyFeatures: [
+				{ label: 'Hierarchy Navigation', detail: 'Root partitions and subfolder levels for structured visual cataloging' },
+				{ label: 'Live Search & Filter', detail: 'Instant client-side filter across the entire category hierarchy' },
+				{ label: 'Class Indexing', detail: 'Indexes assigned images directly into semantic class clusters' }
+			]
+		}
+	];
+
+	let activeScreenId = $state<string>('query');
+	let activeScreen = $derived(showcaseScreens.find((s) => s.id === activeScreenId) ?? showcaseScreens[0]);
+	let zoomedImage = $state<string | null>(null);
 
 	// Interactive Simulator State
 	const querySamples = [
@@ -136,75 +277,68 @@
 		}
 	}
 
-	// Live activity ticker items inspired by GitHub
+	// Live activity ticker items
 	const liveTickerItems = [
 		{ type: 'indexed', label: '10,000+ images indexed across GHIM-10K', time: 'Active' },
-		{ type: 'query', label: 'query vector #1042 matched at 96.4% cosine similarity', time: '4s ago' },
+		{ type: 'query', label: 'Query vector #1042 matched at 96.4% cosine similarity', time: '4s ago' },
 		{ type: 'feedback', label: 'Rocchio feedback loop converged in 2 iterations', time: '18s ago' },
-		{ type: 'shard', label: 'FAISS centroid index shard #04 synced', time: '1m ago' },
-		{ type: 'precision', label: '84.2% mean average precision @ 20 verified', time: '3m ago' },
-		{ type: 'category', label: '20 groundtruth partitions calibrated', time: '5m ago' }
+		{ type: 'latency', label: 'Sequential Latency Trendline active (Avg: 728.7 ms)', time: 'Just now' },
+		{ type: 'layout', label: 'Google Photos Justified Grid enabled with zero cropping', time: '1m ago' },
+		{ type: 'precision', label: '84.2% mean average precision @ 20 verified', time: '3m ago' }
 	];
 </script>
 
 <svelte:head>
-	<title>Perceptra • Content-Based Image Retrieval Platform (GHIM-10K)</title>
+	<title>Perceptra - Content-Based Image Retrieval & Visual Discovery Platform</title>
+	<meta
+		name="description"
+		content="Explore high-dimensional visual retrieval across 10,000 reference images. Fused HSV color histograms, Gabor texture filters, Google Photos justified browsing, and real-time latency telemetry."
+	/>
 </svelte:head>
 
-{#if isRedirecting}
-	<div class="flex min-h-screen items-center justify-center bg-background">
-		<div class="flex items-center gap-3 text-muted-foreground text-sm">
-			<div class="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-			<span>Redirecting to dashboard...</span>
-		</div>
-	</div>
-{:else}
-<div class="min-h-screen bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary">
+{#if !isRedirecting}
+<div class="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
 	<!-- ========================================================================= -->
-	<!-- 1. GITHUB-STYLE STICKY NAVBAR                                             -->
+	<!-- 1. HEADER                                                                 -->
 	<!-- ========================================================================= -->
-	<header class="sticky top-0 z-40 w-full border-b border-border/80 bg-background/95 backdrop-blur-md">
-		<div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-			<!-- Left: Logo & Nav items -->
-			<div class="flex items-center gap-6 lg:gap-8">
-				<a href="/" class="flex items-center gap-2.5 shrink-0 group">
+	<header class="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-md">
+		<div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+			<!-- Left: Logo & Core Nav -->
+			<div class="flex items-center gap-6">
+				<a href="/" class="flex items-center gap-2.5 transition-opacity hover:opacity-90">
 					<img
 						src="/logo-black.png"
 						alt="Perceptra"
-						class="h-8 w-auto object-contain dark:hidden"
+						class="h-7 w-auto object-contain dark:hidden"
 					/>
 					<img
 						src="/logo-beige.png"
 						alt="Perceptra"
-						class="hidden h-8 w-auto object-contain dark:block"
+						class="hidden h-7 w-auto object-contain dark:block"
 					/>
-					<div class="flex flex-col leading-none">
-						<span class="text-base font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
-							Perceptra
-						</span>
-						<span class="text-[10px] text-muted-foreground font-mono">Group 13</span>
-					</div>
+					<span class="font-extrabold tracking-tight text-base text-foreground font-mono">
+						Perceptra<span class="text-primary text-xs font-normal ml-1 px-1.5 py-0.5 rounded-full bg-primary/10">v2.4</span>
+					</span>
 				</a>
 
-				<!-- GitHub-style single-line navigation links -->
-				<nav class="hidden md:flex items-center gap-5 text-xs font-semibold text-muted-foreground whitespace-nowrap">
-					<a href="#platform" class="hover:text-foreground transition-colors">Platform</a>
-					<a href="#simulator" class="hover:text-foreground transition-colors">{m.landing_nav_simulator()}</a>
-					<a href="#features" class="hover:text-foreground transition-colors">{m.landing_nav_features()}</a>
-					<a href="#benchmarks" class="hover:text-foreground transition-colors">{m.landing_nav_benchmarks()}</a>
-					<a href="#architecture" class="hover:text-foreground transition-colors">{m.landing_nav_pipeline()}</a>
-					<a href="/docs" class="hover:text-foreground transition-colors">{m.landing_nav_docs()}</a>
+				<nav class="hidden md:flex items-center gap-5 text-xs font-medium text-muted-foreground">
+					<a href="#showcase" class="hover:text-foreground transition-colors">Platform Screens</a>
+					<a href="#platform" class="hover:text-foreground transition-colors">Features</a>
+					<a href="#simulator" class="hover:text-foreground transition-colors">Simulator</a>
+					<a href="#benchmarks" class="hover:text-foreground transition-colors">Benchmarks</a>
 				</nav>
 			</div>
 
 			<!-- Right: Search pill + Theme/Lang + Auth controls -->
 			<div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
-				<!-- GitHub-style search box mockup with shortcut key -->
-				<div class="hidden lg:flex items-center gap-2 rounded-md border border-input bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground shadow-2xs">
+				<a
+					href="/dashboard/images"
+					class="hidden lg:flex items-center gap-2 rounded-md border border-input bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground shadow-2xs hover:border-primary/40 transition-colors"
+				>
 					<SearchIcon class="size-3.5" />
-					<span class="font-normal">Search GHIM-10K...</span>
+					<span class="font-normal">Search 10,000 GHIM images...</span>
 					<kbd class="ml-2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">/</kbd>
-				</div>
+				</a>
 
 				<ThemeToggle />
 
@@ -237,7 +371,7 @@
 						size="sm"
 						class="h-8 px-3.5 text-xs font-semibold shadow-xs rounded-md"
 					>
-						Sign up
+						Get Started
 					</Button>
 				{/if}
 			</div>
@@ -245,87 +379,198 @@
 	</header>
 
 	<!-- ========================================================================= -->
-	<!-- 2. GITHUB-STYLE HERO SECTION                                              -->
+	<!-- 2. HERO SECTION WITH INTERACTIVE APP SHOWCASE                             -->
 	<!-- ========================================================================= -->
-	<section class="relative pt-16 sm:pt-24 pb-12 overflow-hidden bg-background">
-		<!-- Subtle graph-paper grid pattern inspired by GitHub -->
+	<section class="relative pt-12 sm:pt-20 pb-16 overflow-hidden bg-background">
+		<!-- Subtle graph-paper grid pattern -->
 		<div class="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.06] [background-image:linear-gradient(to_right,#0969da_1px,transparent_1px),linear-gradient(to_bottom,#0969da_1px,transparent_1px)] [background-size:32px_32px]"></div>
 
-		<div class="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
-			<!-- Announcement Pill (like GitHub Universe Recap) -->
-			<a
-				href="#benchmarks"
-				class="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-1 text-xs font-semibold text-foreground shadow-2xs hover:border-primary/50 transition-all mb-8 group"
-			>
-				<span class="size-2 rounded-full bg-[#0969da] animate-pulse"></span>
-				<span class="text-muted-foreground font-normal">GHIM-10K Retrieval Benchmark</span>
-				<span class="font-mono text-primary font-bold">v2.4 Ready</span>
-				<ArrowRightIcon class="size-3 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-			</a>
+		<div class="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+			<!-- Announcement Pill -->
+			<div class="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-1 text-xs font-semibold text-foreground shadow-2xs mb-6">
+				<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+				<span class="text-muted-foreground font-normal">Production Interface</span>
+				<span class="font-mono text-primary font-bold">7 Integrated Modules</span>
+			</div>
 
-			<!-- Big Headline (Inspired by "Software still starts with you") -->
-			<h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground text-balance leading-[1.08]">
-				Visual discovery still starts with you
+			<!-- Big Headline -->
+			<h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground text-balance leading-[1.08] max-w-4xl">
+				Visual discovery engineered for real-world precision
 			</h1>
 
 			<!-- Subtitle -->
-			<p class="mt-6 text-base sm:text-xl text-muted-foreground max-w-2xl text-balance leading-relaxed">
-				Explore high-dimensional visual retrieval across 10,000 reference images. Fused HSV color histograms, Gabor texture filters, and real-time relevance feedback.
+			<p class="mt-5 text-base sm:text-xl text-muted-foreground max-w-3xl text-balance leading-relaxed">
+				Explore 10,000 GHIM reference images with multi-descriptor fusion, Rocchio relevance feedback, Google Photos justified browsing, and live sequential latency telemetry.
 			</p>
 
-			<!-- GitHub-style email signup input & action row -->
-			<div class="mt-8 flex flex-col sm:flex-row items-center gap-2.5 w-full max-w-md">
-				<div class="relative w-full">
-					<input
-						type="email"
-						bind:value={emailSignup}
-						placeholder="Enter your email"
-						class="w-full h-11 rounded-md border border-input bg-card px-3.5 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-					/>
-				</div>
+			<!-- Action Row -->
+			<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
 				<Button
-					href="/register"
-					class="w-full sm:w-auto h-11 px-5 text-xs font-semibold shadow-xs rounded-md shrink-0"
+					href="/dashboard"
+					size="lg"
+					class="h-11 px-6 text-sm font-semibold shadow-sm gap-2"
 				>
-					Sign up for Perceptra
+					<span>Launch Dashboard</span>
+					<ArrowRightIcon class="size-4" />
 				</Button>
-			</div>
-
-			<!-- Secondary CTA Button -->
-			<div class="mt-3">
+				<Button
+					href="/dashboard/query"
+					variant="outline"
+					size="lg"
+					class="h-11 px-6 text-sm font-semibold shadow-2xs gap-2"
+				>
+					<TargetIcon class="size-4 text-primary" />
+					<span>Try Visual Query</span>
+				</Button>
 				<Button
 					href="/dashboard/images"
 					variant="ghost"
-					size="sm"
-					class="h-8 gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
+					size="lg"
+					class="h-11 px-5 text-sm font-semibold text-muted-foreground hover:text-foreground gap-2"
 				>
-					<PhotoIcon class="size-3.5" />
-					<span>Explore image gallery</span>
+					<PhotoIcon class="size-4" />
+					<span>Explore 58+ Images</span>
 				</Button>
 			</div>
-		</div>
 
-		<!-- Cute mascot peeking over the spectrum line (GitHub Octocat homage) -->
-		<div class="relative mt-12 flex justify-center">
-			<div class="relative z-10 -mb-2 flex flex-col items-center">
-				<div class="h-10 w-12 rounded-t-2xl bg-primary flex items-center justify-center shadow-md">
-					<SparklesIcon class="size-5 text-primary-foreground" />
+			<!-- ========================================================================= -->
+			<!-- HERO INTERACTIVE APP SHOWCASE WINDOW (Image Tabs + High-Res Mockup)       -->
+			<!-- ========================================================================= -->
+			<div id="showcase" class="w-full mt-12 text-left">
+				<!-- Selector Tabs Bar -->
+				<div class="flex items-center justify-center gap-1.5 sm:gap-2 overflow-x-auto pb-4 max-w-full">
+					{#each showcaseScreens as screen}
+						{@const isActive = activeScreenId === screen.id}
+						<button
+							type="button"
+							onclick={() => activeScreenId = screen.id}
+							class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border {isActive ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-card text-muted-foreground hover:text-foreground border-border hover:bg-muted/50'}"
+						>
+							{#if screen.id === 'query'}
+								<TargetIcon class="size-3.5" />
+							{:else if screen.id === 'images'}
+								<PhotoIcon class="size-3.5" />
+							{:else if screen.id === 'overview'}
+								<ActivityIcon class="size-3.5" />
+							{:else if screen.id === 'inspection'}
+								<SparklesIcon class="size-3.5" />
+							{:else if screen.id === 'transform'}
+								<CropIcon class="size-3.5" />
+							{:else if screen.id === 'upload'}
+								<UploadIcon class="size-3.5" />
+							{:else}
+								<FolderIcon class="size-3.5" />
+							{/if}
+							<span>{screen.title.split('&')[0].trim()}</span>
+						</button>
+					{/each}
+				</div>
+
+				<!-- Browser Frame Window -->
+				<div class="rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden">
+					<!-- Top Window Chrome -->
+					<div class="flex items-center justify-between px-4 py-3 bg-muted/40 border-b border-border/60">
+						<div class="flex items-center gap-2">
+							<span class="size-3 rounded-full bg-rose-500/80"></span>
+							<span class="size-3 rounded-full bg-amber-500/80"></span>
+							<span class="size-3 rounded-full bg-emerald-500/80"></span>
+						</div>
+
+						<!-- Address Bar Mockup -->
+						<div class="flex items-center gap-2 px-3 py-1 rounded-md bg-background/80 border border-border/60 text-xs font-mono text-muted-foreground max-w-sm sm:max-w-md w-full mx-4">
+							<span class="text-emerald-500">https://</span>
+							<span class="text-foreground truncate">perceptra.internal{activeScreen.path}</span>
+						</div>
+
+						<div class="flex items-center gap-2">
+							<Badge variant="outline" class="hidden sm:inline-flex text-[10px] font-mono border-primary/30 text-primary">
+								{activeScreen.badge}
+							</Badge>
+							<button
+								type="button"
+								onclick={() => zoomedImage = activeScreen.image}
+								class="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+								title="Zoom fullscreen"
+								aria-label="Zoom image fullscreen"
+							>
+								<Maximize2Icon class="size-3.5" />
+							</button>
+							<Button href={activeScreen.actionHref} size="sm" variant="ghost" class="h-7 px-2 text-xs gap-1 hidden sm:flex">
+								<span>Open</span>
+								<ExternalLinkIcon class="size-3" />
+							</Button>
+						</div>
+					</div>
+
+					<!-- Screenshot Frame -->
+					<div class="relative group bg-muted/20">
+						<button
+							type="button"
+							class="w-full text-left cursor-zoom-in block"
+							onclick={() => zoomedImage = activeScreen.image}
+							aria-label="Click to enlarge screenshot"
+						>
+							<img
+								src={activeScreen.image}
+								alt={activeScreen.title}
+								class="w-full h-auto max-h-[640px] object-cover object-top transition-transform duration-300 group-hover:scale-[1.005]"
+								loading="eager"
+							/>
+						</button>
+
+						<div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+							<span class="px-2.5 py-1 rounded-md bg-background/90 text-foreground text-xs font-semibold shadow-md border border-border inline-flex items-center gap-1.5">
+								<Maximize2Icon class="size-3" />
+								<span>Click to Zoom</span>
+							</span>
+						</div>
+					</div>
+
+					<!-- Bottom Spec & Capabilities Bar -->
+					<div class="p-5 sm:p-6 bg-card border-t border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+						<div class="space-y-1.5 max-w-2xl">
+							<div class="flex items-center gap-2">
+								<h3 class="text-lg font-bold text-foreground">{activeScreen.title}</h3>
+								<Badge variant="secondary" class="text-xs">{activeScreen.badge}</Badge>
+							</div>
+							<p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+								{activeScreen.description}
+							</p>
+							<div class="flex flex-wrap items-center gap-1.5 pt-1">
+								{#each activeScreen.tags as tag}
+									<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-muted/50 text-foreground border border-border/50">
+										{tag}
+									</span>
+								{/each}
+							</div>
+						</div>
+
+						<div class="shrink-0 flex items-center gap-3">
+							<Button
+								href={activeScreen.actionHref}
+								class="h-9 px-4 text-xs font-semibold gap-1.5 shadow-xs"
+							>
+								<span>{activeScreen.actionLabel}</span>
+								<ArrowRightIcon class="size-3.5" />
+							</Button>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
 
 		<!-- Signature GitHub Spectrum Multi-Color Border -->
-		<div class="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 via-purple-500 via-pink-500 to-emerald-500"></div>
+		<div class="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 via-purple-500 via-pink-500 to-emerald-500 mt-16"></div>
 	</section>
 
 	<!-- ========================================================================= -->
-	<!-- 3. LIVE ACTIVITY TICKER RIBBON (Image 2)                                  -->
+	<!-- 3. LIVE ACTIVITY TICKER RIBBON                                            -->
 	<!-- ========================================================================= -->
 	<section class="border-b border-border bg-card/60 py-3 overflow-x-auto">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center gap-8 whitespace-nowrap text-xs">
 			<div class="flex items-center gap-2 font-bold text-foreground">
 				<span class="size-2 rounded-full bg-emerald-500 animate-ping"></span>
-				<span class="text-emerald-600 dark:text-emerald-400 font-mono">LIVE FEED</span>
+				<span class="text-emerald-600 dark:text-emerald-400 font-mono">LIVE TELEMETRY</span>
 			</div>
 			<div class="h-4 w-px bg-border"></div>
 			{#each liveTickerItems as item}
@@ -334,8 +579,10 @@
 						<DatabaseIcon class="size-3.5 text-primary" />
 					{:else if item.type === 'query'}
 						<TargetIcon class="size-3.5 text-emerald-500" />
-					{:else if item.type === 'feedback'}
-						<RefreshDotIcon class="size-3.5 text-purple-500" />
+					{:else if item.type === 'latency'}
+						<ActivityIcon class="size-3.5 text-blue-500" />
+					{:else if item.type === 'layout'}
+						<PhotoIcon class="size-3.5 text-indigo-500" />
 					{:else}
 						<CpuIcon class="size-3.5 text-amber-500" />
 					{/if}
@@ -348,248 +595,297 @@
 	</section>
 
 	<!-- ========================================================================= -->
-	<!-- 4. "PERCEPTRA PLATFORM" BENTO SHOWCASE (Images 2, 3, 4)                   -->
+	<!-- 4. "INSIDE PERCEPTRA" BENTO SHOWCASE (Real Screenshots & Deep Dives)      -->
 	<!-- ========================================================================= -->
 	<section id="platform" class="py-16 sm:py-24 border-b border-border bg-background">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<!-- Section Header (like "GitHub Platform") -->
+			<!-- Section Header -->
 			<div class="text-center max-w-3xl mx-auto mb-16">
-				<h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-					Perceptra Platform
+				<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-3">
+					<SparklesIcon class="size-3.5" />
+					<span>Production Modules</span>
+				</div>
+				<h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
+					Inside the Perceptra Platform
 				</h2>
-				<p class="mt-3 text-sm text-muted-foreground">
-					A complete visual search and descriptor intelligence environment built on GHIM-10K.
+				<p class="mt-3 text-sm sm:text-base text-muted-foreground">
+					Explore the production interface: multi-descriptor query studio, Google Photos justified wall, deep KMeans color clustering, and live latency telemetry.
 				</p>
 			</div>
 
-			<!-- Bento Grid: 2 High-Fidelity Cards (Image 2 style) -->
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
-				<!-- Card 1: Styled like a GitHub PR / Visual Task card -->
-				<div class="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
-					<div>
-						<!-- Window chrome bar -->
-						<div class="flex items-center justify-between pb-4 border-b border-border mb-4">
-							<div class="flex items-center gap-2">
-								<span class="size-3 rounded-full bg-red-400"></span>
-								<span class="size-3 rounded-full bg-yellow-400"></span>
-								<span class="size-3 rounded-full bg-green-400"></span>
-								<span class="ml-2 text-xs font-mono text-muted-foreground">retrieval_query_pipeline.cbir</span>
-							</div>
-							<span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-								Indexed #1042
-							</span>
+			<!-- Bento Grid Section 1: Hero Split Feature (Visual Query Studio) -->
+			<div class="rounded-2xl border border-border bg-card shadow-sm overflow-hidden mb-12">
+				<div class="grid grid-cols-1 lg:grid-cols-12 gap-0 items-center">
+					<!-- Visual Screenshot -->
+					<div class="lg:col-span-7 bg-muted/30 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-border">
+						<div class="rounded-xl overflow-hidden border border-border shadow-md group relative">
+							<button
+								type="button"
+								class="w-full text-left cursor-zoom-in block"
+								onclick={() => zoomedImage = '/showcase/query-studio.jpg'}
+								aria-label="Zoom Visual Query Studio screenshot"
+							>
+								<img
+									src="/showcase/query-studio.jpg"
+									alt="Visual Query Studio interface"
+									class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+								/>
+							</button>
 						</div>
+					</div>
 
-						<!-- Mock PR title & Author line -->
-						<div class="space-y-1 mb-4">
-							<div class="flex items-center gap-2">
-								<span class="px-2 py-0.5 rounded-full bg-[#0969da] text-white text-[11px] font-bold inline-flex items-center gap-1">
-									<CheckIcon class="size-3" />
-									<span>Ready</span>
-								</span>
-								<h3 class="text-base font-bold text-foreground">Alpine Glacial Lake #1042</h3>
-							</div>
-							<p class="text-xs text-muted-foreground">
-								<span class="font-mono text-foreground font-semibold">user_88fb</span> queried 512-D visual vector into <span class="font-mono text-primary font-semibold">ghim-10k:partition-08</span>
+					<!-- Detailed Feature Info -->
+					<div class="lg:col-span-5 p-6 sm:p-8 space-y-5">
+						<div class="space-y-2">
+							<Badge variant="outline" class="border-primary/30 text-primary font-mono text-xs">
+								Core Engine • /dashboard/query
+							</Badge>
+							<h3 class="text-2xl font-bold text-foreground">Visual Query Studio</h3>
+							<p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+								Compose queries using any reference image. Dial in feature weights across color and texture descriptors, select candidate scopes, and refine results with Rocchio relevance feedback.
 							</p>
 						</div>
 
-						<!-- Checklist box inspired by GitHub "Able to merge as a stack" -->
-						<div class="rounded-lg border border-border bg-muted/30 p-4 space-y-2.5 text-xs font-medium">
-							<div class="flex items-center justify-between text-foreground">
-								<div class="flex items-center gap-2">
-									<CheckIcon class="size-4 text-emerald-500 shrink-0" />
-									<span>Extract HSV Color Moments (72-bin)</span>
+						<div class="space-y-3 pt-2 text-xs">
+							<div class="flex items-start gap-2.5">
+								<CheckIcon class="size-4 text-emerald-500 shrink-0 mt-0.5" />
+								<div>
+									<strong class="text-foreground">Dynamic Weight Sliders:</strong>
+									<span class="text-muted-foreground"> Live sliders for HSV Color Histogram, Moments, Dominant Colors, GLCM, and LBP.</span>
 								</div>
-								<span class="font-mono text-[11px] text-muted-foreground">3.2 ms</span>
 							</div>
-							<div class="flex items-center justify-between text-foreground">
-								<div class="flex items-center gap-2">
-									<CheckIcon class="size-4 text-emerald-500 shrink-0" />
-									<span>Compute Gabor Wavelet Texture (24-dim)</span>
+							<div class="flex items-start gap-2.5">
+								<CheckIcon class="size-4 text-emerald-500 shrink-0 mt-0.5" />
+								<div>
+									<strong class="text-foreground">Instant Presets:</strong>
+									<span class="text-muted-foreground"> One-click switching between Balanced, Color Focus, Texture Focus, and Custom modes.</span>
 								</div>
-								<span class="font-mono text-[11px] text-muted-foreground">4.8 ms</span>
 							</div>
-							<div class="flex items-center justify-between text-foreground">
-								<div class="flex items-center gap-2">
-									<CheckIcon class="size-4 text-emerald-500 shrink-0" />
-									<span>Generate LBP Uniform Micro-patterns</span>
+							<div class="flex items-start gap-2.5">
+								<CheckIcon class="size-4 text-emerald-500 shrink-0 mt-0.5" />
+								<div>
+									<strong class="text-foreground">Candidate Scopes:</strong>
+									<span class="text-muted-foreground"> Search strictly within the 10,000 GHIM reference set, personal uploads, or combined.</span>
 								</div>
-								<span class="font-mono text-[11px] text-muted-foreground">5.1 ms</span>
-							</div>
-							<div class="flex items-center justify-between text-foreground">
-								<div class="flex items-center gap-2">
-									<CheckIcon class="size-4 text-emerald-500 shrink-0" />
-									<span>Project into FAISS Centroid Partitions</span>
-								</div>
-								<span class="font-mono text-[11px] text-muted-foreground">1.4 ms</span>
 							</div>
 						</div>
-					</div>
 
-					<div class="mt-6 flex items-center justify-between pt-4 border-t border-border">
-						<span class="text-xs text-muted-foreground">Total pipeline extraction: <strong class="text-foreground font-mono">14.5 ms</strong></span>
-						<Button href="/dashboard/images" size="sm" class="h-8 text-xs font-semibold">
-							View in Gallery
-						</Button>
+						<div class="pt-4 border-t border-border flex items-center justify-between">
+							<span class="text-xs font-mono text-muted-foreground">Cosine Latency: <strong class="text-foreground">16.8 ms</strong></span>
+							<Button href="/dashboard/query" size="sm" class="h-8 text-xs font-semibold gap-1.5">
+								<span>Launch Studio</span>
+								<ArrowRightIcon class="size-3.5" />
+							</Button>
+						</div>
 					</div>
 				</div>
+			</div>
 
-				<!-- Card 2: Interactive Terminal / AI Relevance Tuning (Image 2 right card) -->
+			<!-- Bento Grid Section 2: Two Equal Cards (Google Photos Justified Wall & Telemetry Trendline) -->
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+				<!-- Card 1: Google Photos Justified Wall -->
 				<div class="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
-					<div>
-						<!-- Window chrome bar -->
-						<div class="flex items-center justify-between pb-4 border-b border-border mb-4">
-							<div class="flex items-center gap-2">
-								<span class="size-3 rounded-full bg-red-400"></span>
-								<span class="size-3 rounded-full bg-yellow-400"></span>
-								<span class="size-3 rounded-full bg-green-400"></span>
-								<span class="ml-2 text-xs font-mono text-muted-foreground">rocchio_feedback_agent</span>
-							</div>
-							<span class="text-[10px] font-mono text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-								Interactive
+					<div class="space-y-4">
+						<div class="flex items-center justify-between">
+							<span class="text-xs font-mono text-primary font-bold px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+								Google Photos Layout
 							</span>
+							<span class="text-[11px] font-mono text-muted-foreground">/dashboard/images</span>
 						</div>
 
-						<div class="space-y-1 mb-4">
-							<h3 class="text-base font-bold text-foreground">Dynamic Relevance Feedback Engine</h3>
-							<p class="text-xs text-muted-foreground">
-								Iterative Rocchio algorithm shifting query vectors toward positive picks and away from noise.
+						<div class="rounded-xl overflow-hidden border border-border shadow-xs group relative">
+							<button
+								type="button"
+								class="w-full text-left cursor-zoom-in block"
+								onclick={() => zoomedImage = '/showcase/gallery-photos.jpg'}
+								aria-label="Zoom Google Photos Justified Wall screenshot"
+							>
+								<img
+									src="/showcase/gallery-photos.jpg"
+									alt="Google Photos justified gallery"
+									class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+								/>
+							</button>
+						</div>
+
+						<div class="space-y-1.5">
+							<h3 class="text-lg font-bold text-foreground">Justified Image Wall & Batch Actions</h3>
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Images flow naturally at fixed row heights without cropping or distortion. Select images with top-left badges to launch the floating toolbar for moving to collections or batch deleting.
 							</p>
 						</div>
 
-						<!-- Mock terminal code block -->
-						<div class="rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs space-y-2 text-foreground/90 overflow-x-auto">
-							<div class="text-muted-foreground">// Rocchio query vector reformulation:</div>
-							<div class="text-primary font-bold">q_m = (&alpha; * q_0) + (&beta; / |D_r|) * &sum; d_r - (&gamma; / |D_nr|) * &sum; d_nr</div>
-							<div class="text-muted-foreground pt-1">// Parameters calibrated for GHIM-10K:</div>
-							<div class="text-emerald-600 dark:text-emerald-400">&alpha; = 1.00 &bull; &beta; = 0.75 &bull; &gamma; = 0.15</div>
-							<div class="text-muted-foreground pt-1">// Convergence:</div>
-							<div class="text-foreground">+12.4% precision gain achieved in 2 user iterations.</div>
-						</div>
-					</div>
-
-					<div class="mt-6 flex items-center justify-between pt-4 border-t border-border">
-						<span class="text-xs text-muted-foreground">Algorithm: <strong class="text-foreground">Rocchio Multi-Distance</strong></span>
-						<Button href="#simulator" variant="outline" size="sm" class="h-8 text-xs font-semibold">
-							Try Simulator Below
-						</Button>
-					</div>
-				</div>
-			</div>
-
-			<!-- Multi-color dividing line (Image 3) -->
-			<div class="h-0.5 w-full bg-gradient-to-r from-pink-500 via-purple-500 via-blue-500 to-emerald-500 mb-16"></div>
-
-			<!-- Section 5: "More ways to use Perceptra" (Image 3) -->
-			<div class="text-center max-w-2xl mx-auto mb-12">
-				<h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-					More ways to use Perceptra
-				</h2>
-				<p class="mt-2 text-xs sm:text-sm text-muted-foreground">
-					End-to-end tooling for datasets, descriptor benchmarking, and similarity search.
-				</p>
-			</div>
-
-			<!-- 2 Large Feature Cards (Image 3) -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-				<!-- Card 1: Actions / Descriptor Extraction -->
-				<div class="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
-					<div class="space-y-4">
-						<div class="rounded-xl border border-border bg-muted/30 p-4 space-y-2.5">
-							<div class="flex items-center gap-2 font-bold text-xs text-emerald-600 dark:text-emerald-400">
-								<CheckIcon class="size-4 shrink-0" />
-								<span>All feature descriptors computed</span>
+						<div class="grid grid-cols-2 gap-2 text-xs pt-2">
+							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+								<div class="font-semibold text-foreground">Zero Image Distortion</div>
+								<div class="text-[11px] text-muted-foreground">Calculated aspect ratios maintain full fidelity</div>
 							</div>
-							<div class="space-y-1.5 pt-2 text-xs text-foreground">
-								<div class="flex justify-between font-medium">
-									<span>HSV Color Histogram</span>
-									<span class="font-mono text-muted-foreground">Successful in 42ms</span>
-								</div>
-								<div class="flex justify-between font-medium">
-									<span>GLCM Texture Energy</span>
-									<span class="font-mono text-muted-foreground">Successful in 28ms</span>
-								</div>
-								<div class="flex justify-between font-medium">
-									<span>LBP Micro-patterns</span>
-									<span class="font-mono text-muted-foreground">Successful in 34ms</span>
-								</div>
-								<div class="flex justify-between font-medium">
-									<span>FAISS Centroid Normalization</span>
-									<span class="font-mono text-muted-foreground">Successful in 8ms</span>
-								</div>
+							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+								<div class="font-semibold text-foreground">Floating Batch Bar</div>
+								<div class="text-[11px] text-muted-foreground">Move to collection or delete in one step</div>
 							</div>
 						</div>
-						<h3 class="text-base font-bold text-foreground">Automated Descriptor Pipelines</h3>
-						<p class="text-xs text-muted-foreground leading-relaxed">
-							Continuous background descriptor extraction for every uploaded image with z-score standardization.
-						</p>
 					</div>
-					<div class="pt-4">
-						<Button href="/dashboard/upload" variant="outline" size="sm" class="h-8 text-xs font-semibold">
-							Explore Upload Pipeline
+
+					<div class="mt-6 pt-4 border-t border-border flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Batch Operations: <strong class="text-foreground">Supported</strong></span>
+						<Button href="/dashboard/images" variant="outline" size="sm" class="h-8 text-xs font-semibold gap-1.5">
+							<span>Browse Gallery</span>
+							<ArrowRightIcon class="size-3" />
 						</Button>
 					</div>
 				</div>
 
-				<!-- Card 2: Code Quality / Similarity Metrics -->
+				<!-- Card 2: Telemetry & Sequential Latency Trendline -->
 				<div class="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
 					<div class="space-y-4">
-						<div class="rounded-xl border border-border bg-muted/30 p-4 font-mono text-xs space-y-1">
-							<div class="text-muted-foreground">// Multi-distance similarity ranking:</div>
-							<div class="text-red-500 bg-red-500/10 px-2 py-0.5 rounded">- baseline_euclidean: 0.742 (high false positives)</div>
-							<div class="text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">+ proposed_cosine_zscore: 0.964 (groundtruth match)</div>
-							<div class="text-muted-foreground pt-1">// Class: Nature &bull; Precision @ 20: 84.2%</div>
+						<div class="flex items-center justify-between">
+							<span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+								Sequential Latency Trendline
+							</span>
+							<span class="text-[11px] font-mono text-muted-foreground">/dashboard</span>
 						</div>
-						<h3 class="text-base font-bold text-foreground">Precision Distance Scoring</h3>
-						<p class="text-xs text-muted-foreground leading-relaxed">
-							Weighted Cosine, Euclidean, and Mahalanobis metrics tested across 10,000 GHIM-10K reference images.
-						</p>
+
+						<div class="rounded-xl overflow-hidden border border-border shadow-xs group relative">
+							<button
+								type="button"
+								class="w-full text-left cursor-zoom-in block"
+								onclick={() => zoomedImage = '/showcase/overview-dark.png'}
+								aria-label="Zoom Telemetry and Sequential Latency Trendline screenshot"
+							>
+								<img
+									src="/showcase/overview-dark.png"
+									alt="Telemetry and latency trendline in dark mode"
+									class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]"
+								/>
+							</button>
+						</div>
+
+						<div class="space-y-1.5">
+							<h3 class="text-lg font-bold text-foreground">Telemetry & Latency Monitoring</h3>
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Live performance monitoring across iterations. Interactive AreaChart visualizes chronological latency progression alongside a dashed horizontal reference line for Average Latency and SLA thresholds.
+							</p>
+						</div>
+
+						<div class="grid grid-cols-2 gap-2 text-xs pt-2">
+							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+								<div class="font-semibold text-foreground">Dashed SLA Reference</div>
+								<div class="text-[11px] text-muted-foreground">Visualizes average latency drift instantly</div>
+							</div>
+							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
+								<div class="font-semibold text-foreground">Relevance Ratio Tracking</div>
+								<div class="text-[11px] text-muted-foreground">Monitors relevant vs irrelevant feedback</div>
+							</div>
+						</div>
 					</div>
-					<div class="pt-4">
-						<Button href="#benchmarks" variant="outline" size="sm" class="h-8 text-xs font-semibold">
-							Explore Benchmarks
+
+					<div class="mt-6 pt-4 border-t border-border flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Status: <strong class="text-emerald-500">Live Telemetry</strong></span>
+						<Button href="/dashboard" variant="outline" size="sm" class="h-8 text-xs font-semibold gap-1.5">
+							<span>View Dashboard</span>
+							<ArrowRightIcon class="size-3" />
 						</Button>
 					</div>
 				</div>
 			</div>
 
-			<!-- 3 Column Cards (Image 4) -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-				<!-- Card 1 -->
-				<div class="rounded-xl border border-border bg-card p-5 space-y-3 shadow-2xs">
-					<div class="size-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-						<LayersIcon class="size-4" />
+			<!-- Bento Grid Section 3: Three Cards (Descriptors, Transform, Upload) -->
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+				<!-- Card 3A: Deep Descriptors & KMeans -->
+				<div class="rounded-xl border border-border bg-card p-5 space-y-3.5 shadow-2xs flex flex-col justify-between">
+					<div class="space-y-3">
+						<div class="rounded-lg overflow-hidden border border-border group relative">
+							<button
+								type="button"
+								class="w-full text-left cursor-zoom-in block"
+								onclick={() => zoomedImage = '/showcase/image-descriptors.jpg'}
+								aria-label="Zoom deep descriptor inspection screenshot"
+							>
+								<img
+									src="/showcase/image-descriptors.jpg"
+									alt="Dominant color and HSV curves"
+									class="w-full h-40 object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+								/>
+							</button>
+						</div>
+						<div class="space-y-1">
+							<Badge variant="outline" class="text-[10px] font-mono text-purple-600 dark:text-purple-400">
+								MiniBatchKMeans (k=5)
+							</Badge>
+							<h4 class="text-sm font-bold text-foreground">Feature Inspection & HSV Curves</h4>
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Clustered dominant colors with RGB/Hex proportions and full 256-bin continuous HSV distribution frequency curves.
+							</p>
+						</div>
 					</div>
-					<h4 class="text-sm font-bold text-foreground">Vector Similarity Engine</h4>
-					<p class="text-xs text-muted-foreground leading-relaxed">
-						GPU-accelerated nearest-neighbor lookup across 512-dimensional fused descriptors in under 20ms.
-					</p>
-					<Button href="/search" variant="outline" size="sm" class="h-7 text-xs font-semibold">Explore Search</Button>
+					<Button href="/dashboard/images" variant="outline" size="sm" class="h-7 text-xs font-semibold w-full">
+						Inspect Descriptors
+					</Button>
 				</div>
 
-				<!-- Card 2 -->
-				<div class="rounded-xl border border-border bg-card p-5 space-y-3 shadow-2xs">
-					<div class="size-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-						<FolderIcon class="size-4" />
+				<!-- Card 3B: Image Transform Studio -->
+				<div class="rounded-xl border border-border bg-card p-5 space-y-3.5 shadow-2xs flex flex-col justify-between">
+					<div class="space-y-3">
+						<div class="rounded-lg overflow-hidden border border-border group relative">
+							<button
+								type="button"
+								class="w-full text-left cursor-zoom-in block"
+								onclick={() => zoomedImage = '/showcase/image-transform.jpg'}
+								aria-label="Zoom image transform studio screenshot"
+							>
+								<img
+									src="/showcase/image-transform.jpg"
+									alt="Transform workspace tools and resize options"
+									class="w-full h-40 object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+								/>
+							</button>
+						</div>
+						<div class="space-y-1">
+							<Badge variant="outline" class="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+								Canvas 2D Transformations
+							</Badge>
+							<h4 class="text-sm font-bold text-foreground">Image Transform Studio</h4>
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Client-side crop to aspect presets (1:1, 16:9, 9:16), rotate, flip, shear, and apply affine matrix transforms non-destructively.
+							</p>
+						</div>
 					</div>
-					<h4 class="text-sm font-bold text-foreground">Category Hierarchy</h4>
-					<p class="text-xs text-muted-foreground leading-relaxed">
-						20 ground-truth categories with nested folder structures and atomic storage isolation.
-					</p>
-					<Button href="/dashboard/categories" variant="outline" size="sm" class="h-7 text-xs font-semibold">Explore Categories</Button>
+					<Button href="/dashboard/transform" variant="outline" size="sm" class="h-7 text-xs font-semibold w-full">
+						Launch Transform
+					</Button>
 				</div>
 
-				<!-- Card 3 -->
-				<div class="rounded-xl border border-border bg-card p-5 space-y-3 shadow-2xs">
-					<div class="size-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
-						<DatabaseIcon class="size-4" />
+				<!-- Card 3C: Batch Upload & Categories -->
+				<div class="rounded-xl border border-border bg-card p-5 space-y-3.5 shadow-2xs flex flex-col justify-between">
+					<div class="space-y-3">
+						<div class="rounded-lg overflow-hidden border border-border group relative">
+							<button
+								type="button"
+								class="w-full text-left cursor-zoom-in block"
+								onclick={() => zoomedImage = '/showcase/upload-queue.png'}
+								aria-label="Zoom batch upload queue screenshot"
+							>
+								<img
+									src="/showcase/upload-queue.png"
+									alt="Upload queue with progress meters"
+									class="w-full h-40 object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+								/>
+							</button>
+						</div>
+						<div class="space-y-1">
+							<Badge variant="outline" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+								Auto-On Extraction
+							</Badge>
+							<h4 class="text-sm font-bold text-foreground">Batch Upload & Ingestion</h4>
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Multi-file drag-and-drop with toggleable Auto-On descriptor extraction, folder routing, and live per-file progress meters.
+							</p>
+						</div>
 					</div>
-					<h4 class="text-sm font-bold text-foreground">Dataset Management</h4>
-					<p class="text-xs text-muted-foreground leading-relaxed">
-						High-speed batch media upload with automatic thumbnail generation and indexing queue.
-					</p>
-					<Button href="/dashboard/images" variant="outline" size="sm" class="h-7 text-xs font-semibold">Explore Dataset</Button>
+					<Button href="/dashboard/upload" variant="outline" size="sm" class="h-7 text-xs font-semibold w-full">
+						Upload Images
+					</Button>
 				</div>
 			</div>
 		</div>
@@ -753,7 +1049,7 @@
 
 					<div class="flex items-center justify-between pt-2 text-xs text-muted-foreground border-t border-border">
 						<span>Average cosine retrieval time: <strong class="text-foreground font-mono">16.8 ms</strong></span>
-						<Button href="/search" size="sm" variant="outline" class="h-7 text-xs font-semibold gap-1.5 cursor-pointer">
+						<Button href="/dashboard/query" size="sm" variant="outline" class="h-7 text-xs font-semibold gap-1.5 cursor-pointer">
 							<SearchIcon class="size-3" />
 							<span>Query Custom Image</span>
 						</Button>
@@ -764,67 +1060,16 @@
 	</section>
 
 	<!-- ========================================================================= -->
-	<!-- 6. GITHUB-STYLE QUOTE & GIANT STATS (Image 5)                             -->
+	<!-- 6. BENCHMARK MATRIX & ACADEMIC PRECISION                                   -->
 	<!-- ========================================================================= -->
-	<section class="py-16 sm:py-24 border-b border-border bg-background">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="mb-12">
-				<h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground max-w-2xl">
-					Whatever your visual domain, retrieve it with Perceptra
-				</h2>
-			</div>
-
-			<!-- 2-Column Split: Quote on left, Giant Stats on right (Image 5) -->
-			<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-				<!-- Left: Quote Card with Green Quotes -->
-				<div class="lg:col-span-7 rounded-2xl border border-border bg-card p-8 flex flex-col justify-between shadow-xs">
-					<div class="space-y-4">
-						<div class="text-emerald-500 font-serif text-5xl leading-none">&ldquo;</div>
-						<p class="text-lg sm:text-xl font-medium text-foreground leading-relaxed">
-							Perceptra is the de facto retrieval platform for our visual benchmarking team, providing sub-20ms cosine lookups across 10,000 reference images without metric degradation or index drift.
-						</p>
-					</div>
-					<div class="mt-8 flex items-center gap-3 pt-6 border-t border-border">
-						<div class="size-10 rounded-full bg-muted border border-border flex items-center justify-center font-bold text-xs">
-							AT
-						</div>
-						<div>
-							<p class="text-xs font-bold text-foreground">Dr. Aris Thorne</p>
-							<p class="text-[11px] text-muted-foreground">Lead Vision Researcher &bull; Group 13</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- Right: Giant Numbers with typewriter labels (Image 5) -->
-				<div class="lg:col-span-5 grid grid-rows-3 gap-4">
-					<div class="rounded-xl border border-border bg-card p-5 flex flex-col justify-center">
-						<span class="text-3xl sm:text-4xl font-bold font-mono text-emerald-600 dark:text-emerald-400">10,000</span>
-						<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-1">GHIM-10K reference images indexed</span>
-					</div>
-					<div class="rounded-xl border border-border bg-card p-5 flex flex-col justify-center">
-						<span class="text-3xl sm:text-4xl font-bold font-mono text-primary">84.2%</span>
-						<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-1">mean average precision @ 20</span>
-					</div>
-					<div class="rounded-xl border border-border bg-card p-5 flex flex-col justify-center">
-						<span class="text-3xl sm:text-4xl font-bold font-mono text-foreground">&lt; 20ms</span>
-						<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-1">GPU-accelerated cosine latency</span>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 7. GITHUB CONTRIBUTION HEATMAP INSPIRED MATRIX (Image 6)                  -->
-	<!-- ========================================================================= -->
-	<section id="benchmarks" class="py-16 sm:py-20 border-b border-border bg-muted/20">
+	<section id="benchmarks" class="py-16 sm:py-24 border-b border-border bg-background">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<div class="text-center max-w-2xl mx-auto mb-10">
-				<h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+				<h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground">
 					GHIM-10K Benchmark Performance Matrix
 				</h2>
 				<p class="mt-2 text-xs sm:text-sm text-muted-foreground">
-					Empirical retrieval precision across all 20 ground-truth classes.
+					Empirical retrieval precision across 10,000 reference images and 20 ground-truth classes.
 				</p>
 			</div>
 
@@ -876,56 +1121,44 @@
 				</table>
 			</div>
 
-			<!-- GitHub Contribution Graph Heatmap Matrix Visual (Image 6 homage) -->
-			<div class="rounded-xl border border-border bg-card p-6 shadow-xs">
-				<div class="flex items-center justify-between mb-4">
-					<div>
-						<h3 class="text-sm font-bold text-foreground">Indexed Vector Heatmap & Partition Density</h3>
-						<p class="text-xs text-muted-foreground">10,000 feature descriptors distributed across 20 GHIM semantic classes</p>
-					</div>
-					<div class="flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
-						<span>Less</span>
-						<span class="size-2.5 rounded-xs bg-muted"></span>
-						<span class="size-2.5 rounded-xs bg-emerald-200 dark:bg-emerald-950"></span>
-						<span class="size-2.5 rounded-xs bg-emerald-400 dark:bg-emerald-700"></span>
-						<span class="size-2.5 rounded-xs bg-emerald-600 dark:bg-emerald-500"></span>
-						<span>More</span>
-					</div>
+			<!-- 3 Giant Stats -->
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+				<div class="rounded-xl border border-border bg-card p-6 flex flex-col justify-center text-center">
+					<span class="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">10,000</span>
+					<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-2">GHIM-10K reference images indexed</span>
 				</div>
-
-				<!-- Contribution Cells Grid -->
-				<div class="grid grid-flow-col grid-rows-5 gap-1.5 overflow-x-auto pb-2">
-					{#each Array(100) as _, i}
-						{@const intensity = (i * 7) % 5}
-						<div
-							class="size-3.5 sm:size-4 rounded-xs transition-colors {intensity === 0 ? 'bg-muted' : intensity === 1 ? 'bg-emerald-100 dark:bg-emerald-950/60' : intensity === 2 ? 'bg-emerald-300 dark:bg-emerald-800' : intensity === 3 ? 'bg-emerald-500 dark:bg-emerald-600' : 'bg-emerald-600 dark:bg-emerald-400'}"
-							title="Cluster partition #{i + 1}: {50 + intensity * 25} vectors"
-						></div>
-					{/each}
+				<div class="rounded-xl border border-border bg-card p-6 flex flex-col justify-center text-center">
+					<span class="text-4xl font-extrabold font-mono text-primary">84.2%</span>
+					<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-2">Mean average precision @ 20</span>
+				</div>
+				<div class="rounded-xl border border-border bg-card p-6 flex flex-col justify-center text-center">
+					<span class="text-4xl font-extrabold font-mono text-foreground">&lt; 20 ms</span>
+					<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-2">Average cosine retrieval speed</span>
 				</div>
 			</div>
 		</div>
 	</section>
 
 	<!-- ========================================================================= -->
-	<!-- 8. GITHUB-STYLE PRE-FOOTER CTA SECTION (Image 7)                          -->
+	<!-- 7. PRE-FOOTER CTA SECTION                                                 -->
 	<!-- ========================================================================= -->
 	<section class="py-16 sm:py-20 border-b border-border bg-background">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
 			<div class="lg:col-span-6 space-y-3">
 				<div class="h-1 w-8 bg-[#0969da] rounded-full mb-2"></div>
 				<h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-					Join the researchers advancing content-based retrieval
+					Ready to experience next-generation visual retrieval?
 				</h2>
 			</div>
 
 			<div class="lg:col-span-6 space-y-4">
 				<p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-					Whether you are evaluating benchmark datasets or indexing enterprise visual assets, Perceptra gives you sub-20ms precision search with full mathematical transparency.
+					Launch Perceptra to explore multi-descriptor similarity, Google Photos justified browsing, and live latency telemetry across benchmark datasets.
 				</p>
 				<div class="flex flex-col sm:flex-row items-center gap-2.5 w-full">
 					<input
 						type="email"
+						bind:value={emailSignup}
 						placeholder="Enter your email"
 						class="w-full h-10 rounded-md border border-input bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs"
 					/>
@@ -933,7 +1166,7 @@
 						href="/register"
 						class="w-full sm:w-auto h-10 px-5 text-xs font-semibold shrink-0 shadow-xs rounded-md"
 					>
-						Sign up for Perceptra
+						Get Started Free
 					</Button>
 				</div>
 			</div>
@@ -941,11 +1174,11 @@
 	</section>
 
 	<!-- ========================================================================= -->
-	<!-- 9. GITHUB-STYLE MEGA FOOTER (Image 7)                                     -->
+	<!-- 8. FOOTER                                                                 -->
 	<!-- ========================================================================= -->
 	<footer class="border-t border-border bg-card/40 py-12 text-xs text-muted-foreground">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
-			<!-- Newsletter Row (Image 7) -->
+			<!-- Top Row -->
 			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-8 border-b border-border">
 				<div class="flex items-center gap-3">
 					<img
@@ -961,62 +1194,64 @@
 					<div>
 						<div class="flex items-center gap-1.5 font-bold text-foreground">
 							<span class="size-2 rounded-xs bg-[#0969da]"></span>
-							<span>THE CBIR RESEARCH NEWSLETTER</span>
+							<span>PERCEPTRA VISUAL SEARCH PLATFORM</span>
 						</div>
 						<p class="text-[11px] text-muted-foreground mt-0.5">
-							Get algorithm updates, benchmark results, and descriptor guides. Right in your inbox.
+							Content-based image retrieval with multi-descriptor fusion and FRE Group 13 relevance feedback.
 						</p>
 					</div>
 				</div>
 				<Button
+					href="/dashboard"
 					size="sm"
-					class="h-8 px-4 text-xs font-semibold shrink-0 self-start sm:self-auto"
+					class="h-8 px-4 text-xs font-semibold shrink-0 self-start sm:self-auto gap-1"
 				>
-					Subscribe
+					<span>Open Platform</span>
+					<ArrowRightIcon class="size-3" />
 				</Button>
 			</div>
 
 			<!-- Multi-Column Links Grid -->
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
 				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Platform</h4>
+					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Core Modules</h4>
 					<ul class="space-y-2">
-						<li><a href="/dashboard" class="hover:text-foreground transition-colors">Overview</a></li>
-						<li><a href="/dashboard/images" class="hover:text-foreground transition-colors">Image Gallery</a></li>
-						<li><a href="/dashboard/categories" class="hover:text-foreground transition-colors">Categories Tree</a></li>
-						<li><a href="/dashboard/upload" class="hover:text-foreground transition-colors">Batch Upload</a></li>
-						<li><a href="/search" class="hover:text-foreground transition-colors">Similarity Search</a></li>
+						<li><a href="/dashboard" class="hover:text-foreground transition-colors">Telemetry Dashboard</a></li>
+						<li><a href="/dashboard/query" class="hover:text-foreground transition-colors">Visual Query Studio</a></li>
+						<li><a href="/dashboard/images" class="hover:text-foreground transition-colors">Justified Photo Gallery</a></li>
+						<li><a href="/dashboard/transform" class="hover:text-foreground transition-colors">Image Transform Studio</a></li>
+						<li><a href="/dashboard/upload" class="hover:text-foreground transition-colors">Batch Ingestion Queue</a></li>
+						<li><a href="/dashboard/categories" class="hover:text-foreground transition-colors">Category Hierarchy</a></li>
 					</ul>
 				</div>
 
 				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">CBIR Engine</h4>
+					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">CBIR Descriptors</h4>
 					<ul class="space-y-2">
-						<li><a href="#features" class="hover:text-foreground transition-colors">HSV Color Moments</a></li>
-						<li><a href="#features" class="hover:text-foreground transition-colors">Gabor Wavelets</a></li>
-						<li><a href="#features" class="hover:text-foreground transition-colors">Local Binary Patterns</a></li>
-						<li><a href="#features" class="hover:text-foreground transition-colors">FAISS GPU Index</a></li>
-						<li><a href="#features" class="hover:text-foreground transition-colors">Rocchio Algorithm</a></li>
+						<li><a href="#platform" class="hover:text-foreground transition-colors">HSV Color Histograms (72-D)</a></li>
+						<li><a href="#platform" class="hover:text-foreground transition-colors">Color Moments (Mean, Std, Skew)</a></li>
+						<li><a href="#platform" class="hover:text-foreground transition-colors">MiniBatchKMeans Dominant Colors (k=5)</a></li>
+						<li><a href="#platform" class="hover:text-foreground transition-colors">GLCM Texture Energy (24-D)</a></li>
+						<li><a href="#platform" class="hover:text-foreground transition-colors">Uniform LBP Micro-patterns (128-D)</a></li>
 					</ul>
 				</div>
 
 				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Resources</h4>
+					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Academic Reference</h4>
 					<ul class="space-y-2">
-						<li><a href="/docs" class="hover:text-foreground transition-colors">Evaluation Documentation</a></li>
-						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">GHIM-10K Dataset</a></li>
-						<li><a href="/docs" class="hover:text-foreground transition-colors">REST API Reference</a></li>
-						<li><a href="/settings" class="hover:text-foreground transition-colors">API Tokens & Keys</a></li>
+						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">GHIM-10K Benchmark</a></li>
+						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">Rocchio Algorithm Reformulation</a></li>
+						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">Mean Average Precision (mAP)</a></li>
+						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">Sequential Latency Trendline</a></li>
 					</ul>
 				</div>
 
 				<div class="space-y-3">
 					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Project</h4>
 					<ul class="space-y-2">
-						<li><span class="text-foreground font-semibold">Group 13</span></li>
+						<li><span class="text-foreground font-semibold">Group 13 Project</span></li>
 						<li><a href="/terms" class="hover:text-foreground transition-colors">Terms of Service</a></li>
 						<li><a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a></li>
-						<li><a href="https://github.com" target="_blank" rel="noreferrer" class="hover:text-foreground transition-colors">GitHub Repository</a></li>
 					</ul>
 				</div>
 			</div>
@@ -1031,5 +1266,44 @@
 			</div>
 		</div>
 	</footer>
+
+	<!-- ========================================================================= -->
+	<!-- 9. SCREENSHOT ZOOM LIGHTBOX MODAL                                         -->
+	<!-- ========================================================================= -->
+	{#if zoomedImage}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-200"
+		>
+			<button
+				type="button"
+				class="absolute inset-0 bg-transparent w-full h-full cursor-default"
+				onclick={() => zoomedImage = null}
+				aria-label="Close zoomed view"
+			></button>
+
+			<div
+				class="relative z-10 max-w-6xl w-full max-h-[90vh] rounded-2xl overflow-hidden border border-border/60 bg-card shadow-2xl"
+			>
+				<div class="flex items-center justify-between px-4 py-2.5 bg-muted/70 border-b border-border">
+					<span class="text-xs font-mono text-muted-foreground truncate">{zoomedImage}</span>
+					<button
+						type="button"
+						onclick={() => zoomedImage = null}
+						class="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+						aria-label="Close zoomed view"
+					>
+						<XIcon class="size-4" />
+					</button>
+				</div>
+				<div class="overflow-auto max-h-[calc(90vh-42px)] p-2 bg-muted/20">
+					<img
+						src={zoomedImage}
+						alt="Zoomed interface preview"
+						class="w-full h-auto rounded-lg object-contain shadow-sm"
+					/>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 {/if}

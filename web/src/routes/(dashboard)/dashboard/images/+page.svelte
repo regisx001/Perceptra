@@ -5,6 +5,7 @@
 	import { Input } from "#lib/components/ui/input/index.js";
 	import * as AlertDialog from "#lib/components/ui/alert-dialog/index.js";
 	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
 	import { imageService, type ImageItem } from "#lib/images.js";
 	import { categoryService, type CategoryItem } from "#lib/categories.js";
@@ -22,6 +23,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import HeartIcon from "@lucide/svelte/icons/heart";
 	import CheckIcon from "@lucide/svelte/icons/check";
+	import MoreHorizontalIcon from "@lucide/svelte/icons/more-horizontal";
 
 	interface GalleryImage {
 		id: string;
@@ -546,42 +548,72 @@
 							<span class="text-[10px] truncate max-w-full font-mono">{img.filename}</span>
 						</div>
 
-						<!-- Floating Action Buttons: Edit, Favorite, Delete (hidden during multi-select) -->
+						<!-- Floating Action Button: 3 horizontal dots overflow menu (hidden during multi-select) -->
 						{#if selectedIds.size === 0}
 							<div class="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
-								<!-- Edit Image Button -->
-								<button
-									type="button"
-									class="size-7.5 rounded-full bg-black/60 hover:bg-primary text-white/90 hover:text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all backdrop-blur-md shadow-xs cursor-pointer"
-									title="Edit Image"
-									onclick={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										window.location.href = `/dashboard/transform?image_id=${img.id}`;
-									}}
-								>
-									<PencilIcon class="size-3.5" />
-								</button>
+								{#if img.isFavorite}
+									<span
+										class="size-7 sm:size-7.5 rounded-full bg-black/60 text-rose-500 flex items-center justify-center backdrop-blur-md shadow-xs pointer-events-none"
+										title="Favorited"
+									>
+										<HeartIcon class="size-3.5 fill-current" />
+									</span>
+								{/if}
 
-								<!-- Favorite Button -->
-								<button
-									type="button"
-									class="size-7.5 rounded-full bg-black/60 hover:bg-rose-500 hover:text-white text-white/90 flex items-center justify-center {img.isFavorite ? 'opacity-100 text-rose-500' : 'opacity-90 sm:opacity-0 sm:group-hover:opacity-100'} transition-all backdrop-blur-md shadow-xs cursor-pointer"
-									onclick={(e) => toggleFavorite(img, e)}
-									title={img.isFavorite ? "Remove from Favorites" : "Add to Favorites"}
-								>
-									<HeartIcon class="size-3.5 {img.isFavorite ? 'fill-current text-rose-500' : ''}" />
-								</button>
-
-								<!-- Delete Button -->
-								<button
-									type="button"
-									class="size-7.5 rounded-full bg-black/60 hover:bg-destructive text-white/90 hover:text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all backdrop-blur-md shadow-xs cursor-pointer"
-									onclick={(e) => promptDelete(img, e)}
-									title="Delete Image"
-								>
-									<Trash2Icon class="size-3.5" />
-								</button>
+								<DropdownMenu.Root>
+									<DropdownMenu.Trigger
+										class="size-7 sm:size-7.5 rounded-full bg-black/60 hover:bg-black/85 text-white/90 hover:text-white flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 data-[state=open]:opacity-100 transition-all backdrop-blur-md shadow-xs cursor-pointer"
+										title="Image actions"
+										aria-label="Image actions"
+										onclick={(e: MouseEvent) => {
+											e.preventDefault();
+											e.stopPropagation();
+										}}
+									>
+										<MoreHorizontalIcon class="size-4" />
+									</DropdownMenu.Trigger>
+									<DropdownMenu.Content align="end" class="w-44 z-50">
+										<DropdownMenu.Item
+											class="gap-2.5 text-xs cursor-pointer"
+											onclick={(e: MouseEvent) => {
+												e.preventDefault();
+												e.stopPropagation();
+												window.location.href = `/dashboard/transform?image_id=${img.id}`;
+											}}
+										>
+											<PencilIcon class="size-3.5 text-muted-foreground" />
+											<span>Edit in Studio</span>
+										</DropdownMenu.Item>
+										<DropdownMenu.Item
+											class="gap-2.5 text-xs cursor-pointer"
+											onclick={(e: MouseEvent) => {
+												e.preventDefault();
+												e.stopPropagation();
+												toggleFavorite(img, e);
+											}}
+										>
+											<HeartIcon
+												class="size-3.5 {img.isFavorite
+													? 'fill-current text-rose-500'
+													: 'text-muted-foreground'}"
+											/>
+											<span>{img.isFavorite ? "Remove from Favorites" : "Add to Favorites"}</span>
+										</DropdownMenu.Item>
+										<DropdownMenu.Separator />
+										<DropdownMenu.Item
+											variant="destructive"
+											class="gap-2.5 text-xs cursor-pointer"
+											onclick={(e: MouseEvent) => {
+												e.preventDefault();
+												e.stopPropagation();
+												promptDelete(img, e);
+											}}
+										>
+											<Trash2Icon class="size-3.5" />
+											<span>Delete Image</span>
+										</DropdownMenu.Item>
+									</DropdownMenu.Content>
+								</DropdownMenu.Root>
 							</div>
 						{/if}
 					</a>

@@ -214,12 +214,47 @@ def test_image_transformation_and_derivatives_routes(client):
     shear_data = shear_res.get_json()["image"]
     assert shear_data["parent_image_id"] == crop_id
 
+    # 2b. Transform with stacked adjustments
+    adj_payload = {
+        "operation": "adjust",
+        "params": {
+            "brightness": 20,
+            "contrast": 15,
+            "saturation": 10,
+            "sharpness": 25,
+        },
+        "filename": "adjusted.png",
+    }
+    adj_res = client.post(f"/api/v1/images/{parent_id}/transform", json=adj_payload, headers=headers)
+    assert adj_res.status_code == 201
+    adj_data = adj_res.get_json()["image"]
+    assert adj_data["width"] == 100
+    assert adj_data["height"] == 80
+    assert adj_data["transformation_params"]["operation"] == "adjust"
+
+    # 2c. Multi-step pipeline stacking
+    pipe_payload = {
+        "operation": "pipeline",
+        "params": {
+            "steps": [
+                {"operation": "adjust", "params": {"exposure": 10, "temperature": 5}},
+                {"operation": "crop", "params": {"x": 5, "y": 5, "width": 50, "height": 40}},
+            ]
+        },
+        "filename": "pipeline_derived.png",
+    }
+    pipe_res = client.post(f"/api/v1/images/{parent_id}/transform", json=pipe_payload, headers=headers)
+    assert pipe_res.status_code == 201
+    pipe_data = pipe_res.get_json()["image"]
+    assert pipe_data["width"] == 50
+    assert pipe_data["height"] == 40
+    assert pipe_data["transformation_params"]["operation"] == "pipeline"
+
     # 3. List derivatives of parent
     deriv_res = client.get(f"/api/v1/images/{parent_id}/derivatives", headers=headers)
     assert deriv_res.status_code == 200
     derivatives = deriv_res.get_json()["derivatives"]
-    assert len(derivatives) == 1
-    assert derivatives[0]["id"] == crop_id
+    assert len(derivatives) == 3
 
     # 4. Out-of-bounds crop returns 400
     bad_crop = {

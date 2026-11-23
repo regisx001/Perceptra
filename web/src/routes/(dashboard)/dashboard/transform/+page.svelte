@@ -37,6 +37,13 @@
 	import ExternalLinkIcon from "@lucide/svelte/icons/external-link";
 	import FlipHorizontalIcon from "@lucide/svelte/icons/flip-horizontal";
 	import FlipVerticalIcon from "@lucide/svelte/icons/flip-vertical";
+	import SunIcon from "@lucide/svelte/icons/sun";
+	import PaletteIcon from "@lucide/svelte/icons/palette";
+	import SparklesIcon from "@lucide/svelte/icons/sparkles";
+	import LayersIcon from "@lucide/svelte/icons/layers";
+	import EyeIcon from "@lucide/svelte/icons/eye";
+	import XIcon from "@lucide/svelte/icons/x";
+	import type { PhotoAdjustments } from "#lib/images.js";
 
 	// State
 	let user = $state(auth.getUser());
@@ -79,7 +86,10 @@
 		| "rotate"
 		| "flip"
 		| "shear"
-		| "affine";
+		| "affine"
+		| "light"
+		| "color"
+		| "detail";
 	let activeTab = $state<TransformOp>("crop");
 
 	// Preview Controls
@@ -135,6 +145,181 @@
 
 	// 5. Flip Parameters
 	let flipDirection = $state<"horizontal" | "vertical">("horizontal");
+
+	// 6. Photographic Adjustments
+	// Light
+	let adjBrightness = $state<number>(0);
+	let adjContrast = $state<number>(0);
+	let adjExposure = $state<number>(0);
+	let adjHighlights = $state<number>(0);
+	let adjShadows = $state<number>(0);
+	let adjWhites = $state<number>(0);
+	let adjBlacks = $state<number>(0);
+
+	// Color
+	let adjSaturation = $state<number>(0);
+	let adjVibrance = $state<number>(0);
+	let adjHue = $state<number>(0);
+	let adjTemperature = $state<number>(0);
+	let adjTint = $state<number>(0);
+
+	// Detail
+	let adjSharpness = $state<number>(0);
+	let adjClarity = $state<number>(0);
+	let adjBlur = $state<number>(0);
+
+	// A/B Comparison state
+	let isComparing = $state<boolean>(false);
+
+	// Multi-step transformation pipeline stack
+	interface StackStep {
+		id: string;
+		operation: string;
+		description: string;
+		params: Record<string, any>;
+	}
+	let appliedStack = $state<StackStep[]>([]);
+
+	// Active adjustment counters
+	let activeLightCount = $derived.by(() => {
+		let c = 0;
+		if (adjBrightness !== 0) c++;
+		if (adjContrast !== 0) c++;
+		if (adjExposure !== 0) c++;
+		if (adjHighlights !== 0) c++;
+		if (adjShadows !== 0) c++;
+		if (adjWhites !== 0) c++;
+		if (adjBlacks !== 0) c++;
+		return c;
+	});
+
+	let activeColorCount = $derived.by(() => {
+		let c = 0;
+		if (adjSaturation !== 0) c++;
+		if (adjVibrance !== 0) c++;
+		if (adjHue !== 0) c++;
+		if (adjTemperature !== 0) c++;
+		if (adjTint !== 0) c++;
+		return c;
+	});
+
+	let activeDetailCount = $derived.by(() => {
+		let c = 0;
+		if (adjSharpness !== 0) c++;
+		if (adjClarity !== 0) c++;
+		if (adjBlur !== 0) c++;
+		return c;
+	});
+
+	let totalActiveAdjustments = $derived.by(
+		() => activeLightCount + activeColorCount + activeDetailCount,
+	);
+
+	let currentAdjustments = $derived.by((): PhotoAdjustments => {
+		return {
+			brightness: adjBrightness,
+			contrast: adjContrast,
+			exposure: adjExposure,
+			highlights: adjHighlights,
+			shadows: adjShadows,
+			whites: adjWhites,
+			blacks: adjBlacks,
+			saturation: adjSaturation,
+			vibrance: adjVibrance,
+			hue: adjHue,
+			temperature: adjTemperature,
+			tint: adjTint,
+			sharpness: adjSharpness,
+			clarity: adjClarity,
+			blur: adjBlur,
+		};
+	});
+
+	// Real-time CSS Filter preview for center viewport
+	let liveFilterStyle = $derived.by(() => {
+		if (isComparing || totalActiveAdjustments === 0) return "";
+		const brightFactor =
+			(1 + adjBrightness / 100) * Math.pow(2, adjExposure / 50);
+		const contrastFactor = 1 + adjContrast / 100;
+		const satFactor = (1 + adjSaturation / 100) * (1 + adjVibrance / 150);
+		const blurPx = adjBlur;
+		const hueDeg = adjHue;
+		const sepiaFactor = adjTemperature > 0 ? adjTemperature / 200 : 0;
+		return `filter: brightness(${brightFactor}) contrast(${contrastFactor}) saturate(${satFactor}) hue-rotate(${hueDeg}deg) blur(${blurPx}px) sepia(${sepiaFactor});`;
+	});
+
+	function resetLightAdjustments() {
+		adjBrightness = 0;
+		adjContrast = 0;
+		adjExposure = 0;
+		adjHighlights = 0;
+		adjShadows = 0;
+		adjWhites = 0;
+		adjBlacks = 0;
+	}
+
+	function resetColorAdjustments() {
+		adjSaturation = 0;
+		adjVibrance = 0;
+		adjHue = 0;
+		adjTemperature = 0;
+		adjTint = 0;
+	}
+
+	function resetDetailAdjustments() {
+		adjSharpness = 0;
+		adjClarity = 0;
+		adjBlur = 0;
+	}
+
+	function resetAllAdjustments() {
+		resetLightAdjustments();
+		resetColorAdjustments();
+		resetDetailAdjustments();
+	}
+
+	function handleStackCurrentStep() {
+		let stepOp = activeTab as string;
+		let stepDesc = "";
+		let stepParams: Record<string, any> = {};
+
+		if (
+			activeTab === "light" ||
+			activeTab === "color" ||
+			activeTab === "detail"
+		) {
+			if (totalActiveAdjustments === 0) return;
+			stepOp = "adjust";
+			stepDesc = `Adjustments (${totalActiveAdjustments} active)`;
+			stepParams = { adjustments: { ...currentAdjustments } };
+			resetAllAdjustments();
+		} else {
+			stepDesc = `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+			stepParams = { ...activeParamsJson };
+			if (totalActiveAdjustments > 0) {
+				stepParams.adjustments = { ...currentAdjustments };
+				resetAllAdjustments();
+			}
+		}
+
+		appliedStack = [
+			...appliedStack,
+			{
+				id: "step-" + Math.random().toString(36).substring(2, 7),
+				operation: stepOp,
+				description: stepDesc,
+				params: stepParams,
+			},
+		];
+	}
+
+	function removeStackStep(index: number) {
+		appliedStack = appliedStack.filter((_, i) => i !== index);
+	}
+
+	function clearStack() {
+		appliedStack = [];
+	}
 
 	// Saved Info
 	let derivedFilename = $state<string>("chair_01_cropped.jpg");
@@ -315,7 +500,9 @@
 		const ext = originalFilename.includes(".")
 			? "." + originalFilename.split(".").pop()
 			: ".jpg";
-		if (activeTab === "crop") {
+		if (appliedStack.length > 0) {
+			derivedFilename = `${stem}_pipelined_${appliedStack.length}steps${ext}`;
+		} else if (activeTab === "crop") {
 			derivedFilename = `${stem}_cropped${ext}`;
 		} else if (activeTab === "shear") {
 			derivedFilename = `${stem}_sheared${ext}`;
@@ -327,6 +514,12 @@
 			derivedFilename = `${stem}_rotated${ext}`;
 		} else if (activeTab === "flip") {
 			derivedFilename = `${stem}_flipped_${flipDirection}${ext}`;
+		} else if (
+			activeTab === "light" ||
+			activeTab === "color" ||
+			activeTab === "detail"
+		) {
+			derivedFilename = `${stem}_adjusted${ext}`;
 		} else {
 			derivedFilename = `${stem}_transformed${ext}`;
 		}
@@ -373,9 +566,13 @@
 				expand: rotateExpand,
 				bg_color: rotateBgColor,
 			};
-		} else {
+		} else if (activeTab === "flip") {
 			return {
 				direction: flipDirection,
+			};
+		} else {
+			return {
+				adjustments: { ...currentAdjustments },
 			};
 		}
 	});
@@ -915,6 +1112,8 @@
 		flipDirection = "horizontal";
 		zoomLevel = 74;
 		activePreset = "1:1 (Square)";
+		resetAllAdjustments();
+		clearStack();
 	}
 
 	async function handleSaveDerivedImage() {
@@ -923,7 +1122,51 @@
 		saveSuccessImage = null;
 
 		try {
-			const targetOp = activeTab;
+			let targetOp = activeTab as string;
+			let targetParams: Record<string, any> = { ...activeParamsJson };
+
+			if (appliedStack.length > 0) {
+				targetOp = "pipeline";
+				const steps = appliedStack.map((s) => ({
+					operation: s.operation,
+					params: s.params,
+				}));
+
+				// If there are unstacked adjustments or transforms, add them as the last step
+				if (
+					activeTab === "light" ||
+					activeTab === "color" ||
+					activeTab === "detail"
+				) {
+					if (totalActiveAdjustments > 0) {
+						steps.push({
+							operation: "adjust",
+							params: { adjustments: { ...currentAdjustments } },
+						});
+					}
+				} else {
+					const finalStepParams: Record<string, any> = {
+						...activeParamsJson,
+					};
+					if (totalActiveAdjustments > 0) {
+						finalStepParams.adjustments = { ...currentAdjustments };
+					}
+					steps.push({
+						operation: activeTab,
+						params: finalStepParams,
+					});
+				}
+				targetParams = { steps };
+			} else if (
+				activeTab === "light" ||
+				activeTab === "color" ||
+				activeTab === "detail"
+			) {
+				targetOp = "adjust";
+				targetParams = { adjustments: { ...currentAdjustments } };
+			} else if (totalActiveAdjustments > 0) {
+				targetParams.adjustments = { ...currentAdjustments };
+			}
 
 			if (!currentImage) {
 				const mockDerived: ImageItem = {
@@ -941,7 +1184,7 @@
 					created_at: new Date().toISOString(),
 					transformation_params: {
 						operation: targetOp,
-						params: activeParamsJson,
+						params: targetParams,
 					},
 				};
 				saveSuccessImage = mockDerived;
@@ -950,7 +1193,7 @@
 
 			const derived = await imageService.transformImage(currentImage.id, {
 				operation: targetOp,
-				params: activeParamsJson,
+				params: targetParams,
 				filename: derivedFilename,
 				category_id: selectedCategoryId
 					? Number(selectedCategoryId)
@@ -991,6 +1234,14 @@
 
 			const w = img.naturalWidth || originalWidth;
 			const h = img.naturalHeight || originalHeight;
+
+			if (liveFilterStyle && !isComparing) {
+				const cssFilter = liveFilterStyle
+					.replace("filter: ", "")
+					.replace(";", "")
+					.trim();
+				ctx.filter = cssFilter;
+			}
 
 			if (activeTab === "crop") {
 				canvas.width = cropWidth;
@@ -1444,6 +1695,168 @@
 					</div>
 				</div>
 
+				<!-- Section: Photographic Adjustments -->
+				<div class="space-y-2 pt-2 border-t border-border/80">
+					<div class="flex items-center justify-between">
+						<h3
+							class="text-sm font-semibold tracking-tight text-foreground"
+						>
+							Adjustments
+						</h3>
+						{#if totalActiveAdjustments > 0}
+							<button
+								type="button"
+								class="text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+								onclick={resetAllAdjustments}
+							>
+								Reset all
+							</button>
+						{/if}
+					</div>
+
+					<div class="flex flex-col gap-1.5">
+						<!-- Light -->
+						<button
+							type="button"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'light'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
+							onclick={() => (activeTab = "light")}
+						>
+							<div class="flex items-center gap-2.5">
+								<div
+									class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+									'light'
+										? 'bg-primary text-primary-foreground shadow-2xs'
+										: 'text-muted-foreground'}"
+								>
+									<SunIcon class="size-3.5" />
+								</div>
+								<span>Light</span>
+							</div>
+							{#if activeLightCount > 0}
+								<span
+									class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-foreground"
+								>
+									{activeLightCount}
+								</span>
+							{/if}
+						</button>
+
+						<!-- Color -->
+						<button
+							type="button"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'color'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
+							onclick={() => (activeTab = "color")}
+						>
+							<div class="flex items-center gap-2.5">
+								<div
+									class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+									'color'
+										? 'bg-primary text-primary-foreground shadow-2xs'
+										: 'text-muted-foreground'}"
+								>
+									<PaletteIcon class="size-3.5" />
+								</div>
+								<span>Color</span>
+							</div>
+							{#if activeColorCount > 0}
+								<span
+									class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-foreground"
+								>
+									{activeColorCount}
+								</span>
+							{/if}
+						</button>
+
+						<!-- Detail -->
+						<button
+							type="button"
+							class="w-full h-10 px-2.5 rounded-lg flex items-center justify-between text-xs font-medium transition-all cursor-pointer {activeTab ===
+							'detail'
+								? 'bg-primary/10 text-primary border border-primary/25 font-bold shadow-2xs'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted/70 border border-transparent'}"
+							onclick={() => (activeTab = "detail")}
+						>
+							<div class="flex items-center gap-2.5">
+								<div
+									class="size-6 rounded-md flex items-center justify-center shrink-0 {activeTab ===
+									'detail'
+										? 'bg-primary text-primary-foreground shadow-2xs'
+										: 'text-muted-foreground'}"
+								>
+									<SparklesIcon class="size-3.5" />
+								</div>
+								<span>Detail</span>
+							</div>
+							{#if activeDetailCount > 0}
+								<span
+									class="px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-foreground"
+								>
+									{activeDetailCount}
+								</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+
+				<!-- Section: Active Pipeline Stack (if any) -->
+				{#if appliedStack.length > 0}
+					<div class="space-y-2 pt-2 border-t border-border/80">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-1.5">
+								<LayersIcon class="size-3.5 text-primary" />
+								<h3
+									class="text-xs font-semibold tracking-tight text-foreground"
+								>
+									Stack ({appliedStack.length})
+								</h3>
+							</div>
+							<button
+								type="button"
+								class="text-[10px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+								onclick={clearStack}
+							>
+								Clear
+							</button>
+						</div>
+						<div
+							class="flex flex-col gap-1 max-h-32 overflow-y-auto"
+						>
+							{#each appliedStack as step, idx}
+								<div
+									class="flex items-center justify-between px-2 py-1.5 rounded-md bg-muted/40 border border-border/60 text-2xs"
+								>
+									<div
+										class="flex items-center gap-1.5 truncate"
+									>
+										<span
+											class="font-mono text-[10px] text-muted-foreground"
+											>#{idx + 1}</span
+										>
+										<span
+											class="font-medium text-foreground truncate"
+											>{step.description}</span
+										>
+									</div>
+									<button
+										type="button"
+										class="text-muted-foreground hover:text-destructive p-0.5 cursor-pointer rounded"
+										onclick={() => removeStackStep(idx)}
+										title="Remove layer step"
+									>
+										<XIcon class="size-3" />
+									</button>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
 				<!-- Section: Presets -->
 				<div class="space-y-2 pt-2 border-t border-border/80">
 					<h3
@@ -1556,7 +1969,8 @@
 								src={currentImageUrl}
 								alt={originalFilename}
 								onload={handleImageLoad}
-								class="max-w-[85vw] max-h-[calc(100vh-250px)] object-contain rounded-xs border border-white/20 select-none pointer-events-none block"
+								class="max-w-[85vw] max-h-[calc(100vh-250px)] object-contain rounded-xs border border-white/20 select-none pointer-events-none block transition-[filter] duration-75"
+								style={liveFilterStyle}
 							/>
 
 							<!-- ========================================================= -->
@@ -1662,32 +2076,74 @@
 						</Button>
 					</div>
 
-					<!-- Center: Zoom Controls Pill -->
-					<div
-						class="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-muted/30 font-mono"
-					>
-						<button
-							type="button"
-							class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-							onclick={() =>
-								(zoomLevel = Math.max(30, zoomLevel - 10))}
-							title="Zoom Out"
+					<!-- Center: Compare, Stack & Zoom Controls -->
+					<div class="flex items-center gap-2">
+						<!-- A/B Hold Compare Button -->
+						<Button
+							variant={isComparing ? "default" : "outline"}
+							size="sm"
+							class="h-8 px-2.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-2xs transition-colors {isComparing
+								? 'bg-amber-600 text-white hover:bg-amber-700'
+								: 'text-muted-foreground hover:text-foreground'}"
+							onpointerdown={() => (isComparing = true)}
+							onpointerup={() => (isComparing = false)}
+							onpointerleave={() => (isComparing = false)}
+							title="Hold down to preview original unadjusted image"
 						>
-							<MinusIcon class="size-3.5" />
-						</button>
-						<span
-							class="text-xs font-semibold text-foreground px-2 select-none"
-							>{zoomLevel}%</span
+							<EyeIcon class="size-3.5" />
+							<span class="hidden sm:inline"
+								>{isComparing
+									? "Viewing Original"
+									: "Hold to Compare"}</span
+							>
+						</Button>
+
+						<!-- Stack Step Button -->
+						<Button
+							variant="outline"
+							size="sm"
+							class="h-8 px-2.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-2xs border-primary/30 text-primary hover:bg-primary/10"
+							onclick={handleStackCurrentStep}
+							title="Stack current adjustments or transform onto the working image pipeline"
 						>
-						<button
-							type="button"
-							class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-							onclick={() =>
-								(zoomLevel = Math.min(150, zoomLevel + 10))}
-							title="Zoom In"
+							<LayersIcon class="size-3.5" />
+							<span class="hidden sm:inline">Stack Step</span>
+							{#if appliedStack.length > 0}
+								<span
+									class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-foreground"
+								>
+									{appliedStack.length}
+								</span>
+							{/if}
+						</Button>
+
+						<!-- Zoom Controls Pill -->
+						<div
+							class="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-muted/30 font-mono"
 						>
-							<PlusIcon class="size-3.5" />
-						</button>
+							<button
+								type="button"
+								class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+								onclick={() =>
+									(zoomLevel = Math.max(30, zoomLevel - 10))}
+								title="Zoom Out"
+							>
+								<MinusIcon class="size-3.5" />
+							</button>
+							<span
+								class="text-xs font-semibold text-foreground px-2 select-none"
+								>{zoomLevel}%</span
+							>
+							<button
+								type="button"
+								class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+								onclick={() =>
+									(zoomLevel = Math.min(150, zoomLevel + 10))}
+								title="Zoom In"
+							>
+								<PlusIcon class="size-3.5" />
+							</button>
+						</div>
 					</div>
 
 					<!-- Right: Fit to View / Fullscreen -->
@@ -1716,19 +2172,52 @@
 				<!-- Section: Dynamic Tool Settings Title -->
 				<div class="space-y-4">
 					<h3
-						class="text-sm font-semibold tracking-tight text-foreground"
+						class="text-sm font-semibold tracking-tight text-foreground flex items-center justify-between"
 					>
-						{activeTab === "crop"
-							? "Crop Settings"
-							: activeTab === "resize"
-								? "Resize Settings"
-								: activeTab === "rotate"
-									? "Rotate Settings"
-									: activeTab === "flip"
-										? "Flip Settings"
-										: activeTab === "affine"
-											? "Affine Settings"
-											: "Shear Settings"}
+						<span>
+							{activeTab === "crop"
+								? "Crop Settings"
+								: activeTab === "resize"
+									? "Resize Settings"
+									: activeTab === "rotate"
+										? "Rotate Settings"
+										: activeTab === "flip"
+											? "Flip Settings"
+											: activeTab === "shear"
+												? "Shear Settings"
+												: activeTab === "affine"
+													? "Affine Settings"
+													: activeTab === "light"
+														? "Light Adjustments"
+														: activeTab === "color"
+															? "Color Adjustments"
+															: "Detail Adjustments"}
+						</span>
+						{#if activeTab === "light" && activeLightCount > 0}
+							<button
+								type="button"
+								class="text-xs font-normal text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+								onclick={resetLightAdjustments}
+							>
+								Reset Light
+							</button>
+						{:else if activeTab === "color" && activeColorCount > 0}
+							<button
+								type="button"
+								class="text-xs font-normal text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+								onclick={resetColorAdjustments}
+							>
+								Reset Color
+							</button>
+						{:else if activeTab === "detail" && activeDetailCount > 0}
+							<button
+								type="button"
+								class="text-xs font-normal text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+								onclick={resetDetailAdjustments}
+							>
+								Reset Detail
+							</button>
+						{/if}
 					</h3>
 
 					<!-- CROP CONTROLS -->
@@ -2131,7 +2620,7 @@
 						</div>
 
 						<!-- AFFINE CONTROLS -->
-					{:else}
+					{:else if activeTab === "affine"}
 						<div class="space-y-3">
 							<!-- Matrix Visual Preview Card -->
 							<div
@@ -2287,6 +2776,468 @@
 								</div>
 							</div>
 						</div>
+
+					<!-- LIGHT CONTROLS -->
+					{:else if activeTab === "light"}
+						<div class="space-y-3">
+							<!-- Brightness -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Brightness</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjBrightness !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjBrightness > 0 ? `+${adjBrightness}` : adjBrightness}
+										</span>
+										{#if adjBrightness !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjBrightness = 0)}
+												title="Reset Brightness"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjBrightness}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Contrast -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Contrast</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjContrast !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjContrast > 0 ? `+${adjContrast}` : adjContrast}
+										</span>
+										{#if adjContrast !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjContrast = 0)}
+												title="Reset Contrast"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjContrast}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Exposure -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Exposure</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjExposure !== 0 ? 'text-primary' : 'text-foreground'}">
+											{(adjExposure / 50).toFixed(2)} EV
+										</span>
+										{#if adjExposure !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjExposure = 0)}
+												title="Reset Exposure"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjExposure}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Highlights -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Highlights</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjHighlights !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjHighlights > 0 ? `+${adjHighlights}` : adjHighlights}
+										</span>
+										{#if adjHighlights !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjHighlights = 0)}
+												title="Reset Highlights"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjHighlights}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Shadows -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Shadows</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjShadows !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjShadows > 0 ? `+${adjShadows}` : adjShadows}
+										</span>
+										{#if adjShadows !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjShadows = 0)}
+												title="Reset Shadows"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjShadows}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Whites -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Whites</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjWhites !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjWhites > 0 ? `+${adjWhites}` : adjWhites}
+										</span>
+										{#if adjWhites !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjWhites = 0)}
+												title="Reset Whites"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjWhites}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Blacks -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Blacks</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjBlacks !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjBlacks > 0 ? `+${adjBlacks}` : adjBlacks}
+										</span>
+										{#if adjBlacks !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjBlacks = 0)}
+												title="Reset Blacks"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjBlacks}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+						</div>
+
+					<!-- COLOR CONTROLS -->
+					{:else if activeTab === "color"}
+						<div class="space-y-3">
+							<!-- Saturation -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Saturation</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjSaturation !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjSaturation > 0 ? `+${adjSaturation}` : adjSaturation}
+										</span>
+										{#if adjSaturation !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjSaturation = 0)}
+												title="Reset Saturation"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjSaturation}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Vibrance -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Vibrance</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjVibrance !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjVibrance > 0 ? `+${adjVibrance}` : adjVibrance}
+										</span>
+										{#if adjVibrance !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjVibrance = 0)}
+												title="Reset Vibrance"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjVibrance}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Hue -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Hue Shift</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjHue !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjHue > 0 ? `+${adjHue}` : adjHue}°
+										</span>
+										{#if adjHue !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjHue = 0)}
+												title="Reset Hue"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-180"
+									max="180"
+									step="1"
+									bind:value={adjHue}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Temperature -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Temperature (Warm / Cool)</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjTemperature !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjTemperature > 0 ? `+${adjTemperature}` : adjTemperature}
+										</span>
+										{#if adjTemperature !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjTemperature = 0)}
+												title="Reset Temperature"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjTemperature}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Tint -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Tint (Magenta / Green)</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjTint !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjTint > 0 ? `+${adjTint}` : adjTint}
+										</span>
+										{#if adjTint !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjTint = 0)}
+												title="Reset Tint"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjTint}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+						</div>
+
+					<!-- DETAIL CONTROLS -->
+					{:else if activeTab === "detail"}
+						<div class="space-y-3">
+							<!-- Sharpness -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Sharpness</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjSharpness !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjSharpness}
+										</span>
+										{#if adjSharpness !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjSharpness = 0)}
+												title="Reset Sharpness"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="0"
+									max="100"
+									step="1"
+									bind:value={adjSharpness}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Clarity -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Clarity</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjClarity !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjClarity > 0 ? `+${adjClarity}` : adjClarity}
+										</span>
+										{#if adjClarity !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjClarity = 0)}
+												title="Reset Clarity"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="-100"
+									max="100"
+									step="1"
+									bind:value={adjClarity}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+
+							<!-- Blur -->
+							<div class="space-y-1">
+								<div class="flex items-center justify-between text-2xs">
+									<span class="text-muted-foreground">Gaussian Blur</span>
+									<div class="flex items-center gap-1 font-mono">
+										<span class="font-bold {adjBlur !== 0 ? 'text-primary' : 'text-foreground'}">
+											{adjBlur}px
+										</span>
+										{#if adjBlur !== 0}
+											<button
+												type="button"
+												class="p-0.5 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+												onclick={() => (adjBlur = 0)}
+												title="Reset Blur"
+											>
+												<RotateCcwIcon class="size-2.5" />
+											</button>
+										{/if}
+									</div>
+								</div>
+								<input
+									type="range"
+									min="0"
+									max="20"
+									step="1"
+									bind:value={adjBlur}
+									class="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+								/>
+							</div>
+						</div>
 					{/if}
 				</div>
 
@@ -2416,6 +3367,163 @@
 									class="size-3.5"
 								/>
 								<span>Reflect Y</span>
+							</Button>
+						{:else if activeTab === "light"}
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjContrast = 20;
+									adjHighlights = -25;
+									adjShadows = 35;
+									adjWhites = 10;
+									adjBlacks = -10;
+								}}
+							>
+								<SunIcon data-icon="inline-start" class="size-3.5" />
+								<span>HDR Dynamic</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjContrast = 30;
+									adjWhites = 15;
+									adjBlacks = -15;
+								}}
+							>
+								<SparklesIcon data-icon="inline-start" class="size-3.5" />
+								<span>Pop Contrast</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjBrightness = 15;
+									adjExposure = 12;
+									adjShadows = 20;
+								}}
+							>
+								<MaximizeIcon data-icon="inline-start" class="size-3.5" />
+								<span>Brighten</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={resetLightAdjustments}
+							>
+								<RotateCcwIcon data-icon="inline-start" class="size-3.5" />
+								<span>Reset Light</span>
+							</Button>
+						{:else if activeTab === "color"}
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjVibrance = 25;
+									adjTemperature = 15;
+									adjSaturation = 10;
+								}}
+							>
+								<PaletteIcon data-icon="inline-start" class="size-3.5" />
+								<span>Vivid Warm</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjTemperature = -20;
+									adjTint = 5;
+									adjSaturation = -10;
+									adjVibrance = 15;
+								}}
+							>
+								<SparklesIcon data-icon="inline-start" class="size-3.5" />
+								<span>Cool Moody</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjSaturation = -30;
+									adjVibrance = 15;
+									adjTemperature = 18;
+									adjTint = -5;
+								}}
+							>
+								<SlidersHorizontalIcon data-icon="inline-start" class="size-3.5" />
+								<span>Vintage Film</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={resetColorAdjustments}
+							>
+								<RotateCcwIcon data-icon="inline-start" class="size-3.5" />
+								<span>Reset Color</span>
+							</Button>
+						{:else if activeTab === "detail"}
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjSharpness = 40;
+									adjClarity = 25;
+								}}
+							>
+								<SparklesIcon data-icon="inline-start" class="size-3.5" />
+								<span>Crisp Pop</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjClarity = -25;
+									adjBlur = 2;
+								}}
+							>
+								<CrosshairIcon data-icon="inline-start" class="size-3.5" />
+								<span>Soft Glow</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={() => {
+									adjSharpness = 75;
+									adjClarity = 15;
+								}}
+							>
+								<ScanIcon data-icon="inline-start" class="size-3.5" />
+								<span>Ultra Sharp</span>
+							</Button>
+
+							<Button
+								variant="outline"
+								size="sm"
+								class="h-9 text-xs font-medium gap-1.5 justify-center shadow-xs cursor-pointer border-border"
+								onclick={resetDetailAdjustments}
+							>
+								<RotateCcwIcon data-icon="inline-start" class="size-3.5" />
+								<span>Reset Detail</span>
 							</Button>
 						{:else}
 							<Button

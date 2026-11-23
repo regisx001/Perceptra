@@ -2,12 +2,8 @@
 	import SectionCards from "#lib/components/section-cards.svelte";
 	import ChartAreaInteractive from "#lib/components/chart-area-interactive.svelte";
 	import RetrievalAnalyticsPanels from "#lib/components/retrieval-analytics-panels.svelte";
-	import RetrievalHistoryTable from "#lib/components/retrieval-history-table.svelte";
-	import DataTable from "#lib/components/data-table.svelte";
-	import { cbirMockImages } from "#lib/components/cbir-mock-data.js";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import PhotoPlusIcon from "@tabler/icons-svelte/icons/photo-plus";
-	import RefreshDotIcon from "@tabler/icons-svelte/icons/refresh-dot";
 	import * as m from "#lib/paraglide/messages.js";
 </script>
 
@@ -46,11 +42,8 @@
 				<ChartAreaInteractive />
 			</div>
 
-			<!-- Section 3: Deep Analytics (Feedback ratio, Descriptors, Latency) -->
+			<!-- Section 3: Deep Analytics (Feedback ratio & Sequential Latency Trendline) -->
 			<RetrievalAnalyticsPanels />
-
-			<!-- Section 4: Persistent Search History Table with Iteration Inspection -->
-			<RetrievalHistoryTable />
 		</div>
 	</div>
 </div>

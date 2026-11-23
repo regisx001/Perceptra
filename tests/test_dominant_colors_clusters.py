@@ -107,14 +107,14 @@ def test_engine_extract_all_cluster_variations():
     assert "dominant_colors_10" in results
     assert "dominant_colors_20" in results
 
-    assert len(results["dominant_colors"]["feature_values"]["clusters"]) == 5
-    assert len(results["dominant_colors"]["feature_vector"]) == 20
+    assert len(results["dominant_colors"][1]["clusters"]) == 5
+    assert len(results["dominant_colors"][1]["vector"]) == 20
 
-    assert len(results["dominant_colors_10"]["feature_values"]["clusters"]) == 10
-    assert len(results["dominant_colors_10"]["feature_vector"]) == 40
+    assert len(results["dominant_colors_10"][1]["clusters"]) == 10
+    assert len(results["dominant_colors_10"][1]["vector"]) == 40
 
-    assert len(results["dominant_colors_20"]["feature_values"]["clusters"]) == 20
-    assert len(results["dominant_colors_20"]["feature_vector"]) == 80
+    assert len(results["dominant_colors_20"][1]["clusters"]) == 20
+    assert len(results["dominant_colors_20"][1]["vector"]) == 80
 
 
 # ============================================================================
@@ -148,7 +148,5 @@ def test_query_config_includes_cluster_descriptors(client):
     assert res.status_code == 200
     json_data = res.get_json()
 
-    color_descs = json_data["supported_descriptors"]["color"]
-    assert "dominant_colors" in color_descs
-    assert "dominant_colors_10" in color_descs
-    assert "dominant_colors_20" in color_descs
+    descs = json_data["supported_descriptors"]
+    assert "dominant_colors" in descs

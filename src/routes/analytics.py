@@ -424,7 +424,7 @@ def analytics_performance():
 
     iterations = RetrievalIteration.query.filter(
         RetrievalIteration.query_id.in_(user_query_ids)
-    ).order_by(RetrievalIteration.created_at.desc()).limit(30).all()
+    ).order_by(RetrievalIteration.created_at.desc()).limit(50).all()
 
     times = [it.execution_time_ms for it in iterations if it.execution_time_ms is not None]
 
@@ -442,6 +442,6 @@ def analytics_performance():
                 "results": it.results_count,
                 "created_at": it.created_at.isoformat() if it.created_at else None,
             }
-            for it in iterations[:15]
+            for it in iterations[:50]
         ],
     }), 200

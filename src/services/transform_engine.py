@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from typing import Any, Tuple
 
+import cv2
+import numpy as np
 from PIL import Image as PILImage, ImageColor, ImageOps, UnidentifiedImageError
 
 # Map Pillow format identifiers to canonical (extension, mime_type)
@@ -329,6 +331,26 @@ class TransformEngine:
                 )
             return new_w, new_h
 
+        elif op == "adjust":
+            return width, height
+
+        elif op == "pipeline":
+            steps = params.get("steps")
+            if not isinstance(steps, (list, tuple)) or not steps:
+                raise InvalidTransformParamsError("Pipeline requires a non-empty 'steps' list.")
+            cur_w, cur_h = width, height
+            for idx, step in enumerate(steps):
+                if not isinstance(step, dict):
+                    raise InvalidTransformParamsError(f"Step #{idx + 1} must be an object.")
+                sub_op = step.get("operation")
+                if not sub_op or not isinstance(sub_op, str):
+                    raise InvalidTransformParamsError(f"Step #{idx + 1} requires a valid 'operation' string.")
+                sub_params = step.get("params", {})
+                if not isinstance(sub_params, dict):
+                    raise InvalidTransformParamsError(f"Step #{idx + 1} 'params' must be an object.")
+                cur_w, cur_h = cls.validate_dimensions(cur_w, cur_h, sub_op, sub_params)
+            return cur_w, cur_h
+
         raise InvalidTransformParamsError(f"Unknown operation: {op}")
 
     @classmethod
@@ -342,9 +364,9 @@ class TransformEngine:
             raise InvalidTransformParamsError("Image data cannot be empty.")
 
         op = (operation or "").strip().lower()
-        if op not in {"crop", "resize", "rotate", "flip", "shear", "affine"}:
+        if op not in {"crop", "resize", "rotate", "flip", "shear", "affine", "adjust", "pipeline"}:
             raise InvalidTransformParamsError(
-                f"Unsupported operation '{operation}'. Supported operations: crop, resize, rotate, flip, shear, affine."
+                f"Unsupported operation '{operation}'. Supported operations: crop, resize, rotate, flip, shear, affine, adjust, pipeline."
             )
 
         try:
@@ -366,7 +388,11 @@ class TransformEngine:
             if img is None:
                 img = source_img.copy()
 
-            if op == "crop":
+            if op == "adjust":
+                transformed = cls._apply_adjustments(img, params)
+            elif op == "pipeline":
+                transformed = cls._apply_pipeline(img, params.get("steps", []), detected_format)
+            elif op == "crop":
                 transformed = cls._crop(img, params)
             elif op == "resize":
                 transformed = cls._resize(img, params)
@@ -380,6 +406,10 @@ class TransformEngine:
                 transformed = cls._affine(img, params, detected_format)
             else:
                 raise InvalidTransformParamsError(f"Unknown operation: {op}")
+
+            # If a geometric transform also included stacked adjustments:
+            if op not in ("adjust", "pipeline") and "adjustments" in params and isinstance(params["adjustments"], dict):
+                transformed = cls._apply_adjustments(transformed, params["adjustments"])
 
             # Re-check output bounds
             w, h = transformed.size
@@ -426,6 +456,225 @@ class TransformEngine:
                 file_size=len(out_bytes),
                 checksum=checksum,
             )
+
+    @classmethod
+    def _apply_pipeline(cls, img: PILImage.Image, steps: list[dict[str, Any]], detected_format: str) -> PILImage.Image:
+        if not isinstance(steps, (list, tuple)) or not steps:
+            raise InvalidTransformParamsError("Pipeline requires a non-empty 'steps' list.")
+
+        current = img
+        for idx, step in enumerate(steps):
+            if not isinstance(step, dict):
+                raise InvalidTransformParamsError(f"Step #{idx + 1} must be an object.")
+            sub_op = (step.get("operation") or "").strip().lower()
+            sub_params = step.get("params", {})
+            if not isinstance(sub_params, dict):
+                raise InvalidTransformParamsError(f"Step #{idx + 1} 'params' must be an object.")
+
+            if sub_op == "adjust":
+                current = cls._apply_adjustments(current, sub_params)
+            elif sub_op == "crop":
+                current = cls._crop(current, sub_params)
+            elif sub_op == "resize":
+                current = cls._resize(current, sub_params)
+            elif sub_op == "rotate":
+                current = cls._rotate(current, sub_params, detected_format)
+            elif sub_op == "flip":
+                current = cls._flip(current, sub_params)
+            elif sub_op == "shear":
+                current = cls._shear(current, sub_params, detected_format)
+            elif sub_op == "affine":
+                current = cls._affine(current, sub_params, detected_format)
+            else:
+                raise InvalidTransformParamsError(f"Unknown pipeline step operation: '{sub_op}' at step #{idx + 1}.")
+
+            if sub_op != "adjust" and "adjustments" in sub_params and isinstance(sub_params["adjustments"], dict):
+                current = cls._apply_adjustments(current, sub_params["adjustments"])
+
+        return current
+
+    @classmethod
+    def _apply_adjustments(cls, img: PILImage.Image, params: dict[str, Any]) -> PILImage.Image:
+        """
+        Applies photographic adjustments (Light, Color, Detail) to a PIL Image.
+        Handles flat or nested parameter structures, as well as alpha channels.
+        """
+        if not isinstance(params, dict) or not params:
+            return img
+
+        # Flatten nested light, color, detail keys if present
+        flat: dict[str, Any] = {}
+        for k, v in params.items():
+            if isinstance(v, dict):
+                flat.update(v)
+            else:
+                flat[k] = v
+
+        # Convert image to RGB array while preserving Alpha channel
+        has_alpha = img.mode == "RGBA" or ("A" in img.mode)
+        alpha_channel = None
+        if has_alpha:
+            rgba = img.convert("RGBA")
+            alpha_channel = rgba.split()[3]
+            working_img = rgba.convert("RGB")
+        elif img.mode != "RGB":
+            working_img = img.convert("RGB")
+        else:
+            working_img = img
+
+        arr = np.array(working_img, dtype=np.uint8)
+
+        # 1. LIGHT ADJUSTMENTS
+        arr = cls._apply_light_adjustments(arr, flat)
+
+        # 2. COLOR ADJUSTMENTS
+        arr = cls._apply_color_adjustments(arr, flat)
+
+        # 3. DETAIL ADJUSTMENTS
+        arr = cls._apply_detail_adjustments(arr, flat)
+
+        result_img = PILImage.fromarray(arr, "RGB")
+        if alpha_channel is not None:
+            r, g, b = result_img.split()
+            result_img = PILImage.merge("RGBA", (r, g, b, alpha_channel))
+
+        return result_img
+
+    @staticmethod
+    def _apply_light_adjustments(arr: np.ndarray, p: dict[str, Any]) -> np.ndarray:
+        brightness = float(p.get("brightness", 0.0) or 0.0)
+        contrast = float(p.get("contrast", 0.0) or 0.0)
+        exposure = float(p.get("exposure", 0.0) or 0.0)
+        highlights = float(p.get("highlights", 0.0) or 0.0)
+        shadows = float(p.get("shadows", 0.0) or 0.0)
+        whites = float(p.get("whites", 0.0) or 0.0)
+        blacks = float(p.get("blacks", 0.0) or 0.0)
+
+        if not any((brightness, contrast, exposure, highlights, shadows, whites, blacks)):
+            return arr
+
+        res = arr.astype(np.float32)
+
+        # Exposure (photographic EV factor: 2^(EV / 50))
+        if exposure != 0.0:
+            res *= (2.0 ** (exposure / 50.0))
+
+        # Brightness (linear luminance offset)
+        if brightness != 0.0:
+            res += (brightness * 1.28)
+
+        # Contrast (midtone centered S-curve / factor)
+        if contrast != 0.0:
+            factor = (259.0 * (contrast + 255.0)) / (255.0 * (259.0 - contrast))
+            res = (res - 128.0) * factor + 128.0
+
+        # Highlights & Shadows tone curves
+        if any((highlights, shadows, whites, blacks)):
+            lum = (0.299 * res[:, :, 0] + 0.587 * res[:, :, 1] + 0.114 * res[:, :, 2]) / 255.0
+            lum = np.clip(lum, 0.0, 1.0)
+
+            if highlights != 0.0:
+                w_h = np.clip((lum - 0.5) / 0.5, 0.0, 1.0) ** 2
+                for c in range(3):
+                    res[:, :, c] += (highlights * 0.5) * w_h
+
+            if shadows != 0.0:
+                w_s = np.clip((0.5 - lum) / 0.5, 0.0, 1.0) ** 2
+                for c in range(3):
+                    res[:, :, c] += (shadows * 0.5) * w_s
+
+            if whites != 0.0:
+                w_w = np.clip((lum - 0.75) / 0.25, 0.0, 1.0)
+                for c in range(3):
+                    res[:, :, c] += (whites * 0.4) * w_w
+
+            if blacks != 0.0:
+                w_b = np.clip((0.25 - lum) / 0.25, 0.0, 1.0)
+                for c in range(3):
+                    res[:, :, c] += (blacks * 0.4) * w_b
+
+        return np.clip(res, 0.0, 255.0).astype(np.uint8)
+
+    @staticmethod
+    def _apply_color_adjustments(arr: np.ndarray, p: dict[str, Any]) -> np.ndarray:
+        saturation = float(p.get("saturation", 0.0) or 0.0)
+        vibrance = float(p.get("vibrance", 0.0) or 0.0)
+        hue = float(p.get("hue", 0.0) or 0.0)
+        temperature = float(p.get("temperature", 0.0) or 0.0)
+        tint = float(p.get("tint", 0.0) or 0.0)
+
+        if not any((saturation, vibrance, hue, temperature, tint)):
+            return arr
+
+        res = arr.astype(np.float32)
+
+        # White balance (Temperature: Blue <-> Yellow/Red; Tint: Green <-> Magenta)
+        if temperature != 0.0:
+            t = temperature * 0.6
+            res[:, :, 0] += t   # Red
+            res[:, :, 2] -= t   # Blue
+
+        if tint != 0.0:
+            ti = tint * 0.6
+            res[:, :, 0] += ti * 0.5  # Magenta = Red + Blue
+            res[:, :, 2] += ti * 0.5
+            res[:, :, 1] -= ti        # Green
+
+        res = np.clip(res, 0.0, 255.0).astype(np.uint8)
+
+        # Saturation, Vibrance, Hue in HSV space
+        if saturation != 0.0 or vibrance != 0.0 or hue != 0.0:
+            hsv = cv2.cvtColor(res, cv2.COLOR_RGB2HSV).astype(np.float32)
+
+            if hue != 0.0:
+                hsv[:, :, 0] = (hsv[:, :, 0] + (hue * 0.5)) % 180.0
+
+            if saturation != 0.0:
+                hsv[:, :, 1] *= (1.0 + saturation / 100.0)
+
+            if vibrance != 0.0:
+                s_norm = hsv[:, :, 1] / 255.0
+                v_boost = (1.0 - s_norm) * (vibrance / 100.0)
+                hsv[:, :, 1] *= (1.0 + v_boost)
+
+            hsv[:, :, 1] = np.clip(hsv[:, :, 1], 0.0, 255.0)
+            res = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2RGB)
+
+        return res
+
+    @staticmethod
+    def _apply_detail_adjustments(arr: np.ndarray, p: dict[str, Any]) -> np.ndarray:
+        sharpness = float(p.get("sharpness", 0.0) or 0.0)
+        clarity = float(p.get("clarity", 0.0) or 0.0)
+        blur = float(p.get("blur", 0.0) or 0.0)
+
+        if not any((sharpness, clarity, blur)):
+            return arr
+
+        res = arr
+
+        # Gaussian Blur
+        if blur > 0.0:
+            k = max(3, int(blur * 0.4) * 2 + 1)
+            sigma = max(0.1, blur * 0.15)
+            res = cv2.GaussianBlur(res, (k, k), sigma)
+
+        # Clarity (local midtone contrast enhancement)
+        if clarity != 0.0:
+            low_pass = cv2.GaussianBlur(res, (0, 0), 10.0)
+            diff = res.astype(np.float32) - low_pass.astype(np.float32)
+            lum = (0.299 * res[:, :, 0] + 0.587 * res[:, :, 1] + 0.114 * res[:, :, 2]) / 255.0
+            mid_mask = (np.sin(lum * np.pi) ** 2)[:, :, np.newaxis]
+            diff *= mid_mask * (clarity / 100.0)
+            res = np.clip(res.astype(np.float32) + diff, 0.0, 255.0).astype(np.uint8)
+
+        # Sharpness (Unsharp Masking)
+        if sharpness > 0.0:
+            blurred = cv2.GaussianBlur(res, (0, 0), 1.0)
+            amount = sharpness / 50.0
+            res = cv2.addWeighted(res, 1.0 + amount, blurred, -amount, 0)
+
+        return res
 
     @classmethod
     def _crop(cls, img: PILImage.Image, params: dict[str, Any]) -> PILImage.Image:

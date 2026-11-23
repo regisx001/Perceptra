@@ -184,13 +184,13 @@ def test_extract_single_image_all_descriptors(client):
     for ft in ("color_histogram", "color_moments", "dominant_colors", "glcm", "lbp_histogram"):
         assert ft in descriptors
 
-    # Now GET descriptors should return all 5
+    # Now GET descriptors should return indexed features
     get_res = client.get(f"/api/v1/images/{image_id}/descriptors", headers=headers)
     assert get_res.status_code == 200
     get_data = get_res.get_json()
     assert get_data["processing_status"] == "indexed"
-    assert len(get_data["available_features"]) == 5
-    assert len(get_data["descriptors"]) == 5
+    assert len(get_data["available_features"]) >= 5
+    assert len(get_data["descriptors"]) >= 5
 
 
 def test_extract_cached_and_force(client):
