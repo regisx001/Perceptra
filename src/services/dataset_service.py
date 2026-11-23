@@ -417,3 +417,118 @@ class DatasetIngestionService:
 
         stats.duration_seconds = time.time() - t0
         return stats
+
+    def remove_dataset(
+        self,
+        dataset_name: Optional[str] = None,
+        remove_all: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Removes dataset images, descriptors, categories, and physical files.
+        - dataset_name: specific dataset to remove (e.g. 'GHIM-10K').
+        - remove_all: if True, removes all images where source_type == 'dataset'.
+        User uploads and user accounts are preserved.
+        """
+        from src.models.category import Category
+        from src.models.favorite import FavoriteImage
+        from src.models.image import Image
+        from src.models.image_feature import ImageFeature
+        from src.models.retrieval import RetrievalQuery, RetrievalResult
+
+        stats = {
+            "images_deleted": 0,
+            "features_deleted": 0,
+            "categories_deleted": 0,
+            "files_removed": False,
+        }
+
+        # 1. Identify target images and categories
+        target_categories: List[Category] = []
+        if remove_all:
+            images = Image.query.filter_by(source_type="dataset").all()
+            root_dataset_cats = Category.query.filter(
+                Category.parent_id.is_(None), Category.user_id.is_(None)
+            ).all()
+            for root_cat in root_dataset_cats:
+                target_categories.append(root_cat)
+                target_categories.extend(root_cat.subcategories)
+        elif dataset_name:
+            safe_ds_dir = dataset_name.replace("/", "_").replace("\\", "_")
+            images = Image.query.filter(
+                Image.source_type == "dataset",
+                Image.storage_key.like(f"datasets/{safe_ds_dir}/%"),
+            ).all()
+            root_cat = Category.query.filter(
+                Category.name == dataset_name, Category.parent_id.is_(None)
+            ).first()
+            if root_cat:
+                target_categories.append(root_cat)
+                target_categories.extend(root_cat.subcategories)
+        else:
+            raise ValueError("Must specify either dataset_name or remove_all=True")
+
+        image_ids = [img.id for img in images]
+        stats["images_deleted"] = len(image_ids)
+
+        # 2. Delete linked records and images in batches
+        if image_ids:
+            for k in range(0, len(image_ids), 500):
+                chunk_ids = image_ids[k : k + 500]
+                # Break FK references from queries
+                RetrievalQuery.query.filter(
+                    RetrievalQuery.query_image_id.in_(chunk_ids)
+                ).update({RetrievalQuery.query_image_id: None}, synchronize_session=False)
+
+                # Delete results & favorites referencing these images
+                RetrievalResult.query.filter(
+                    RetrievalResult.image_id.in_(chunk_ids)
+                ).delete(synchronize_session=False)
+                FavoriteImage.query.filter(
+                    FavoriteImage.image_id.in_(chunk_ids)
+                ).delete(synchronize_session=False)
+
+                # Delete feature vectors
+                feat_count = ImageFeature.query.filter(
+                    ImageFeature.image_id.in_(chunk_ids)
+                ).delete(synchronize_session=False)
+                stats["features_deleted"] += feat_count
+
+                # Delete images
+                Image.query.filter(Image.id.in_(chunk_ids)).delete(
+                    synchronize_session=False
+                )
+
+        # 3. Clean up categories (children first, then root parents)
+        children = [c for c in target_categories if c.parent_id is not None]
+        parents = [c for c in target_categories if c.parent_id is None]
+
+        for cat in children:
+            remaining = Image.query.filter_by(category_id=cat.id).count()
+            if remaining == 0:
+                db.session.delete(cat)
+                stats["categories_deleted"] += 1
+        db.session.flush()
+
+        for cat in parents:
+            remaining = Image.query.filter_by(category_id=cat.id).count()
+            if remaining == 0:
+                db.session.delete(cat)
+                stats["categories_deleted"] += 1
+
+        db.session.commit()
+
+        # 4. Clean up disk files in storage/datasets
+        if remove_all:
+            datasets_dir = self.storage_root / "datasets"
+            if datasets_dir.exists():
+                shutil.rmtree(datasets_dir, ignore_errors=True)
+                datasets_dir.mkdir(parents=True, exist_ok=True)
+                stats["files_removed"] = True
+        elif dataset_name:
+            safe_ds_dir = dataset_name.replace("/", "_").replace("\\", "_")
+            ds_dir = self.storage_root / "datasets" / safe_ds_dir
+            if ds_dir.exists():
+                shutil.rmtree(ds_dir, ignore_errors=True)
+                stats["files_removed"] = True
+
+        return stats

@@ -1,0 +1,56 @@
+\chapter{Moteur de Similarité et Recherche CBIR}
+\label{chap:recherche}
+
+\section{Espaces Métriques et Mesures de Proximité}
+
+La recherche par le contenu nécessite de projeter les images au sein d'un espace vectoriel normé et d'évaluer leur proximité relative. Cette fonction est assurée par le composant \texttt{SimilarityEngine} (\texttt{src/services/similarity\_engine.py}).
+
+Soit $\mathbf{q} \in \mathbb{R}^D$ le vecteur représentant la requête visuelle de l'utilisateur et $\mathbf{c} \in \mathbb{R}^D$ le vecteur correspondant à une image candidate issue de la collection indexée.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.60\textwidth]{images/06-pipeline-recherche-similarite.png}
+\caption{Pipeline de mise en correspondance vectorielle et d'ordonnancement Top-K}
+\label{fig:pipeline_similarite}
+\end{figure}
+
+Toutes les mesures de proximité dans Perceptra sont calibrées pour appartenir strictement à l'intervalle $[0, 1]$, où la valeur $1.0$ indique une identité visuelle parfaite et $0.0$ une divergence totale.
+
+\begin{infobox}{Métrique Cosinus Normalisée (Défaut)}
+La similarité cosinus mesure l'angle géométrique entre deux vecteurs indépendamment de leur magnitude globale, ce qui s'avère particulièrement pertinent pour comparer des histogrammes de fréquences ou de textures~:
+\begin{equation}
+\cos(\mathbf{q}, \mathbf{c}) = \frac{\mathbf{q} \cdot \mathbf{c}}{\|\mathbf{q}\|_2 \cdot \|\mathbf{c}\|_2} \implies S_{\text{cos}}(\mathbf{q}, \mathbf{c}) = \frac{1 + \cos(\mathbf{q}, \mathbf{c})}{2} \in [0, 1]
+\end{equation}
+\end{infobox}
+
+\begin{infobox}{Métrique Euclidienne Inversée}
+Lorsque l'utilisateur sélectionne la métrique euclidienne $L_2$, la distance géométrique $d_2(\mathbf{q}, \mathbf{c}) = \|\mathbf{q} - \mathbf{c}\|_2$ est convertie en score de similarité borné selon la décroissance harmonique standard~:
+\begin{equation}
+S_{\text{euc}}(\mathbf{q}, \mathbf{c}) = \frac{1}{1 + \|\mathbf{q} - \mathbf{c}\|_2} \in [0, 1]
+\end{equation}
+\end{infobox}
+
+\section{Agrégation Convexe Multi-Descripteurs}
+
+Pour éviter l'écueil classique de la «~malédiction de la dimensionnalité~» induit par la concaténation brute d'espaces hétérogènes, Perceptra maintient chaque descripteur dans son sous-espace métrique propre.
+
+Soit $\mathcal{F}$ l'ensemble des familles de descripteurs actives. Pour chaque descripteur $j \in \mathcal{F}$, nous disposons d'un vecteur de requête $\mathbf{q}_j$, d'un candidat $\mathbf{c}_j$ et d'un poids $w_j \ge 0$. Les poids actifs sont préalablement normalisés sous contrainte convexe~:
+\begin{equation}
+\tilde{w}_j = \frac{w_j}{\sum_{k \in \mathcal{F}} w_k}, \quad \text{tel que } \sum_{j \in \mathcal{F}} \tilde{w}_j = 1.0
+\end{equation}
+
+La similarité globale $S(\mathbf{q}, \mathbf{c})$ entre l'image requête et l'image candidate est alors formulée comme la combinaison linéaire convexe des similarités individuelles~:
+\begin{equation}
+S(\mathbf{q}, \mathbf{c}) = \sum_{j \in \mathcal{F}} \tilde{w}_j \cdot S_j(\mathbf{q}_j, \mathbf{c}_j)
+\end{equation}
+
+\section{Décomposition Analytique et Ordonnancement Top-K}
+
+Pour offrir une transparence maximale à l'utilisateur, la méthode \texttt{aggregate\_multi\_feature\_similarity} extrait simultanément la décomposition des affinités par famille conceptuelle~:
+\begin{itemize}
+    \item \textbf{Similarité Chromatique ($S_{\text{color}}$)~:} Moyenne arithmétique des scores des composantes de couleur actives (\texttt{color\_histogram}, \texttt{color\_moments}, \texttt{dominant\_colors})~;
+    \item \textbf{Similarité Texturale ($S_{\text{texture}}$)~:} Moyenne arithmétique des scores des composantes texturales actives (\texttt{glcm}, \texttt{lbp\_histogram})~;
+    \item \textbf{Scores fins par descripteur~:} Dictionnaire associatif $\{j: S_j(\mathbf{q}_j, \mathbf{c}_j)\}$.
+\end{itemize}
+
+Le service de requête \texttt{QueryService} (\texttt{src/services/query\_service.py}) orchestre l'exécution de la recherche en mémoire~: filtrage du périmètre (\texttt{all}, \texttt{ghim10k}, \texttt{my\_images}), balayage matriciel vectorisé sous NumPy évaluant 10\,000 vecteurs en moins de 45 millisecondes, tri décroissant et extraction des $K$ meilleurs résultats (\texttt{Top-K}).

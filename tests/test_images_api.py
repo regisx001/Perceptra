@@ -203,6 +203,17 @@ def test_image_transformation_and_derivatives_routes(client):
     assert crop_data["transformation_params"]["operation"] == "crop"
 
     crop_id = crop_data["id"]
+    assert crop_data["processing_status"] == "indexed"
+
+    # Verify color & texture descriptors were computed automatically
+    desc_res = client.get(f"/api/v1/images/{crop_id}/descriptors", headers=headers)
+    assert desc_res.status_code == 200
+    descriptors = desc_res.get_json()["descriptors"]
+    assert "color_histogram" in descriptors
+    assert "color_moments" in descriptors
+    assert "dominant_colors" in descriptors
+    assert "glcm" in descriptors
+    assert "lbp_histogram" in descriptors
 
     # 2. Chain transformation: shear the crop
     shear_payload = {

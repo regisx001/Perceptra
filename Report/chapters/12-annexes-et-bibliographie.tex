@@ -1,0 +1,157 @@
+\chapter{Annexes Techniques et Bibliographie}
+\label{chap:annexes}
+
+\section{Spécification des Endpoints de l'API RESTful}
+
+Le tableau~\ref{tab:api_endpoints_annex} documente la spécification formelle des principaux points d'accès exposés par le serveur Flask de Perceptra. Toutes les requêtes et réponses échangent des données sérialisées au format JSON, à l'exception des routes de téléversement et de téléchargement binaire.
+
+\begin{table}[H]
+\centering
+\rowcolors{2}{LightGray}{white}
+\scriptsize
+\begin{tabularx}{\textwidth}{>{\bfseries}p{1.4cm}p{3.5cm}p{2.1cm}X}
+\toprule
+\rowcolor{TableHeader}
+\color{white}Méthode & \color{white}Point d'Accès & \color{white}Auth. Requise & \color{white}Description \& Paramètres Clés \\
+\midrule
+\texttt{POST} & \texttt{/api/auth/register} & Non & Inscription d'un utilisateur (\texttt{username}, \texttt{email}, \texttt{password}). \\
+\texttt{POST} & \texttt{/api/auth/login} & Non & Authentification et émission de la paire de jetons JWT. \\
+\texttt{GET} & \texttt{/api/auth/profile} & JWT Bearer & Consultation des informations du compte utilisateur connecté. \\
+\midrule
+\texttt{GET} & \texttt{/api/images} & Optionnelle & Liste paginée des images (\texttt{page}, \texttt{limit}, \texttt{category\_id}, \texttt{favorites\_only}). \\
+\texttt{POST} & \texttt{/api/images/upload} & JWT Bearer & Téléversement d'image (\texttt{multipart/form-data}, calcul SHA-256 et descripteurs). \\
+\texttt{GET} & \texttt{/api/images/<id>/file} & Non & Téléchargement du flux binaire original. \\
+\texttt{GET} & \texttt{/api/images/<id>/thumbnail}& Non & Téléchargement de la vignette allégée ($256 \times 256$ pixels). \\
+\texttt{DELETE}& \texttt{/api/images/<id>} & JWT (Owner) & Suppression d'une image, de ses variantes et de ses descripteurs. \\
+\texttt{POST} & \texttt{/api/images/batch-delete} & JWT Bearer & Suppression par lot d'une liste d'identifiants d'images. \\
+\texttt{POST} & \texttt{/api/images/<id>/transform}& JWT Bearer & Retouches non destructives (\texttt{crop}, \texttt{resize}, \texttt{rotate}, \texttt{affine}). \\
+\midrule
+\texttt{GET} & \texttt{/api/categories} & Optionnelle & Arborescence des catégories sérialisée sous forme d'arbre récursif. \\
+\texttt{POST} & \texttt{/api/categories} & JWT Bearer & Création d'une catégorie (\texttt{name}, \texttt{parent\_id}). \\
+\midrule
+\texttt{GET} & \texttt{/api/descriptors/<id>} & Optionnelle & Consultation des vecteurs de signatures numériques. \\
+\texttt{POST} & \texttt{/api/descriptors/extract}& JWT Bearer & Déclenchement explicite de l'extraction sur une image donnée. \\
+\midrule
+\texttt{POST} & \texttt{/api/query/simple} & JWT Bearer & Recherche initiale par image (\texttt{image\_id}, \texttt{weights}, \texttt{metric}, \texttt{k}). \\
+\texttt{POST} & \texttt{/api/query/feedback} & JWT Bearer & Soumission du feedback FRE (\texttt{query\_id}, \texttt{relevant\_ids}, \texttt{irrelevant\_ids}). \\
+\midrule
+\texttt{GET} & \texttt{/api/analytics/overview} & JWT Admin & Métriques globales du système (images, taille disque, requêtes, latence). \\
+\bottomrule
+\end{tabularx}
+\caption{Spécification formelle des endpoints de l'API REST de Perceptra}
+\label{tab:api_endpoints_annex}
+\end{table}
+
+\section{Schéma SQL DDL et Guide de Démarrage}
+
+\begin{lstlisting}[language=SQL, basicstyle=\scriptsize\ttfamily, caption={Définition DDL des tables principales de Perceptra}]
+CREATE TABLE users (
+    id VARCHAR(36) PRIMARY KEY, username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(120) NOT NULL UNIQUE, password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'user', created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE categories (
+    id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+    parent_id VARCHAR(36) REFERENCES categories(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL, path VARCHAR(500) NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE images (
+    id VARCHAR(36) PRIMARY KEY, owner_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+    category_id VARCHAR(36) REFERENCES categories(id) ON DELETE SET NULL,
+    filename VARCHAR(255) NOT NULL, storage_key VARCHAR(500) NOT NULL UNIQUE,
+    source_type VARCHAR(20) NOT NULL, processing_status VARCHAR(20) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL, file_size INT NOT NULL, width INT NOT NULL, height INT NOT NULL,
+    checksum VARCHAR(64) NOT NULL, transformation_params JSON, created_at TIMESTAMP NOT NULL
+);
+CREATE INDEX ix_images_checksum ON images(checksum);
+CREATE TABLE image_features (
+    id VARCHAR(36) PRIMARY KEY, image_id VARCHAR(36) NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+    feature_type VARCHAR(50) NOT NULL, extractor_version VARCHAR(50) NOT NULL,
+    feature_values JSON NOT NULL, parameters JSON, created_at TIMESTAMP NOT NULL,
+    CONSTRAINT uq_image_feature_type_version UNIQUE (image_id, feature_type, extractor_version)
+);
+CREATE TABLE retrieval_queries (
+    id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    query_image_id VARCHAR(36) REFERENCES images(id) ON DELETE SET NULL,
+    search_scope VARCHAR(30) NOT NULL, configuration JSON, status VARCHAR(20) NOT NULL, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE retrieval_iterations (
+    id VARCHAR(36) PRIMARY KEY, query_id VARCHAR(36) NOT NULL REFERENCES retrieval_queries(id) ON DELETE CASCADE,
+    iteration_number INT NOT NULL, retrieval_method VARCHAR(30) NOT NULL,
+    feature_weights JSON, updated_query_vector JSON, feedback_count INT NOT NULL,
+    execution_time_ms INT NOT NULL, results_count INT NOT NULL, created_at TIMESTAMP NOT NULL,
+    CONSTRAINT uq_retrieval_iteration_query_number UNIQUE (query_id, iteration_number)
+);
+CREATE TABLE retrieval_results (
+    id VARCHAR(36) PRIMARY KEY, iteration_id VARCHAR(36) NOT NULL REFERENCES retrieval_iterations(id) ON DELETE CASCADE,
+    image_id VARCHAR(36) NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+    rank INT NOT NULL, similarity_score FLOAT NOT NULL, feature_scores JSON, created_at TIMESTAMP NOT NULL
+);
+CREATE TABLE relevance_feedbacks (
+    id VARCHAR(36) PRIMARY KEY, iteration_id VARCHAR(36) NOT NULL REFERENCES retrieval_iterations(id) ON DELETE CASCADE,
+    image_id VARCHAR(36) NOT NULL REFERENCES images(id) ON DELETE CASCADE,
+    feedback_type VARCHAR(20) NOT NULL, created_at TIMESTAMP NOT NULL
+);
+\end{lstlisting}
+
+\begin{lstlisting}[language=bash, basicstyle=\scriptsize\ttfamily, caption={Commandes d'initialisation et démarrage du projet Perceptra}]
+# Cloner et initialiser le projet
+git clone https://github.com/regisx001/Perceptra.git && cd Perceptra && cp .env.example .env
+uv sync && uv run perceptra db upgrade
+uv run perceptra dev     # Lancement backend Flask (port 5000)
+cd web && bun install && bun run prepare && bun run dev  # Lancement frontend (port 5173)
+# Alternative conteneurisee tout-en-un
+docker compose up --build -d
+\end{lstlisting}
+
+\vspace{0.4cm}
+\section{Bibliographie et Références Scientifiques}
+
+\begin{thebibliography}{99}
+\small
+\bibitem{flickner1995qbic}
+Flickner, M., et al. (1995). Query by image and video content: The QBIC system. \textit{IEEE Computer}, 28(9), 23--32.
+
+\bibitem{pentland1996photobook}
+Pentland, A., Picard, R. W., \& Sclaroff, S. (1996). Photobook: Content-based manipulation of image databases. \textit{IJCV}, 18(3), 233--254.
+
+\bibitem{smith1996visualseek}
+Smith, J. R., \& Chang, S. F. (1996). VisualSEEk: a fully automated content-based image query system. \textit{Proc. ACM Multimedia}, 87--98.
+
+\bibitem{smeulders2000content}
+Smeulders, A. W., et al. (2000). Content-based image retrieval at the end of the early years. \textit{IEEE TPAMI}, 22(12), 1349--1380.
+
+\bibitem{stricker1995similarity}
+Stricker, M. A., \& Orengo, M. (1995). Similarity of color images. \textit{SPIE}, Vol. 2420, 381--392.
+
+\bibitem{haralick1973textural}
+Haralick, R. M., et al. (1973). Textural features for image classification. \textit{IEEE Trans. SMC}, 3(6), 610--621.
+
+\bibitem{ojala2002multiresolution}
+Ojala, T., et al. (2002). Multiresolution gray-scale and rotation invariant texture classification with LBP. \textit{IEEE TPAMI}, 24(7), 971--987.
+
+\bibitem{rocchio1971relevance}
+Rocchio, J. J. (1971). Relevance feedback in information retrieval. \textit{The SMART Retrieval System}, Prentice-Hall, 313--323.
+
+\bibitem{rui1998relevance}
+Rui, Y., et al. (1998). Relevance feedback: a power tool for interactive content-based image retrieval. \textit{IEEE TCSVT}, 8(5), 644--655.
+
+\bibitem{vaswani2017attention}
+Vaswani, A., et al. (2017). Attention is all you need. \textit{NeurIPS}, 30, 5998--6008.
+
+\bibitem{radford2021learning}
+Radford, A., et al. (2021). Learning transferable visual models from natural language supervision (CLIP). \textit{ICML}, 8748--8763.
+
+\bibitem{oquab2023dinov2}
+Oquab, M., et al. (2023). DINOv2: Learning robust visual features without supervision. \textit{arXiv:2304.07193}.
+
+\bibitem{johnson2019billion}
+Johnson, J., Douze, M., \& Jegou, H. (2019). Billion-scale similarity search with GPUs (FAISS). \textit{IEEE TBD}, 7(3), 535--547.
+
+\bibitem{kaggle_ghim10k}
+Kaggle Dataset. (2020). GHIM-10K Image Dataset. \textit{Kaggle}, \url{https://www.kaggle.com/datasets/mcpython/ghim-10k}.
+
+\bibitem{grigorova2007content}
+Grigorova, A., et al. (2007). Content-based image retrieval using feature relevance estimation. \textit{Pattern Recognition Letters}, 28(16), 2314--2324.
+
+\end{thebibliography}

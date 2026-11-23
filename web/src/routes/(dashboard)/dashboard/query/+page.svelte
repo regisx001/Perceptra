@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from "svelte";
+	import { page } from "$app/state";
+	import { goto } from "$app/navigation";
 	import * as Card from "#lib/components/ui/card/index.js";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Tabs from "#lib/components/ui/tabs/index.js";
@@ -94,6 +96,31 @@
 		"balanced",
 	);
 
+	let lastLoadedQueryImageId: string | null = null;
+
+	async function loadQueryImageFromParam(id: string) {
+		if (lastLoadedQueryImageId === id && selectedExistingImage) return;
+		lastLoadedQueryImageId = id;
+		try {
+			const img = await imageService.getImage(id);
+			if (img) {
+				selectedExistingImage = img;
+				querySourceType = "existing";
+				uploadedFile = null;
+				if (previewUrl) {
+					URL.revokeObjectURL(previewUrl);
+					previewUrl = null;
+				}
+				errorMessage = null;
+				// Auto-execute visual retrieval for smooth UX
+				await executeSearch();
+			}
+		} catch (err: any) {
+			console.error("Failed to load query image by id:", err);
+			errorMessage = `Could not load selected image: ${err.message || "Image not found"}`;
+		}
+	}
+
 	onMount(async () => {
 		try {
 			const [catData, confData] = await Promise.all([
@@ -116,6 +143,23 @@
 				err.message,
 			);
 		}
+
+		// Check for image_id in URL query params on mount
+		const queryParamId = page.url.searchParams.get("image_id");
+		if (queryParamId) {
+			await loadQueryImageFromParam(queryParamId);
+		}
+	});
+
+	$effect(() => {
+		const currentParamId = page.url.searchParams.get("image_id");
+		if (
+			currentParamId &&
+			currentParamId !== lastLoadedQueryImageId &&
+			queryConfig
+		) {
+			loadQueryImageFromParam(currentParamId);
+		}
 	});
 
 	function handleFileSelected(e: Event) {
@@ -123,10 +167,19 @@
 		if (target.files && target.files[0]) {
 			const file = target.files[0];
 			uploadedFile = file;
+			querySourceType = "upload";
 			if (previewUrl) URL.revokeObjectURL(previewUrl);
 			previewUrl = URL.createObjectURL(file);
 			selectedExistingImage = null;
+			lastLoadedQueryImageId = null;
 			errorMessage = null;
+			if (page.url.searchParams.has("image_id")) {
+				const newUrl = new URL(page.url.href);
+				newUrl.searchParams.delete("image_id");
+				goto(newUrl.pathname + newUrl.search, {
+					replaceState: true,
+				});
+			}
 		}
 	}
 
@@ -147,6 +200,7 @@
 
 	function selectGalleryImage(img: ImageItem) {
 		selectedExistingImage = img;
+		querySourceType = "existing";
 		uploadedFile = null;
 		if (previewUrl) {
 			URL.revokeObjectURL(previewUrl);
@@ -154,14 +208,28 @@
 		}
 		isGalleryPickerOpen = false;
 		errorMessage = null;
+		lastLoadedQueryImageId = img.id;
+		const newUrl = new URL(page.url.href);
+		newUrl.searchParams.set("image_id", img.id);
+		goto(newUrl.pathname + newUrl.search, {
+			replaceState: true,
+		});
 	}
 
 	function clearQueryImage() {
 		uploadedFile = null;
 		selectedExistingImage = null;
+		lastLoadedQueryImageId = null;
 		if (previewUrl) {
 			URL.revokeObjectURL(previewUrl);
 			previewUrl = null;
+		}
+		if (page.url.searchParams.has("image_id")) {
+			const newUrl = new URL(page.url.href);
+			newUrl.searchParams.delete("image_id");
+			goto(newUrl.pathname + newUrl.search, {
+				replaceState: true,
+			});
 		}
 	}
 

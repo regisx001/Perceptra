@@ -210,6 +210,65 @@ def ingest_dataset_alias(folder, name, user, batch_size, limit, compute_features
     _execute_ingest(folder, name, user, batch_size, limit, compute_features, skip_existing, workers, parent_category)
 
 
+def _execute_clear(name: str | None, remove_all: bool, yes: bool):
+    from flask import current_app
+    from src.services.dataset_service import DatasetIngestionService
+
+    if not name and not remove_all:
+        click.secho("Error: Please specify either --name <dataset_name> or --all to clear all datasets.", fg="red", err=True)
+        sys.exit(1)
+
+    target_desc = "ALL ingested datasets" if remove_all else f"dataset '{name}'"
+
+    if not yes:
+        click.confirm(
+            click.style(
+                f"Are you sure you want to remove {target_desc}? This will delete all its images, visual descriptors, categories, and disk files (user personal uploads will NOT be affected).",
+                fg="yellow",
+                bold=True,
+            ),
+            abort=True,
+        )
+
+    storage_root = current_app.config.get("STORAGE_BASE_PATH", "storage")
+    service = DatasetIngestionService(storage_root=storage_root)
+
+    click.echo()
+    click.secho(f"Removing {target_desc}...", fg="cyan")
+    stats = service.remove_dataset(dataset_name=name, remove_all=remove_all)
+
+    click.secho("✓ Dataset Removal Completed!", fg="green", bold=True)
+    click.echo(f"  • Images Deleted      : {stats['images_deleted']:,}")
+    click.echo(f"  • Descriptors Removed : {stats['features_deleted']:,}")
+    click.echo(f"  • Categories Cleaned  : {stats['categories_deleted']:,}")
+    click.echo(f"  • Storage Files Purged: {'Yes' if stats['files_removed'] else 'No'}")
+    click.echo()
+
+
+@dataset_group.command("clear")
+@click.option("--name", "-n", default=None, help="Name of specific dataset to clear (e.g. GHIM-10K).")
+@click.option("--all", "-a", "remove_all", is_flag=True, default=False, help="Remove all dataset images and categories.")
+@click.option("--yes", "-y", is_flag=True, default=False, help="Skip confirmation prompt.")
+@with_appcontext
+def dataset_clear(name, remove_all, yes):
+    """
+    Remove ingested datasets, descriptors, categories, and storage files.
+    """
+    _execute_clear(name, remove_all, yes)
+
+
+@cli.command("clear-dataset")
+@click.option("--name", "-n", default=None, help="Name of specific dataset to clear (e.g. GHIM-10K).")
+@click.option("--all", "-a", "remove_all", is_flag=True, default=False, help="Remove all dataset images and categories.")
+@click.option("--yes", "-y", is_flag=True, default=False, help="Skip confirmation prompt.")
+@with_appcontext
+def clear_dataset_alias(name, remove_all, yes):
+    """
+    Shortcut for 'perceptra dataset clear'.
+    """
+    _execute_clear(name, remove_all, yes)
+
+
 @dataset_group.command("status")
 @click.option("--dataset", "-d", default=None, help="Filter status by dataset name.")
 @with_appcontext
@@ -268,3 +327,26 @@ def dataset_status(dataset=None):
     if len(categories) > 25:
         click.echo(f"  ... and {len(categories) - 25} more categories.")
     click.echo()
+
+
+@cli.command("benchmark")
+@click.option("--output", "-o", default="BENCHMARK_RESULTS.md", help="Output markdown report path.")
+@click.option("--queries-per-category", "-q", default=3, type=int, help="Number of query images sampled per category.")
+@click.option("--extraction-samples", "-e", default=25, type=int, help="Number of images to profile for extraction latency.")
+def benchmark_cmd(output, queries_per_category, extraction_samples):
+    """
+    Run comprehensive CBIR retrieval accuracy and latency benchmark.
+    """
+    from scripts.benchmark_system import main as run_benchmark
+    import sys
+
+    sys.argv = [
+        "benchmark_system.py",
+        "--output",
+        output,
+        "--queries-per-category",
+        str(queries_per_category),
+        "--extraction-samples",
+        str(extraction_samples),
+    ]
+    run_benchmark()

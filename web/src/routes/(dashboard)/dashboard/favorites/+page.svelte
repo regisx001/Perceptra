@@ -739,6 +739,17 @@
 															onclick={(e: MouseEvent) => {
 																e.preventDefault();
 																e.stopPropagation();
+																window.location.href = `/dashboard/query?image_id=${img.id}`;
+															}}
+														>
+															<SearchIcon class="size-3.5 text-muted-foreground" />
+															<span>Search Similar</span>
+														</DropdownMenu.Item>
+														<DropdownMenu.Item
+															class="gap-2.5 text-xs cursor-pointer"
+															onclick={(e: MouseEvent) => {
+																e.preventDefault();
+																e.stopPropagation();
 																window.location.href = `/dashboard/transform?image_id=${img.id}`;
 															}}
 														>

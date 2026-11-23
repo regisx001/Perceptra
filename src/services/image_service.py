@@ -1,5 +1,6 @@
 import hashlib
 import io
+import logging
 from dataclasses import dataclass
 from typing import Any, BinaryIO, Optional
 
@@ -9,12 +10,16 @@ from sqlalchemy.exc import SQLAlchemyError
 from src.extensions import db
 from src.models.category import Category
 from src.models.image import Image
+from src.models.image_feature import ImageFeature
+from src.services.descriptor_engine import DescriptorEngine, EXTRACTOR_VERSION
 from src.services.storage import StorageBackend, StorageError
 from src.services.transform_engine import (
     InvalidTransformParamsError,
     TransformEngine,
     TransformError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ImageServiceError(Exception):
@@ -236,6 +241,28 @@ class ImageService:
 
         try:
             db.session.add(derived_image)
+            db.session.flush()
+
+            # Automatically extract all color and texture descriptors for the derived image
+            try:
+                features_data = DescriptorEngine.extract(res.data)
+                for ft, (feat_params, feat_vals) in features_data.items():
+                    feat = ImageFeature(
+                        image_id=derived_image.id,
+                        feature_type=ft,
+                        extractor_version=EXTRACTOR_VERSION,
+                        parameters=feat_params,
+                        feature_values=feat_vals,
+                    )
+                    db.session.add(feat)
+
+                derived_image.processing_status = "indexed"
+            except Exception as extract_err:
+                logger.warning(
+                    f"Automatic feature extraction failed for transformed image {derived_image.id}: {extract_err}"
+                )
+                derived_image.processing_status = "pending"
+
             db.session.commit()
             return derived_image
         except SQLAlchemyError as exc:

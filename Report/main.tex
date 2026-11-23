@@ -1,0 +1,333 @@
+\documentclass[12pt,a4paper,twoside]{report}
+
+%==========================================================
+% TEMPLATE DE RAPPORT — Style "PrimaryRed / DarkSlate"
+% Projet Perceptra — CBIR & Feature Relevance Estimation
+% Groupe 13 | FST Tanger | Année Universitaire 2026-2027
+%==========================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{csquotes}
+\usepackage{mathpazo}
+\usepackage[scaled=0.92]{helvet}
+\usepackage{courier}
+\usepackage{microtype}
+\usepackage{geometry}
+\usepackage[dvipsnames,table]{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{titletoc}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{iftex}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\tcbuselibrary{skins}
+\usetikzlibrary{positioning,arrows.meta}
+
+\geometry{
+  a4paper,
+  top=2.5cm,
+  bottom=2.7cm,
+  inner=3cm,
+  outer=2.2cm,
+  headheight=25pt,
+  includehead
+}
+
+% ---- Palette (PrimaryRed / DarkSlate) ----
+\definecolor{PrimaryRed}{RGB}{72,61,139}   % accent color (DarkSlateBlue)
+\definecolor{DarkSlate}{RGB}{38,42,52}
+\definecolor{MidGray}{RGB}{96,102,112}
+\definecolor{LightGray}{RGB}{246,247,250}
+\definecolor{SoftRed}{RGB}{255,247,246}
+\definecolor{AccentBlue}{RGB}{48,104,178}
+\definecolor{TableHeader}{RGB}{48,52,64}
+\colorlet{primary}{PrimaryRed}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=PrimaryRed,
+  urlcolor=AccentBlue,
+  citecolor=PrimaryRed,
+  pdftitle={Rapport de Projet Perceptra - Visual Image Retrieval},
+  pdfauthor={Groupe 13 - Feature Relevance Estimation}
+}
+
+\setlength{\parindent}{15pt}
+\setlength{\parskip}{0pt}
+\linespread{1.08}
+
+\setcounter{tocdepth}{1}
+\setcounter{secnumdepth}{2}
+
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\bottomfraction}{0.90}
+\renewcommand{\textfraction}{0.10}
+\renewcommand{\floatpagefraction}{0.85}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\color{MidGray}\leftmark}
+\fancyhead[RO]{\small\color{MidGray}\rightmark}
+\fancyfoot[C]{\small\color{MidGray}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{PrimaryRed}\leaders\hrule height \headrulewidth\hfill}}
+
+\titleformat{\chapter}[display]
+  {\normalfont\color{DarkSlate}}
+  {%
+    \begin{tikzpicture}[baseline]
+      \node[
+        fill=PrimaryRed,
+        text=white,
+        rounded corners=2pt,
+        inner xsep=12pt,
+        minimum height=0.72cm,
+        font=\Large\bfseries
+      ] {\chaptertitlename~\thechapter};
+    \end{tikzpicture}
+  }
+  {14pt}
+  {\Huge\bfseries}
+  [\vspace{6pt}{\color{PrimaryRed}\rule{\textwidth}{1.2pt}}]
+\titlespacing*{\chapter}{0pt}{-12pt}{30pt}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{DarkSlate}}
+  {\color{PrimaryRed}\thesection}{0.8em}{}
+  [\vspace{-3pt}{\color{MidGray!35}\rule{\textwidth}{0.5pt}}]
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{DarkSlate}}
+  {\color{PrimaryRed}\thesubsection}{0.7em}{}
+
+\titlecontents{chapter}[0pt]
+  {\vspace{7pt}\bfseries\color{DarkSlate}}
+  {\contentslabel{2em}}{}
+  {\hfill\color{PrimaryRed}\contentspage}
+
+\titlecontents{section}[2em]
+  {\vspace{2pt}\color{MidGray}}
+  {\contentslabel{2.3em}}{}
+  {\titlerule*[0.5pc]{.}\contentspage}
+
+\setlist[itemize]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=2pt,topsep=3pt}
+
+\captionsetup{
+  labelfont={bf,color=PrimaryRed},
+  textfont={small,color=DarkSlate},
+  justification=centering
+}
+
+\tcbset{
+  enhanced,
+  boxrule=0.6pt,
+  arc=3pt,
+  left=8pt,
+  right=8pt,
+  top=7pt,
+  bottom=7pt
+}
+
+\newtcolorbox{infobox}[1]{
+  colback=SoftRed,
+  colframe=PrimaryRed,
+  title={#1},
+  fonttitle=\bfseries,
+  coltitle=white,
+  colbacktitle=PrimaryRed
+}
+
+\newtcolorbox{resultbox}[1]{
+  colback=LightGray,
+  colframe=DarkSlate!35,
+  title={#1},
+  fonttitle=\bfseries,
+  coltitle=DarkSlate,
+  colbacktitle=white
+}
+
+\lstset{
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\color{AccentBlue}\bfseries,
+  commentstyle=\color{MidGray}\itshape,
+  stringstyle=\color{PrimaryRed},
+  backgroundcolor=\color{LightGray},
+  frame=single,
+  rulecolor=\color{MidGray!45},
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+\newcommand{\projectname}{Perceptra}
+
+\begin{document}
+
+%==========================================================
+% PAGE DE GARDE (TEMPLATE CONSERVÉ ET VALORISÉ)
+%==========================================================
+\begin{titlepage}
+  \thispagestyle{empty}
+  \enlargethispage{1.4cm}
+  \noindent
+  \begin{minipage}[c]{0.30\linewidth}
+    \raggedright
+    \includegraphics[width=3.25cm]{images/logo_left.png}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[c]{0.38\linewidth}
+    \centering
+    {\small\textbf{UNIVERSITÉ ABDELMALEK ESSAÂDI}}\\
+    {\scriptsize FACULTÉ DES SCIENCES ET TECHNIQUES DE TANGER}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[c]{0.30\linewidth}
+    \raggedleft
+    \includegraphics[width=3.25cm]{images/logo_right.png}
+  \end{minipage}
+
+  \vspace{0.45cm}
+
+  \begin{center}
+    {\normalsize\bfseries DÉPARTEMENT DE GÉNIE INFORMATIQUE}\\[0.1cm]
+    {\normalsize\bfseries MASTER EN INGÉNIERIE INFORMATIQUE}\\[0.35cm]
+
+    \begin{tcolorbox}[
+      colback=PrimaryRed!5,
+      colframe=PrimaryRed,
+      width=0.88\linewidth,
+      arc=4pt,
+      boxrule=0.9pt,
+      left=8pt,
+      right=8pt,
+      top=6pt,
+      bottom=6pt
+    ]
+      \centering
+      {\large\textbf{Module : Vision par Ordinateur \& Indexation Multimédia}}
+    \end{tcolorbox}
+
+    \vspace{0.55cm}
+
+    \begin{tcolorbox}[
+      colback=white,
+      colframe=PrimaryRed,
+      width=0.94\linewidth,
+      arc=6pt,
+      boxrule=1.2pt,
+      left=14pt,
+      right=14pt,
+      top=13pt,
+      bottom=13pt,
+      borderline west={3pt}{0pt}{PrimaryRed}
+    ]
+      \centering
+      {\Huge\bfseries\textcolor{PrimaryRed}{Rapport de Projet de Fin d'Études}}\\[0.35cm]
+      {\LARGE\bfseries\textcolor{DarkSlate}{PERCEPTRA : SYSTÈME CBIR AVANCÉ}}\\[0.22cm]
+      {\large\bfseries Recherche d'Images par le Contenu \& Estimation de Pertinence des Descripteurs}\\[0.35cm]
+      {\normalsize Analyse architecturale, algorithmique, logicielle et opérationnelle complète}
+    \end{tcolorbox}
+  \end{center}
+
+  \vspace{0.45cm}
+
+  \begin{tcolorbox}[
+    colback=LightGray,
+    colframe=MidGray!45,
+    width=\linewidth,
+    arc=4pt,
+    boxrule=0.6pt,
+    left=12pt,
+    right=12pt,
+    top=8pt,
+    bottom=8pt
+  ]
+    \noindent
+    \begin{minipage}[t]{0.48\linewidth}
+      \textbf{\textcolor{PrimaryRed}{Encadré par :}}\\[0.15cm]
+      Équipe Pédagogique FST Tanger\\
+      Département de Génie Informatique
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\linewidth}
+      \raggedleft
+      \textbf{\textcolor{PrimaryRed}{Réalisé par :}}\\[0.15cm]
+      \textit{Groupe 13}\\
+      \textit{Feature Relevance Estimation}
+    \end{minipage}
+  \end{tcolorbox}
+
+  \vspace{0.15cm}
+  \noindent
+  \textbf{\textcolor{PrimaryRed}{Dépôt GitHub du Projet :}} \href{https://github.com/regisx001/Perceptra}{https://github.com/regisx001/Perceptra}
+
+  \vspace{0.35cm}
+
+  \begin{center}
+    \textcolor{PrimaryRed}{\rule{0.45\linewidth}{0.8pt}}\\[0.25cm]
+    {\large\bfseries Année Universitaire 2026--2027}
+  \end{center}
+\end{titlepage}
+
+%==========================================================
+% FRONT MATTER (chiffres romains)
+%==========================================================
+\newpage
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\input{chapters/00-resume.tex}
+\newpage
+
+\tableofcontents
+\newpage
+
+\listoffigures
+\newpage
+
+\listoftables
+\newpage
+
+%==========================================================
+% CORPS DU RAPPORT (chiffres arabes)
+%==========================================================
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{chapters/01-introduction-et-etat-de-l-art.tex}
+\input{chapters/02-architecture-globale-et-technologies.tex}
+\input{chapters/03-backend-et-services-metiers.tex}
+\input{chapters/04-moteur-descripteurs-visuels.tex}
+\input{chapters/05-moteur-similarite-et-recherche.tex}
+\input{chapters/06-estimation-pertinence-feedback.tex}
+\input{chapters/07-frontend-et-experience-utilisateur.tex}
+\input{chapters/08-gestion-donnees-et-stockage.tex}
+\input{chapters/09-deploiement-operation-securite.tex}
+\input{chapters/10-tests-evaluation-resultats.tex}
+\input{chapters/11-conclusion-et-perspectives.tex}
+
+%==========================================================
+% ANNEXES ET BIBLIOGRAPHIE
+%==========================================================
+\appendix
+\input{chapters/12-annexes-et-bibliographie.tex}
+
+\end{document}

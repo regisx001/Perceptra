@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+	import { untrack } from "svelte";
 	import { goto } from "$app/navigation";
 	import type { PageData } from "./$types";
 	import { imageService, type ImageItem, type DescriptorsMap } from "#lib/images.js";
@@ -51,17 +51,27 @@
 		return Object.keys(descriptors).length > 0;
 	});
 
-	async function loadAllData() {
+	let reqSequence = 0;
+
+	async function loadDataForId(targetId: string) {
+		const currentSeq = ++reqSequence;
 		isLoading = true;
 		error = null;
+		isLineageDialogOpen = false;
 
 		try {
+			const fetchCategories = categories.length === 0
+				? categoryService.getCategories({ tree: false })
+				: Promise.resolve(categories);
+
 			const [imgResult, descResult, derivResult, catResult] = await Promise.allSettled([
-				imageService.getImage(data.id),
-				imageService.getImageDescriptors(data.id),
-				imageService.getDerivatives(data.id),
-				categoryService.getCategories({ tree: false })
+				imageService.getImage(targetId),
+				imageService.getImageDescriptors(targetId),
+				imageService.getDerivatives(targetId),
+				fetchCategories
 			]);
+
+			if (currentSeq !== reqSequence) return;
 
 			if (imgResult.status === "fulfilled") {
 				image = imgResult.value;
@@ -83,16 +93,26 @@
 
 			if (catResult.status === "fulfilled") {
 				categories = catResult.value || [];
-			} else {
-				categories = [];
 			}
 		} catch (err: any) {
+			if (currentSeq !== reqSequence) return;
 			console.error("Error loading image detail:", err);
 			error = err.message || "An unexpected error occurred while loading image details.";
 		} finally {
-			isLoading = false;
+			if (currentSeq === reqSequence) {
+				isLoading = false;
+			}
 		}
 	}
+
+	$effect(() => {
+		const targetId = data.id;
+		untrack(() => {
+			if (targetId) {
+				loadDataForId(targetId);
+			}
+		});
+	});
 
 	async function handleExtract(force = true) {
 		if (!image) return;
@@ -125,9 +145,7 @@
 		await goto("/dashboard/images");
 	}
 
-	onMount(() => {
-		loadAllData();
-	});
+
 </script>
 
 <div class="flex min-h-full flex-col bg-background text-foreground">

@@ -93,7 +93,7 @@
 	let activeTab = $state<TransformOp>("crop");
 
 	// Preview Controls
-	let zoomLevel = $state<number>(74);
+	let zoomLevel = $state<number>(100);
 	let activePreset = $state<string>("1:1 (Square)");
 
 	// 1. Interactive Crop Parameters (8-point control system)
@@ -1110,7 +1110,7 @@
 		rotateExpand = true;
 		rotateBgColor = "#FFFFFF";
 		flipDirection = "horizontal";
-		zoomLevel = 74;
+		zoomLevel = 100;
 		activePreset = "1:1 (Square)";
 		resetAllAdjustments();
 		clearStack();
@@ -1512,14 +1512,23 @@
 					✓
 				</div>
 				<div>
-					<p class="font-bold">Derived Image Successfully Saved!</p>
+					<p class="font-bold">Derived Image Successfully Saved & Indexed!</p>
 					<p class="text-muted-foreground font-mono text-[11px]">
 						{saveSuccessImage.filename} ({saveSuccessImage.width}×{saveSuccessImage.height}
-						px) &bull; Non-destructive child record created.
+						px) &bull; Color & Texture descriptors automatically computed.
 					</p>
 				</div>
 			</div>
 			<div class="flex items-center gap-2">
+				<Button
+					href="/dashboard/images/{saveSuccessImage.id}"
+					variant="default"
+					size="sm"
+					class="h-8 px-3 text-xs gap-1.5 shadow-xs"
+				>
+					<span>View Features</span>
+					<ExternalLinkIcon class="size-3.5" />
+				</Button>
 				<Button
 					variant="outline"
 					size="sm"
@@ -1535,8 +1544,7 @@
 					size="sm"
 					class="h-8 px-3 text-xs gap-1.5"
 				>
-					<span>View in Gallery</span>
-					<ExternalLinkIcon class="size-3.5" />
+					<span>Gallery</span>
 				</Button>
 				<Button
 					variant="ghost"
@@ -2125,7 +2133,7 @@
 								type="button"
 								class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 								onclick={() =>
-									(zoomLevel = Math.max(30, zoomLevel - 10))}
+									(zoomLevel = Math.max(50, zoomLevel - 10))}
 								title="Zoom Out"
 							>
 								<MinusIcon class="size-3.5" />
@@ -2138,7 +2146,7 @@
 								type="button"
 								class="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
 								onclick={() =>
-									(zoomLevel = Math.min(150, zoomLevel + 10))}
+									(zoomLevel = Math.min(200, zoomLevel + 10))}
 								title="Zoom In"
 							>
 								<PlusIcon class="size-3.5" />
@@ -2152,8 +2160,8 @@
 							variant="outline"
 							size="icon"
 							class="size-8 rounded-lg cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground"
-							onclick={() => (zoomLevel = 74)}
-							title="Reset zoom to 74%"
+							onclick={() => (zoomLevel = 100)}
+							title="Reset zoom to 100%"
 						>
 							<Maximize2Icon class="size-4" />
 						</Button>
