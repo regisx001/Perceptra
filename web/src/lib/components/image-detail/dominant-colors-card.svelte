@@ -3,6 +3,7 @@
 	import * as ToggleGroup from "#lib/components/ui/toggle-group/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import CopyIcon from "@lucide/svelte/icons/copy";
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
@@ -76,11 +77,11 @@
 				<div class="flex items-center gap-2">
 					<PaletteIcon class="size-4 text-primary" />
 					<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-						Dominant Colors Clustered Analysis
+						{m.image_detail_dom_colors_title()}
 					</Card.Title>
 				</div>
 				<Card.Description class="text-xs text-muted-foreground mt-0.5">
-					Color centroids and weight distribution via MiniBatchKMeans (k = {selectedK})
+					{m.image_detail_dom_colors_desc()}
 				</Card.Description>
 			</div>
 
@@ -132,10 +133,10 @@
 				>
 					{#if isLocalExtracting || isExtracting}
 						<Loader2Icon class="size-3.5 animate-spin" />
-						<span>Clustering {selectedK} Colors…</span>
+						<span>{m.image_detail_dom_colors_computing({ k: Number(selectedK) })}</span>
 					{:else}
 						<SparklesIcon class="size-3.5" />
-						<span>Compute {selectedK} Clusters</span>
+						<span>{m.image_detail_dom_colors_compute({ k: Number(selectedK) })}</span>
 					{/if}
 				</Button>
 			</div>

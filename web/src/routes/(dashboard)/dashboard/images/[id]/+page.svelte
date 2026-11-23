@@ -16,6 +16,7 @@
 	import ColorMomentsCard from "#lib/components/image-detail/color-moments-card.svelte";
 	import GlcmTextureCard from "#lib/components/image-detail/glcm-texture-card.svelte";
 	import LbpHistogramCard from "#lib/components/image-detail/lbp-histogram-card.svelte";
+	import * as m from "#lib/paraglide/messages.js";
 
 	// Icons
 	import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
@@ -160,7 +161,14 @@
 			</div>
 			<div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
 				<div class="lg:col-span-5 xl:col-span-4 space-y-4 md:space-y-6">
-					<Skeleton class="h-[360px] w-full rounded-xl" />
+					<div class="flex min-h-[220px] max-h-[340px] w-full items-center justify-center overflow-hidden rounded-xl bg-neutral-900/5 dark:bg-neutral-950/40 p-2">
+						<img
+							src={imageService.getImageUrl(data.id)}
+							alt=""
+							class="max-h-[320px] w-auto max-w-full rounded-lg object-contain"
+							style="view-transition-name: image-{data.id};"
+						/>
+					</div>
 					<Skeleton class="h-[240px] w-full rounded-xl" />
 				</div>
 				<div class="lg:col-span-7 xl:col-span-8 space-y-4 md:space-y-6">
@@ -175,13 +183,13 @@
 			<div class="mb-4 flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive ring-8 ring-destructive/5">
 				<AlertCircleIcon class="size-7" />
 			</div>
-			<h2 class="text-xl font-semibold tracking-tight text-foreground">Failed to Load Image</h2>
+			<h2 class="text-xl font-semibold tracking-tight text-foreground">{m.image_detail_failed_title()}</h2>
 			<p class="mt-2 text-sm text-muted-foreground max-w-md">
-				{error || "The requested image could not be found or you do not have permission to view it."}
+				{error || m.image_detail_failed_desc()}
 			</p>
 			<Button variant="outline" class="mt-6 gap-2" href="/dashboard/images">
 				<ArrowLeftIcon class="size-4" />
-				Back to Gallery
+				{m.image_detail_back_gallery()}
 			</Button>
 		</div>
 	{:else}
@@ -220,7 +228,7 @@
 									: 'text-muted-foreground hover:text-foreground'}"
 								onclick={() => (activeTab = "color")}
 							>
-								<span>Color Features</span>
+								<span>{m.image_detail_tab_color()}</span>
 								{#if hasDescriptors}
 									<span class="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-mono text-primary">3</span>
 								{/if}
@@ -233,7 +241,7 @@
 									: 'text-muted-foreground hover:text-foreground'}"
 								onclick={() => (activeTab = "texture")}
 							>
-								<span>Texture Features</span>
+								<span>{m.image_detail_tab_texture()}</span>
 								{#if hasDescriptors}
 									<span class="ml-1.5 rounded-full bg-primary/10 px-1.5 py-0.2 text-[10px] font-mono text-primary">2</span>
 								{/if}
@@ -246,13 +254,13 @@
 									: 'text-muted-foreground hover:text-foreground'}"
 								onclick={() => (activeTab = "metadata")}
 							>
-								<span>Metadata & Properties</span>
+								<span>{m.image_detail_tab_metadata()}</span>
 							</button>
 						</div>
 
 						{#if hasDescriptors}
 							<div class="text-[11px] text-muted-foreground hidden sm:block">
-								Standardized CBIR JSON Schemas
+								{m.image_detail_schemas_badge()}
 							</div>
 						{/if}
 					</div>

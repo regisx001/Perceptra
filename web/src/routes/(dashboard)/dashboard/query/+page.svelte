@@ -31,6 +31,7 @@
 	import CheckIcon from "@tabler/icons-svelte/icons/check";
 	import TargetIcon from "@tabler/icons-svelte/icons/target";
 	import RetrievalParameters from "./retrieval-parameters.svelte";
+	import * as m from "#lib/paraglide/messages.js";
 
 	// State: Configuration & Categories
 	let categories = $state<CategoryItem[]>([]);
@@ -404,7 +405,7 @@
 			</a>
 			<span class="text-xs text-muted-foreground/60 shrink-0">/</span>
 			<span class="text-xs text-muted-foreground font-medium shrink-0"
-				>Visual Query</span
+				>{m.query_breadcrumb_title()}</span
 			>
 			{#if uploadedFile}
 				<span class="text-xs text-muted-foreground/60 shrink-0">/</span>
@@ -434,7 +435,7 @@
 			onclick={resetQuery}
 		>
 			<RefreshDotIcon class="size-3.5" />
-			<span>Reset</span>
+			<span>{m.query_btn_reset()}</span>
 		</Button>
 
 		<Button
@@ -448,10 +449,10 @@
 				<div
 					class="size-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"
 				></div>
-				<span>Retrieving...</span>
+				<span>{m.query_btn_searching()}</span>
 			{:else}
 				<SearchIcon class="size-3.5" />
-				<span>Search Similar</span>
+				<span>{m.query_btn_search()}</span>
 			{/if}
 		</Button>
 	</div>
@@ -467,11 +468,10 @@
 				<h1
 					class="text-xl font-bold tracking-tight text-foreground sm:text-2xl"
 				>
-					Visual Query Studio
+					{m.query_studio_title()}
 				</h1>
 				<p class="text-xs text-muted-foreground sm:text-sm">
-					Multi-descriptor content-based visual retrieval with
-					interactive Feature Relevance Estimation.
+					{m.query_studio_subtitle()}
 				</p>
 			</div>
 
@@ -482,19 +482,19 @@
 						class="flex items-center gap-1.5 font-mono text-2xs px-2.5 py-1 rounded-md bg-muted/60 border border-border text-muted-foreground"
 					>
 						<span class="text-foreground font-semibold"
-							>{executionTiming.total_ms}ms total</span
+							>{m.query_timing_total({ ms: executionTiming.total_ms })}</span
 						>
 						<span class="text-muted-foreground/60">&bull;</span>
-						<span>Ext: {executionTiming.extraction_ms}ms</span>
+						<span>{m.query_timing_ext({ ms: executionTiming.extraction_ms })}</span>
 						<span class="text-muted-foreground/60">&bull;</span>
-						<span>Sim: {executionTiming.similarity_ms}ms</span>
+						<span>{m.query_timing_sim({ ms: executionTiming.similarity_ms })}</span>
 					</div>
 				{/if}
 				{#if currentIteration > 0}
 					<span
 						class="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400"
 					>
-						Iteration #{currentIteration}
+						{m.query_iteration_badge({ number: currentIteration })}
 					</span>
 				{/if}
 			</div>
@@ -516,7 +516,7 @@
 						class="underline font-bold cursor-pointer"
 						onclick={() => (errorMessage = null)}
 					>
-						Dismiss
+						{m.query_dismiss()}
 					</button>
 				</div>
 			{/if}
@@ -542,7 +542,7 @@
 								class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"
 							>
 								<TargetIcon class="size-3.5 text-primary" />
-								<span>Reference Query Image</span>
+								<span>{m.query_ref_image_title()}</span>
 							</Card.Title>
 
 							{#if previewUrl || selectedExistingImage}
@@ -550,10 +550,10 @@
 									type="button"
 									class="text-2xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 cursor-pointer"
 									onclick={clearQueryImage}
-									title="Remove query image"
+									title={m.query_btn_clear()}
 								>
 									<XIcon class="size-3" />
-									<span>Clear</span>
+									<span>{m.query_btn_clear()}</span>
 								</button>
 							{/if}
 						</Card.Header>
@@ -589,13 +589,12 @@
 										<p
 											class="text-xs font-semibold text-foreground"
 										>
-											No Query Image Selected
+											{m.query_no_image_title()}
 										</p>
 										<p
 											class="text-2xs text-muted-foreground mt-0.5 max-w-[200px]"
 										>
-											Upload a local image file or pick an
-											indexed image from your library.
+											{m.query_no_image_desc()}
 										</p>
 									</div>
 								{/if}
@@ -607,7 +606,7 @@
 									class="h-8.5 px-2.5 rounded-lg border border-border hover:bg-muted/70 text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs"
 								>
 									<UploadIcon class="size-3.5 text-primary" />
-									<span>Upload File</span>
+									<span>{m.query_btn_upload()}</span>
 									<input
 										type="file"
 										accept="image/jpeg,image/png,image/webp"
@@ -623,7 +622,7 @@
 									onclick={openGalleryPicker}
 								>
 									<PhotoIcon class="size-3.5 text-primary" />
-									<span>Pick Library</span>
+									<span>{m.query_btn_pick_library()}</span>
 								</Button>
 							</div>
 
@@ -636,7 +635,7 @@
 										class="flex justify-between items-center"
 									>
 										<span class="text-muted-foreground"
-											>Filename:</span
+											>{m.query_meta_filename()}</span
 										>
 										<span
 											class="font-semibold text-foreground truncate max-w-[190px]"
@@ -654,19 +653,19 @@
 											class="flex justify-between items-center"
 										>
 											<span class="text-muted-foreground"
-												>Category:</span
+												>{m.query_meta_category()}</span
 											>
 											<span
 												class="font-medium text-foreground"
 												>{selectedExistingImage.category_id ||
-													"Unassigned"}</span
+													m.query_meta_unassigned()}</span
 											>
 										</div>
 										<div
 											class="flex justify-between items-center"
 										>
 											<span class="text-muted-foreground"
-												>Dimensions:</span
+												>{m.query_meta_dimensions()}</span
 											>
 											<span class="font-mono"
 												>{selectedExistingImage.width} &times;
@@ -695,17 +694,17 @@
 								<div
 									class="size-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin"
 								></div>
-								<span>Searching Similar...</span>
+								<span>{m.query_btn_searching()}</span>
 							{:else}
 								<SearchIcon class="size-4" />
-								<span>Search Similar</span>
+								<span>{m.query_btn_search()}</span>
 							{/if}
 						</Button>
 						{#if !uploadedFile && !previewUrl && !selectedExistingImage}
 							<p
 								class="text-2xs text-muted-foreground text-center mt-1.5"
 							>
-								Select or upload an image above to run retrieval
+								{m.query_select_image_hint()}
 							</p>
 						{/if}
 					</div>
@@ -741,13 +740,12 @@
 									<h3
 										class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"
 									>
-										<span>Retrieved Candidates</span>
+										<span>{m.query_results_title()}</span>
 										{#if results.length > 0}
 											<span
 												class="font-mono text-2xs font-normal text-muted-foreground lowercase"
 											>
-												({results.length} of {totalCandidatesCount}
-												evaluated)
+												{m.query_results_evaluated({ count: results.length, total: totalCandidatesCount })}
 											</span>
 										{/if}
 									</h3>
@@ -774,11 +772,10 @@
 									<p
 										class="text-xs font-semibold text-foreground"
 									>
-										Computing multi-descriptor similarity...
+										{m.query_results_loading_title()}
 									</p>
 									<p class="text-2xs text-muted-foreground">
-										Scanning candidate features &amp;
-										calculating weighted distances
+										{m.query_results_loading_desc()}
 									</p>
 								</div>
 							{:else if results.length > 0}
@@ -843,7 +840,7 @@
 													class="absolute bottom-2 right-2 size-7 rounded-md bg-background/85 backdrop-blur-md border border-border/70 flex items-center justify-center text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-xs"
 													onclick={() =>
 														openInspect(item)}
-													title="Inspect Side-by-Side Comparison"
+													title={m.query_card_inspect()}
 												>
 													<EyeIcon class="size-3.5" />
 												</button>
@@ -913,7 +910,7 @@
 														<ThumbsUpIcon
 															class="size-3 shrink-0"
 														/>
-														<span>Relevant</span>
+														<span>{m.query_feedback_relevant()}</span>
 													</button>
 
 													<button
@@ -931,7 +928,7 @@
 														<ThumbsDownIcon
 															class="size-3 shrink-0"
 														/>
-														<span>Irrelevant</span>
+														<span>{m.query_feedback_irrelevant()}</span>
 													</button>
 												</div>
 											</div>
@@ -1121,11 +1118,11 @@
 		>
 			<div class="flex items-center gap-2.5 pr-3 border-r border-border/80">
 				<span class="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-					+{relevantCount} Relevant
+					+{relevantCount} {m.query_feedback_relevant()}
 				</span>
 				<span class="text-muted-foreground/40 text-sm">&bull;</span>
 				<span class="font-mono text-sm font-semibold text-rose-600 dark:text-rose-400">
-					-{irrelevantCount} Irrelevant
+					-{irrelevantCount} {m.query_feedback_irrelevant()}
 				</span>
 			</div>
 
@@ -1135,9 +1132,9 @@
 				onclick={() => {
 					feedbackMap = {};
 				}}
-				title="Clear all marked feedback"
+				title={m.query_feedback_clear_btn()}
 			>
-				Clear
+				{m.query_feedback_clear_btn()}
 			</button>
 
 			<Button
@@ -1151,10 +1148,10 @@
 					<div
 						class="size-4 border-2 border-white border-t-transparent rounded-full animate-spin"
 					></div>
-					<span>Re-ranking...</span>
+					<span>{m.query_btn_searching()}</span>
 				{:else}
 					<RefreshDotIcon class="size-4" />
-					<span>Re-estimate &amp; Re-rank</span>
+					<span>{m.query_feedback_refine_btn()}</span>
 				{/if}
 			</Button>
 		</div>

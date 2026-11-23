@@ -20,6 +20,7 @@
 	import InfoCircleIcon from "@tabler/icons-svelte/icons/info-circle";
 	import ChartPieIcon from "@tabler/icons-svelte/icons/chart-pie";
 	import SparklesIcon from "@tabler/icons-svelte/icons/sparkles";
+	import * as m from "#lib/paraglide/messages.js";
 
 	let feedbackStats = $state<AnalyticsFeedback | null>(null);
 	let performanceStats = $state<AnalyticsPerformance | null>(null);
@@ -279,14 +280,14 @@
 			<div class="flex items-center justify-between">
 				<Card.Title class="flex items-center gap-2 text-base">
 					<CheckCircleIcon class="size-4 text-emerald-500" />
-					Relevance Judgment Behavior
+					{m.analytics_judgments_title()}
 				</Card.Title>
 				<Badge variant="outline" class="text-xs">
 					Ratio: {feedbackStats?.ratio ?? 0}
 				</Badge>
 			</div>
 			<Card.Description>
-				Relevant vs. Irrelevant user judgments recorded
+				{m.analytics_judgments_desc()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex-1 pb-2">
@@ -325,7 +326,7 @@
 			<div class="flex w-full items-start gap-2 text-sm">
 				<div class="grid gap-1">
 					<div class="flex items-center gap-2 leading-none font-medium">
-						Avg {feedbackStats?.average_judgments_per_search ?? 0} judgments per search
+						{m.analytics_judgments_avg({ count: feedbackStats?.average_judgments_per_search ?? 0 })}
 						<TrendingUpIcon class="size-4 text-emerald-500" />
 					</div>
 					<div class="text-xs text-muted-foreground">
@@ -342,20 +343,20 @@
 			<div class="flex items-center justify-between">
 				<Card.Title class="flex items-center gap-2 text-base">
 					<ClockIcon class="size-4 text-blue-500" />
-					Retrieval Latency
+					{m.analytics_latency_title()}
 				</Card.Title>
 				<Badge variant="outline" class="text-xs text-blue-600 dark:text-blue-400">
 					Avg: {performanceStats?.average_ms ?? 0} ms
 				</Badge>
 			</div>
 			<Card.Description>
-				Candidate distance calculation &amp; FRE re-ranking execution
+				{m.analytics_latency_desc()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-3">
 			<div class="grid grid-cols-3 gap-2 text-center text-xs">
 				<div class="rounded-lg border border-border/50 bg-muted/30 p-2">
-					<div class="text-[11px] text-muted-foreground">Min Latency</div>
+					<div class="text-[11px] text-muted-foreground">{m.analytics_latency_min()}</div>
 					<div class="text-base font-bold tabular-nums text-foreground">
 						{performanceStats?.min_ms ?? 0} <span class="text-xs font-normal">ms</span>
 					</div>
@@ -438,14 +439,14 @@
 			<div class="flex items-center justify-between">
 				<Card.Title class="flex items-center gap-2 text-base">
 					<ChartPieIcon class="size-4 text-primary" />
-					Modality Split
+					{m.analytics_modality_title()}
 				</Card.Title>
 				<Badge variant="outline" class="font-mono text-xs">
 					{totalModalityQueries} queries
 				</Badge>
 			</div>
 			<Card.Description>
-				Multimodal vs. single-feature queries
+				{m.analytics_modality_desc()}
 			</Card.Description>
 		</Card.Header>
 
@@ -507,14 +508,14 @@
 				<div>
 					<Card.Title class="flex items-center gap-2 text-base">
 						<ClockIcon class="size-4 text-primary" />
-						Search Latency Breakdown (Ranked)
+						{m.analytics_breakdown_title()}
 					</Card.Title>
 					<Card.Description>
-						Ranked execution time across retrieval stages (Average: {performanceStats?.average_ms ?? 0} ms)
+						{m.analytics_breakdown_desc({ avg: performanceStats?.average_ms ?? 0 })}
 					</Card.Description>
 				</div>
 				<Badge variant="outline" class="font-mono text-xs text-primary border-primary/20 bg-primary/5">
-					10,000 images scanned
+					{m.analytics_breakdown_scanned({ count: "10,000" })}
 				</Badge>
 			</div>
 		</Card.Header>

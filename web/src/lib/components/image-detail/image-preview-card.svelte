@@ -2,6 +2,7 @@
 	import type { ImageItem } from "#lib/images.js";
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Dialog from "#lib/components/ui/dialog/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 
 	let {
 		image,
@@ -43,12 +44,7 @@
 					class="h-6 px-2.5 text-xs font-medium border-border bg-background hover:bg-muted shadow-xs gap-1.5"
 					onclick={onOpenLineage}
 				>
-					<span>Check Lineage</span>
-					{#if derivativesCount > 0}
-						<span class="rounded-full bg-primary/10 text-primary px-1.5 py-0.2 text-[10px] font-mono">
-							{derivativesCount}
-						</span>
-					{/if}
+					<span>{m.image_detail_check_lineage({ count: derivativesCount })}</span>
 				</Button>
 			{/if}
 
@@ -75,6 +71,7 @@
 			src={imageUrl}
 			alt={image.filename}
 			class="max-h-[320px] w-auto max-w-full rounded-lg object-contain"
+			style="view-transition-name: image-{image.id};"
 			loading="eager"
 		/>
 

@@ -94,7 +94,7 @@
 			class="text-xs h-8 px-3 shadow-xs"
 			href="/dashboard/query?image_id={image.id}"
 		>
-			<span>Search Similar</span>
+			<span>{m.image_detail_search_similar()}</span>
 		</Button>
 
 		<!-- Favorite Toggle -->
@@ -102,7 +102,7 @@
 			variant={image.is_favorite ? "default" : "outline"}
 			size="icon"
 			class="size-8 border-border {image.is_favorite ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-500' : 'bg-background text-muted-foreground hover:text-foreground'}"
-			title={image.is_favorite ? "Remove from Favorites" : "Add to Favorites"}
+			title={image.is_favorite ? m.favorites_remove() : m.favorites_add()}
 			onclick={handleToggleFavorite}
 			disabled={isTogglingFavorite}
 		>
@@ -116,7 +116,7 @@
 			class="text-xs h-8 px-3 border-border bg-background hover:bg-muted/50"
 			href="/dashboard/transform?image_id={image.id}"
 		>
-			<span>Transform</span>
+			<span>{m.image_detail_transform()}</span>
 		</Button>
 
 		<!-- Extract / Recompute Descriptors -->
@@ -126,13 +126,13 @@
 			disabled={isExtracting}
 			onclick={onExtract}
 			class="gap-1.5 text-xs h-8 px-3 border-border bg-background hover:bg-muted/50"
-			title="Recompute all visual descriptors"
+			title={m.image_detail_recompute()}
 		>
 			{#if isExtracting}
 				<Loader2Icon class="size-3.5 animate-spin" />
-				<span>Extracting…</span>
+				<span>{m.image_detail_extracting()}</span>
 			{:else}
-				<span>Recompute</span>
+				<span>{m.image_detail_recompute()}</span>
 			{/if}
 		</Button>
 
@@ -141,7 +141,7 @@
 			variant="outline"
 			size="icon"
 			class="size-8 border-border bg-background text-muted-foreground hover:text-foreground"
-			title="Download original file"
+			title={m.image_detail_download()}
 			href={imageService.getImageUrl(image.id, true)}
 			download={image.filename}
 		>
@@ -153,7 +153,7 @@
 			variant="outline"
 			size="icon"
 			class="size-8 border-border bg-background text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-			title="Delete image"
+			title={m.image_detail_delete()}
 			onclick={() => (isDeleteDialogOpen = true)}
 		>
 			<Trash2Icon class="size-3.5" />
@@ -165,15 +165,14 @@
 <AlertDialog.Root bind:open={isDeleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete this image?</AlertDialog.Title>
+			<AlertDialog.Title>{m.image_detail_delete_title()}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to permanently delete <strong class="text-foreground">{image.filename}</strong>?
-				This will remove the file from storage along with all extracted visual descriptors and derived variations. This action cannot be undone.
+				{m.image_detail_delete_desc({ filename: image.filename })}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel disabled={isDeleting} onclick={() => (isDeleteDialogOpen = false)}>
-				Cancel
+				{m.image_detail_cancel()}
 			</AlertDialog.Cancel>
 			<AlertDialog.Action
 				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -182,9 +181,9 @@
 			>
 				{#if isDeleting}
 					<Loader2Icon class="size-4 animate-spin mr-1.5" />
-					Deleting…
+					{m.image_detail_deleting()}
 				{:else}
-					Delete Image
+					{m.image_detail_delete_confirm()}
 				{/if}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>

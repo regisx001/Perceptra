@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from "#lib/components/ui/button/index.js";
 	import * as Card from "#lib/components/ui/card/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import Loader2Icon from "@lucide/svelte/icons/loader-2";
 
 	let {
@@ -21,28 +22,26 @@
 		{/if}
 
 		<h3 class="text-xl font-semibold tracking-tight text-foreground">
-			{isExtracting ? "Extracting Visual Descriptors..." : "Visual Descriptors Not Indexed"}
+			{isExtracting ? m.image_detail_extracting() : m.image_detail_unindexed_title()}
 		</h3>
 
 		<p class="mt-2 text-sm text-muted-foreground leading-relaxed">
-			{isExtracting
-				? "Analyzing image channels, color distribution, co-occurrence matrices, and local binary patterns. This may take a moment."
-				: "This image hasn't been processed for visual features yet. Extracting descriptors will compute color distribution, statistical moments, dominant palettes, GLCM texture, and uniform LBP patterns for similarity search."}
+			{m.image_detail_unindexed_desc()}
 		</p>
 
 		<!-- Feature badges preview -->
 		<div class="mt-6 flex flex-wrap items-center justify-center gap-2">
 			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				Dominant Colors
+				{m.query_settings_feat_dominant_colors()}
 			</span>
 			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				Color Histogram
+				{m.query_settings_feat_color_hist()}
 			</span>
 			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				Color Moments
+				{m.query_settings_feat_color_moments()}
 			</span>
 			<span class="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground">
-				GLCM & LBP Texture
+				{m.query_settings_group_texture()}
 			</span>
 		</div>
 
@@ -56,9 +55,9 @@
 			>
 				{#if isExtracting}
 					<Loader2Icon class="size-4 animate-spin" />
-					<span>Extracting Features...</span>
+					<span>{m.image_detail_extracting()}</span>
 				{:else}
-					<span>Extract Visual Descriptors</span>
+					<span>{m.image_detail_unindexed_btn()}</span>
 				{/if}
 			</Button>
 		</div>

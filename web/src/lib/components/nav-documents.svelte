@@ -5,6 +5,7 @@
 	import TrashIcon from "@tabler/icons-svelte/icons/trash";
 	import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
 	import * as Sidebar from "#lib/components/ui/sidebar/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import type { Icon } from "@tabler/icons-svelte";
 
 	let { items }: { items: { name: string; url: string; icon: Icon }[] } = $props();
@@ -14,7 +15,7 @@
 
 <Sidebar.Group class="group-data-[collapsible=icon]:hidden">
 	<Sidebar.GroupLabel class="text-xs font-medium text-muted-foreground">
-		Feature Descriptors & Shards
+		{m.nav_doc_shards()}
 	</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		{#each items as item (item.name)}
@@ -36,7 +37,7 @@
 								class="rounded-sm data-[state=open]:bg-accent"
 							>
 								<DotsIcon />
-								<span class="sr-only">More</span>
+								<span class="sr-only">{m.nav_more()}</span>
 							</Sidebar.MenuAction>
 						{/snippet}
 					</DropdownMenu.Trigger>
@@ -47,16 +48,16 @@
 					>
 						<DropdownMenu.Item>
 							<FolderIcon />
-							<span>Inspect Vectors</span>
+							<span>{m.nav_inspect_vectors()}</span>
 						</DropdownMenu.Item>
 						<DropdownMenu.Item>
 							<Share3Icon />
-							<span>Export HDF5</span>
+							<span>{m.nav_export_hdf5()}</span>
 						</DropdownMenu.Item>
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item variant="destructive">
 							<TrashIcon />
-							<span>Rebuild Index</span>
+							<span>{m.nav_rebuild_index()}</span>
 						</DropdownMenu.Item>
 					</DropdownMenu.Content>
 				</DropdownMenu.Root>

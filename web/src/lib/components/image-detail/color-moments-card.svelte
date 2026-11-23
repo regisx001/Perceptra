@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Card from "#lib/components/ui/card/index.js";
+	import * as msg from "#lib/paraglide/messages.js";
 	import type { ColorMomentsFeature } from "#lib/images.js";
 
 	let { data }: { data?: ColorMomentsFeature } = $props();
@@ -16,10 +17,10 @@
 		<div class="flex items-center justify-between">
 			<div>
 				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-					Color Moments
+					{msg.image_detail_color_moments_title()}
 				</Card.Title>
 				<Card.Description class="text-xs text-muted-foreground">
-					First 3 statistical moments (μ, σ, s) in normalized HSV
+					{msg.image_detail_color_moments_desc()}
 				</Card.Description>
 			</div>
 			<span class="text-2xs font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">

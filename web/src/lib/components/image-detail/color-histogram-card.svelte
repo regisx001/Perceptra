@@ -4,6 +4,7 @@
 	import { LineChart } from "layerchart";
 	import * as Card from "#lib/components/ui/card/index.js";
 	import * as Chart from "#lib/components/ui/chart/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import type { ColorHistogramFeature } from "#lib/images.js";
 
 	let { data }: { data?: ColorHistogramFeature } = $props();
@@ -140,10 +141,10 @@
 		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
 			<div>
 				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-					HSV Color Distribution ({chartData.length || 256} Bins)
+					{m.image_detail_color_hist_title()} ({chartData.length || 256} Bins)
 				</Card.Title>
 				<Card.Description class="text-xs text-muted-foreground">
-					High-resolution continuous frequency distribution curves for Hue, Saturation, and Value
+					{m.image_detail_color_hist_desc()}
 				</Card.Description>
 			</div>
 

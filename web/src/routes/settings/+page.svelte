@@ -425,22 +425,22 @@
 				<div class="space-y-6">
 					<div>
 						<h1 class="text-2xl font-bold tracking-tight text-foreground">
-							Notifications
+							{m.settings_notif_title()}
 						</h1>
 						<Separator class="mt-4" />
 					</div>
 					<div class="space-y-3 max-w-md text-xs">
 						<label class="flex items-center gap-2">
 							<input type="checkbox" checked class="rounded border-border text-primary focus:ring-primary" />
-							<span>Email alerts on background descriptor indexing completion</span>
+							<span>{m.settings_notif_email_indexing()}</span>
 						</label>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" checked class="rounded border-border text-primary focus:ring-primary" />
-							<span>Notify when storage consumption exceeds 80% quota</span>
+							<span>{m.settings_notif_storage_quota()}</span>
 						</label>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" class="rounded border-border text-primary focus:ring-primary" />
-							<span>Weekly retrieval analytics digest</span>
+							<span>{m.settings_notif_weekly_digest()}</span>
 						</label>
 					</div>
 				</div>
@@ -449,20 +449,20 @@
 				<div class="space-y-6">
 					<div>
 						<h1 class="text-2xl font-bold tracking-tight text-foreground">
-							Password & Security
+							{m.settings_sec_title()}
 						</h1>
 						<Separator class="mt-4" />
 					</div>
 					<div class="space-y-4 max-w-md">
 						<div class="space-y-1.5">
-							<label for="old-pass" class="text-xs font-semibold">Current Password</label>
+							<label for="old-pass" class="text-xs font-semibold">{m.settings_sec_current_pass()}</label>
 							<Input id="old-pass" type="password" class="h-9 text-xs" />
 						</div>
 						<div class="space-y-1.5">
-							<label for="new-pass" class="text-xs font-semibold">New Password</label>
+							<label for="new-pass" class="text-xs font-semibold">{m.settings_sec_new_pass()}</label>
 							<Input id="new-pass" type="password" class="h-9 text-xs" />
 						</div>
-						<Button size="sm" class="h-8 text-xs font-semibold cursor-pointer">Update Password</Button>
+						<Button size="sm" class="h-8 text-xs font-semibold cursor-pointer">{m.settings_sec_update_btn()}</Button>
 					</div>
 				</div>
 
@@ -470,18 +470,18 @@
 				<div class="space-y-6">
 					<div>
 						<h1 class="text-2xl font-bold tracking-tight text-foreground">
-							JWT & API Tokens
+							{m.settings_tok_title()}
 						</h1>
 						<Separator class="mt-4" />
 					</div>
 					<div class="space-y-3 max-w-md">
 						<p class="text-xs text-muted-foreground">
-							Use bearer tokens to automate visual query indexing and remote batch submissions via the REST API.
+							{m.settings_tok_desc()}
 						</p>
 						<div class="rounded-lg border border-border p-3 bg-muted/30 font-mono text-xs truncate">
 							eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.perceptra_token_mock
 						</div>
-						<Button variant="outline" size="sm" class="h-8 text-xs font-semibold cursor-pointer">Generate New Token</Button>
+						<Button variant="outline" size="sm" class="h-8 text-xs font-semibold cursor-pointer">{m.settings_tok_generate_btn()}</Button>
 					</div>
 				</div>
 
@@ -489,14 +489,14 @@
 				<div class="space-y-6">
 					<div>
 						<h1 class="text-2xl font-bold tracking-tight text-foreground">
-							Storage & Upload Limits
+							{m.settings_lim_title()}
 						</h1>
 						<Separator class="mt-4" />
 					</div>
 					<div class="space-y-4 max-w-md text-xs">
 						<div class="space-y-1">
 							<div class="flex justify-between font-semibold">
-								<span>Indexed Images</span>
+								<span>{m.settings_lim_indexed()}</span>
 								<span>10,000 / 50,000</span>
 							</div>
 							<div class="h-2 rounded-full bg-muted overflow-hidden">
@@ -505,7 +505,7 @@
 						</div>
 						<div class="space-y-1">
 							<div class="flex justify-between font-semibold">
-								<span>Disk Quota</span>
+								<span>{m.settings_lim_quota()}</span>
 								<span>1.42 GB / 10.00 GB</span>
 							</div>
 							<div class="h-2 rounded-full bg-muted overflow-hidden">
@@ -519,24 +519,24 @@
 				<div class="space-y-6">
 					<div>
 						<h1 class="text-2xl font-bold tracking-tight text-foreground">
-							Visual Descriptors Engine
+							{m.settings_desc_engine_title()}
 						</h1>
 						<Separator class="mt-4" />
 					</div>
 					<div class="space-y-3 max-w-md text-xs">
 						<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
 							<div>
-								<p class="font-semibold">HSV Color Histogram</p>
-								<p class="text-muted-foreground text-[11px]">72-bin quantized representation</p>
+								<p class="font-semibold">{m.settings_desc_hsv_title()}</p>
+								<p class="text-muted-foreground text-[11px]">{m.settings_desc_hsv_sub()}</p>
 							</div>
-							<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Active</span>
+							<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{m.settings_desc_active()}</span>
 						</div>
 						<div class="flex items-center justify-between p-3 rounded-lg border border-border bg-card">
 							<div>
-								<p class="font-semibold">Gabor Wavelet Texture</p>
-								<p class="text-muted-foreground text-[11px]">24-dim scale & orientation energy</p>
+								<p class="font-semibold">{m.settings_desc_gabor_title()}</p>
+								<p class="text-muted-foreground text-[11px]">{m.settings_desc_gabor_sub()}</p>
 							</div>
-							<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Active</span>
+							<span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{m.settings_desc_active()}</span>
 						</div>
 					</div>
 				</div>
@@ -545,17 +545,17 @@
 				<div class="space-y-6">
 					<div>
 						<h1 class="text-2xl font-bold tracking-tight text-foreground">
-							Index & Maintenance
+							{m.settings_maint_title()}
 						</h1>
 						<Separator class="mt-4" />
 					</div>
 					<div class="space-y-3 max-w-md">
 						<p class="text-xs text-muted-foreground">
-							Rebuild FAISS index partitions or re-extract descriptors for GHIM-10K clusters.
+							{m.settings_maint_desc()}
 						</p>
 						<div class="flex gap-2">
-							<Button variant="outline" size="sm" class="h-8 text-xs font-semibold cursor-pointer">Re-index FAISS</Button>
-							<Button variant="destructive" size="sm" class="h-8 text-xs font-semibold cursor-pointer">Purge Cache</Button>
+							<Button variant="outline" size="sm" class="h-8 text-xs font-semibold cursor-pointer">{m.settings_maint_reindex_btn()}</Button>
+							<Button variant="destructive" size="sm" class="h-8 text-xs font-semibold cursor-pointer">{m.settings_maint_purge_btn()}</Button>
 						</div>
 					</div>
 				</div>

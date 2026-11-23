@@ -18,6 +18,7 @@
 	import ArrowRightIcon from "@tabler/icons-svelte/icons/arrow-right";
 	import CheckIcon from "@tabler/icons-svelte/icons/check";
 	import XIcon from "@tabler/icons-svelte/icons/x";
+	import * as m from "#lib/paraglide/messages.js";
 
 	let historyData = $state<HistoryListResponse | null>(null);
 	let isLoading = $state(true);
@@ -72,10 +73,10 @@
 			<div>
 				<Card.Title class="flex items-center gap-2 text-base font-semibold">
 					<HistoryIcon class="size-4 text-primary" />
-					Visual Retrieval History Log
+					{m.analytics_table_title()}
 				</Card.Title>
 				<Card.Description>
-					Chronological record of past visual queries, scope configurations, and relevance feedback refinements
+					{m.analytics_table_desc()}
 				</Card.Description>
 			</div>
 			<Button
@@ -85,7 +86,7 @@
 				onclick={() => loadHistory(historyData?.pagination.page || 1)}
 			>
 				<RefreshDotIcon class="size-3.5" />
-				<span>Refresh</span>
+				<span>{m.images_refresh()}</span>
 			</Button>
 		</Card.Header>
 		<Card.Content>
@@ -98,10 +99,10 @@
 			{:else if !historyData?.items || historyData.items.length === 0}
 				<div class="flex flex-col items-center justify-center py-12 text-center text-sm text-muted-foreground">
 					<PhotoIcon class="size-10 stroke-1 text-muted-foreground/60 mb-2" />
-					<p class="font-medium text-foreground">No visual searches recorded yet</p>
-					<p class="text-xs">Run a query from the Visual Query Studio to record search and feedback iterations.</p>
+					<p class="font-medium text-foreground">{m.analytics_table_empty()}</p>
+					<p class="text-xs">{m.query_results_empty_desc()}</p>
 					<Button href="/dashboard/query" size="sm" class="mt-4 text-xs">
-						Launch Visual Query
+						{m.nav_visual_query()}
 					</Button>
 				</div>
 			{:else}

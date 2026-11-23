@@ -1447,10 +1447,10 @@
 				}
 				isUploadDialogOpen = true;
 			}}
-			title="Upload an image from your computer to transform"
+			title={m.transform_upload_btn()}
 		>
 			<UploadCloudIcon data-icon="inline-start" class="size-3.5" />
-			<span class="hidden sm:inline">Upload Image</span>
+			<span class="hidden sm:inline">{m.transform_upload_btn()}</span>
 		</Button>
 
 		<!-- Reset Canvas -->
@@ -1459,10 +1459,10 @@
 			size="sm"
 			class="h-8 px-2.5 sm:px-3 text-xs font-semibold gap-1.5 cursor-pointer shadow-2xs border-border"
 			onclick={resetCanvas}
-			title="Reset all transformation parameters"
+			title={m.transform_reset_btn()}
 		>
 			<RotateCcwIcon data-icon="inline-start" class="size-3.5" />
-			<span class="hidden sm:inline">Reset</span>
+			<span class="hidden sm:inline">{m.transform_reset_btn()}</span>
 		</Button>
 
 		<!-- Save Derived Image Button (Primary Accent) -->
@@ -1471,14 +1471,14 @@
 			class="h-8 px-3 sm:px-3.5 text-xs font-semibold gap-1.5 cursor-pointer shadow-xs bg-primary text-primary-foreground hover:bg-primary/90"
 			disabled={isSaving}
 			onclick={handleSaveDerivedImage}
-			title="Save as non-destructive derived image into your dataset"
+			title={m.transform_save_derived_btn()}
 		>
 			{#if isSaving}
 				<Loader2Icon class="size-3.5 animate-spin" />
-				<span>Saving...</span>
+				<span>{m.transform_saving()}</span>
 			{:else}
 				<DownloadIcon data-icon="inline-start" class="size-3.5" />
-				<span>Save Derived Image</span>
+				<span>{m.transform_save_derived_btn()}</span>
 			{/if}
 		</Button>
 	</div>
@@ -1496,7 +1496,7 @@
 			<button
 				type="button"
 				class="underline font-bold cursor-pointer"
-				onclick={() => (errorMessage = null)}>Dismiss</button
+				onclick={() => (errorMessage = null)}>{m.query_dismiss()}</button
 			>
 		</div>
 	{/if}
@@ -1512,10 +1512,9 @@
 					✓
 				</div>
 				<div>
-					<p class="font-bold">Derived Image Successfully Saved & Indexed!</p>
+					<p class="font-bold">{m.transform_saved_success_title()}</p>
 					<p class="text-muted-foreground font-mono text-[11px]">
-						{saveSuccessImage.filename} ({saveSuccessImage.width}×{saveSuccessImage.height}
-						px) &bull; Color & Texture descriptors automatically computed.
+						{m.transform_saved_success_desc({ filename: saveSuccessImage.filename, width: saveSuccessImage.width ?? 0, height: saveSuccessImage.height ?? 0 })}
 					</p>
 				</div>
 			</div>
@@ -1526,7 +1525,7 @@
 					size="sm"
 					class="h-8 px-3 text-xs gap-1.5 shadow-xs"
 				>
-					<span>View Features</span>
+					<span>{m.transform_view_features()}</span>
 					<ExternalLinkIcon class="size-3.5" />
 				</Button>
 				<Button
@@ -1536,7 +1535,7 @@
 					onclick={handleDownloadImage}
 				>
 					<DownloadIcon class="size-3.5" />
-					<span>Download</span>
+					<span>{m.transform_download()}</span>
 				</Button>
 				<Button
 					href="/dashboard/images"
@@ -1544,7 +1543,7 @@
 					size="sm"
 					class="h-8 px-3 text-xs gap-1.5"
 				>
-					<span>Gallery</span>
+					<span>{m.transform_gallery()}</span>
 				</Button>
 				<Button
 					variant="ghost"
@@ -1574,7 +1573,7 @@
 					<h3
 						class="text-sm font-semibold tracking-tight text-foreground"
 					>
-						Transformation Tools
+						{m.transform_tools_title()}
 					</h3>
 
 					<div class="flex flex-col gap-1.5">
@@ -1598,7 +1597,7 @@
 							>
 								<CropIcon class="size-3.5" />
 							</div>
-							<span>Crop</span>
+							<span>{m.transform_tool_crop()}</span>
 						</button>
 
 						<!-- Resize -->
@@ -1618,7 +1617,7 @@
 							>
 								<Maximize2Icon class="size-3.5" />
 							</div>
-							<span>Resize</span>
+							<span>{m.transform_tool_resize()}</span>
 						</button>
 
 						<!-- Rotate -->
@@ -1638,7 +1637,7 @@
 							>
 								<RotateCwIcon class="size-3.5" />
 							</div>
-							<span>Rotate</span>
+							<span>{m.transform_tool_rotate()}</span>
 						</button>
 
 						<!-- Flip -->
@@ -1658,7 +1657,7 @@
 							>
 								<SlidersHorizontalIcon class="size-3.5" />
 							</div>
-							<span>Flip</span>
+							<span>{m.transform_tool_flip()}</span>
 						</button>
 
 						<!-- Shear -->
@@ -1678,7 +1677,7 @@
 							>
 								<RectangleHorizontalIcon class="size-3.5" />
 							</div>
-							<span>Shear</span>
+							<span>{m.transform_tool_shear()}</span>
 						</button>
 
 						<!-- Affine -->
@@ -1698,7 +1697,7 @@
 							>
 								<TriangleIcon class="size-3.5" />
 							</div>
-							<span>Affine</span>
+							<span>{m.transform_tool_affine()}</span>
 						</button>
 					</div>
 				</div>
@@ -1709,7 +1708,7 @@
 						<h3
 							class="text-sm font-semibold tracking-tight text-foreground"
 						>
-							Adjustments
+							{m.transform_adjustments_title()}
 						</h3>
 						{#if totalActiveAdjustments > 0}
 							<button
@@ -1717,7 +1716,7 @@
 								class="text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
 								onclick={resetAllAdjustments}
 							>
-								Reset all
+								{m.transform_reset_all()}
 							</button>
 						{/if}
 					</div>
@@ -1741,7 +1740,7 @@
 								>
 									<SunIcon class="size-3.5" />
 								</div>
-								<span>Light</span>
+								<span>{m.transform_tool_light()}</span>
 							</div>
 							{#if activeLightCount > 0}
 								<span
@@ -1770,7 +1769,7 @@
 								>
 									<PaletteIcon class="size-3.5" />
 								</div>
-								<span>Color</span>
+								<span>{m.transform_tool_color()}</span>
 							</div>
 							{#if activeColorCount > 0}
 								<span
@@ -1799,7 +1798,7 @@
 								>
 									<SparklesIcon class="size-3.5" />
 								</div>
-								<span>Detail</span>
+								<span>{m.transform_tool_detail()}</span>
 							</div>
 							{#if activeDetailCount > 0}
 								<span
@@ -1821,7 +1820,7 @@
 								<h3
 									class="text-xs font-semibold tracking-tight text-foreground"
 								>
-									Stack ({appliedStack.length})
+									{m.transform_stack_title({ count: appliedStack.length })}
 								</h3>
 							</div>
 							<button
@@ -1829,7 +1828,7 @@
 								class="text-[10px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
 								onclick={clearStack}
 							>
-								Clear
+								{m.transform_clear_stack()}
 							</button>
 						</div>
 						<div
@@ -1870,7 +1869,7 @@
 					<h3
 						class="text-sm font-semibold tracking-tight text-foreground"
 					>
-						Presets
+						{m.transform_presets_title()}
 					</h3>
 
 					<div class="grid grid-cols-2 gap-2">
@@ -2101,8 +2100,8 @@
 							<EyeIcon class="size-3.5" />
 							<span class="hidden sm:inline"
 								>{isComparing
-									? "Viewing Original"
-									: "Hold to Compare"}</span
+									? m.transform_btn_compare_viewing()
+									: m.transform_btn_compare_hold()}</span
 							>
 						</Button>
 
@@ -2115,7 +2114,7 @@
 							title="Stack current adjustments or transform onto the working image pipeline"
 						>
 							<LayersIcon class="size-3.5" />
-							<span class="hidden sm:inline">Stack Step</span>
+							<span class="hidden sm:inline">{m.transform_btn_stack_step()}</span>
 							{#if appliedStack.length > 0}
 								<span
 									class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-primary text-primary-foreground"
@@ -2184,22 +2183,22 @@
 					>
 						<span>
 							{activeTab === "crop"
-								? "Crop Settings"
+								? m.transform_crop_settings()
 								: activeTab === "resize"
-									? "Resize Settings"
+									? m.transform_resize_settings()
 									: activeTab === "rotate"
-										? "Rotate Settings"
+										? m.transform_rotate_settings()
 										: activeTab === "flip"
-											? "Flip Settings"
+											? m.transform_flip_settings()
 											: activeTab === "shear"
-												? "Shear Settings"
+												? m.transform_shear_settings()
 												: activeTab === "affine"
-													? "Affine Settings"
+													? m.transform_affine_settings()
 													: activeTab === "light"
-														? "Light Adjustments"
+														? m.transform_light_settings()
 														: activeTab === "color"
-															? "Color Adjustments"
-															: "Detail Adjustments"}
+															? m.transform_color_settings()
+															: m.transform_detail_settings()}
 						</span>
 						{#if activeTab === "light" && activeLightCount > 0}
 							<button
@@ -2207,7 +2206,7 @@
 								class="text-xs font-normal text-muted-foreground hover:text-primary transition-colors cursor-pointer"
 								onclick={resetLightAdjustments}
 							>
-								Reset Light
+								{m.transform_reset_light()}
 							</button>
 						{:else if activeTab === "color" && activeColorCount > 0}
 							<button
@@ -2215,7 +2214,7 @@
 								class="text-xs font-normal text-muted-foreground hover:text-primary transition-colors cursor-pointer"
 								onclick={resetColorAdjustments}
 							>
-								Reset Color
+								{m.transform_reset_color()}
 							</button>
 						{:else if activeTab === "detail" && activeDetailCount > 0}
 							<button
@@ -2223,7 +2222,7 @@
 								class="text-xs font-normal text-muted-foreground hover:text-primary transition-colors cursor-pointer"
 								onclick={resetDetailAdjustments}
 							>
-								Reset Detail
+								{m.transform_reset_detail()}
 							</button>
 						{/if}
 					</h3>
@@ -2233,7 +2232,7 @@
 						<!-- Aspect Ratio Dropdown -->
 						<div class="space-y-1.5">
 							<span class="text-xs font-medium text-foreground"
-								>Aspect ratio</span
+								>{m.transform_aspect_ratio()}</span
 							>
 							<Select.Root
 								type="single"
@@ -2269,7 +2268,7 @@
 						<!-- Dimensions (W / H with Aspect Lock) -->
 						<div class="space-y-1.5">
 							<span class="text-xs font-medium text-foreground"
-								>Dimensions</span
+								>{m.transform_dimensions()}</span
 							>
 							<div class="flex items-center gap-2">
 								<!-- Width Box -->
@@ -2341,7 +2340,7 @@
 						<!-- Position (X / Y) -->
 						<div class="space-y-1.5">
 							<span class="text-xs font-medium text-foreground"
-								>Position</span
+								>{m.transform_position()}</span
 							>
 							<div class="flex items-center gap-2">
 								<div
@@ -2422,7 +2421,7 @@
 									class="flex items-center justify-between text-xs"
 								>
 									<span class="text-muted-foreground"
-										>Scale</span
+										>{m.transform_scale()}</span
 									>
 									<span
 										class="font-mono font-bold text-foreground"
@@ -2515,7 +2514,7 @@
 									class="flex items-center justify-between text-xs"
 								>
 									<span class="text-muted-foreground"
-										>Angle</span
+										>{m.transform_angle()}</span
 									>
 									<span
 										class="font-mono font-bold text-foreground"
@@ -2545,7 +2544,7 @@
 								onclick={() => (flipDirection = "horizontal")}
 							>
 								<FlipHorizontalIcon class="size-5" />
-								<span class="text-xs">Horizontal</span>
+								<span class="text-xs">{m.transform_horizontal()}</span>
 							</button>
 							<button
 								type="button"
@@ -2556,7 +2555,7 @@
 								onclick={() => (flipDirection = "vertical")}
 							>
 								<FlipVerticalIcon class="size-5" />
-								<span class="text-xs">Vertical</span>
+								<span class="text-xs">{m.transform_vertical()}</span>
 							</button>
 						</div>
 
@@ -2568,7 +2567,7 @@
 									class="flex items-center justify-between text-xs"
 								>
 									<span class="text-muted-foreground"
-										>Horizontal Shear</span
+										>{m.transform_shear_x()}</span
 									>
 									<span
 										class="font-mono font-bold text-foreground"
@@ -2589,7 +2588,7 @@
 									class="flex items-center justify-between text-xs"
 								>
 									<span class="text-muted-foreground"
-										>Vertical Shear</span
+										>{m.transform_shear_y()}</span
 									>
 									<span
 										class="font-mono font-bold text-foreground"
@@ -2607,7 +2606,7 @@
 							</div>
 
 							<div class="flex items-center justify-between pt-1">
-								<span class="text-xs text-muted-foreground">Expand Canvas</span>
+								<span class="text-xs text-muted-foreground">{m.transform_expand_canvas()}</span>
 								<input
 									type="checkbox"
 									bind:checked={shearExpand}
@@ -2615,7 +2614,7 @@
 								/>
 							</div>
 							<div class="flex items-center justify-between pt-1">
-								<span class="text-xs text-muted-foreground">Background Color</span>
+								<span class="text-xs text-muted-foreground">{m.transform_bg_color()}</span>
 								<div class="flex items-center gap-1.5">
 									<input
 										type="color"
@@ -2637,7 +2636,7 @@
 								<div
 									class="flex justify-between items-center text-muted-foreground border-b border-border/50 pb-1 font-sans text-xs"
 								>
-									<span class="font-semibold text-foreground">Transformation Matrix</span>
+									<span class="font-semibold text-foreground">{m.transform_matrix()}</span>
 									<span class="font-mono text-2xs">det = {(affineA * affineE - affineB * affineD).toFixed(2)}</span>
 								</div>
 								<div class="grid grid-cols-3 gap-1 pt-1 text-center font-mono">
@@ -2764,7 +2763,7 @@
 								</div>
 
 								<div class="flex items-center justify-between pt-1">
-									<span class="text-xs text-muted-foreground">Expand Canvas</span>
+									<span class="text-xs text-muted-foreground">{m.transform_expand_canvas()}</span>
 									<input
 										type="checkbox"
 										bind:checked={affineExpand}
@@ -2772,7 +2771,7 @@
 									/>
 								</div>
 								<div class="flex items-center justify-between pt-1">
-									<span class="text-xs text-muted-foreground">Background Color</span>
+									<span class="text-xs text-muted-foreground">{m.transform_bg_color()}</span>
 									<div class="flex items-center gap-1.5">
 										<input
 											type="color"
@@ -3254,7 +3253,7 @@
 					<h3
 						class="text-sm font-semibold tracking-tight text-foreground"
 					>
-						Quick Actions
+						{m.transform_quick_actions_title()}
 					</h3>
 
 					<div class="grid grid-cols-2 gap-2">
@@ -3269,7 +3268,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Center</span>
+								<span>{m.transform_action_center()}</span>
 							</Button>
 
 							<Button
@@ -3282,7 +3281,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Fit to Image</span>
+								<span>{m.transform_action_fit()}</span>
 							</Button>
 
 							<Button
@@ -3295,7 +3294,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Fill</span>
+								<span>{m.transform_action_fill()}</span>
 							</Button>
 
 							<Button
@@ -3308,7 +3307,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Reset Crop</span>
+								<span>{m.transform_action_reset_crop()}</span>
 							</Button>
 						{:else if activeTab === "affine"}
 							<Button
@@ -3328,7 +3327,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Reset Matrix</span>
+								<span>{m.transform_action_reset_matrix()}</span>
 							</Button>
 
 							<Button
@@ -3344,7 +3343,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Zero Offset</span>
+								<span>{m.transform_action_zero_offset()}</span>
 							</Button>
 
 							<Button
@@ -3359,7 +3358,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
-								<span>Reflect X</span>
+								<span>{m.transform_action_reflect_x()}</span>
 							</Button>
 
 							<Button
@@ -3374,6 +3373,7 @@
 									data-icon="inline-start"
 									class="size-3.5"
 								/>
+								<span>{m.transform_action_reflect_y()}</span>
 								<span>Reflect Y</span>
 							</Button>
 						{:else if activeTab === "light"}
@@ -3652,11 +3652,10 @@
 	<Dialog.Content class="max-w-md sm:max-w-lg p-5">
 		<Dialog.Header class="pb-1">
 			<Dialog.Title class="text-base font-bold text-foreground">
-				Upload Image to Transform
+				{m.transform_upload_dialog_title()}
 			</Dialog.Title>
 			<Dialog.Description class="text-xs text-muted-foreground">
-				Select or drag & drop an image from your device to immediately
-				load and edit on the transformation canvas.
+				{m.transform_upload_dialog_desc()}
 			</Dialog.Description>
 		</Dialog.Header>
 
@@ -3668,7 +3667,7 @@
 				<button
 					type="button"
 					class="underline font-bold cursor-pointer"
-					onclick={() => (uploadError = null)}>Dismiss</button
+					onclick={() => (uploadError = null)}>{m.query_dismiss()}</button
 				>
 			</div>
 		{/if}
@@ -3740,10 +3739,10 @@
 					</div>
 					<div class="space-y-1">
 						<p class="text-xs font-semibold text-foreground">
-							Click to browse or drag & drop image here
+							{m.transform_upload_drop_zone()}
 						</p>
 						<p class="text-[11px] text-muted-foreground">
-							Supports PNG, JPEG, WEBP, GIF, and TIFF (up to 20MB)
+							{m.transform_upload_drop_formats()}
 						</p>
 					</div>
 				{/if}
@@ -3756,14 +3755,14 @@
 						for="upload-category"
 						class="text-xs font-medium text-foreground"
 					>
-						Assign Category (Optional)
+						{m.transform_upload_assign_cat()}
 					</label>
 					<select
 						id="upload-category"
 						bind:value={uploadCategoryId}
 						class="w-full h-8.5 rounded-md border border-input bg-card px-2.5 text-xs text-foreground shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
-						<option value="">No Category (Uncategorized)</option>
+						<option value="">{m.transform_upload_no_cat()}</option>
 						{#each categories as cat}
 							<option value={cat.id}>{cat.name}</option>
 						{/each}
@@ -3777,7 +3776,7 @@
 					<div
 						class="flex items-center justify-between text-[11px] font-mono text-muted-foreground"
 					>
-						<span>Uploading image...</span>
+						<span>{m.transform_upload_uploading()}</span>
 						<span>{uploadProgress}%</span>
 					</div>
 					<div
@@ -3808,7 +3807,7 @@
 					}
 				}}
 			>
-				Cancel
+				{m.settings_cancel()}
 			</Button>
 
 			<Button
@@ -3819,9 +3818,9 @@
 			>
 				{#if isUploadingImage}
 					<Loader2Icon class="size-3.5 animate-spin mr-1.5" />
-					<span>Uploading...</span>
+					<span>{m.transform_upload_uploading()}</span>
 				{:else}
-					<span>Load in Canvas</span>
+					<span>{m.transform_upload_load_canvas()}</span>
 				{/if}
 			</Button>
 		</Dialog.Footer>

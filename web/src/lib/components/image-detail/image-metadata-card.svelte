@@ -5,6 +5,7 @@
 	import { Button } from "#lib/components/ui/button/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import * as Select from "#lib/components/ui/select/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import CopyIcon from "@lucide/svelte/icons/copy";
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import ArrowUpRightIcon from "@lucide/svelte/icons/arrow-up-right";
@@ -80,7 +81,7 @@
 <Card.Root class="border border-border bg-card shadow-xs">
 	<Card.Header class="pb-3 pt-4 px-4 sm:px-5">
 		<Card.Title class="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
-			<span>Image Metadata & Properties</span>
+			<span>{m.image_detail_meta_title()}</span>
 		</Card.Title>
 	</Card.Header>
 
@@ -88,37 +89,37 @@
 		<!-- Metadata Key-Value List -->
 		<dl class="divide-y divide-border/60 text-xs">
 			<div class="flex items-center justify-between py-2.5">
-				<dt class="text-muted-foreground">Filename</dt>
+				<dt class="text-muted-foreground">{m.image_detail_meta_filename()}</dt>
 				<dd class="font-medium text-foreground max-w-[240px] truncate text-right font-mono" title={image.filename}>
 					{image.filename}
 				</dd>
 			</div>
 
 			<div class="flex items-center justify-between py-2.5">
-				<dt class="text-muted-foreground">Resolution</dt>
+				<dt class="text-muted-foreground">{m.image_detail_meta_dimensions()}</dt>
 				<dd class="font-mono text-foreground">
 					{image.width && image.height ? `${image.width} × ${image.height} px` : "—"}
 				</dd>
 			</div>
 
 			<div class="flex items-center justify-between py-2.5">
-				<dt class="text-muted-foreground">MIME Type</dt>
+				<dt class="text-muted-foreground">{m.image_detail_meta_format()}</dt>
 				<dd class="font-mono text-foreground">{image.mime_type || "—"}</dd>
 			</div>
 
 			<div class="flex items-center justify-between py-2.5">
-				<dt class="text-muted-foreground">File Size</dt>
+				<dt class="text-muted-foreground">{m.image_detail_meta_filesize()}</dt>
 				<dd class="font-mono text-foreground">{formatBytes(image.file_size)}</dd>
 			</div>
 
 			<div class="flex items-center justify-between py-2.5">
-				<dt class="text-muted-foreground">Date Added</dt>
+				<dt class="text-muted-foreground">{m.image_detail_meta_uploaded_at()}</dt>
 				<dd class="text-foreground">{formatDate(image.created_at)}</dd>
 			</div>
 
 			<!-- Category Selector -->
 			<div class="flex items-center justify-between py-2.5 gap-2">
-				<dt class="text-muted-foreground">Category</dt>
+				<dt class="text-muted-foreground">{m.image_detail_meta_category()}</dt>
 				<dd class="flex items-center gap-1.5">
 					{#if isUpdatingCategory}
 						<Loader2Icon class="size-3.5 animate-spin text-muted-foreground" />
@@ -134,7 +135,7 @@
 						</Select.Trigger>
 						<Select.Content align="end">
 							<Select.Item value="none">
-								<span class="text-muted-foreground italic">None (Uncategorized)</span>
+								<span class="text-muted-foreground italic">{m.categories_uncategorized_label()}</span>
 							</Select.Item>
 							{#each categories as cat (cat.id)}
 								<Select.Item value={cat.id}>

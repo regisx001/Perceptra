@@ -3,8 +3,20 @@
 	import type { LayoutProps } from "./$types";
 	import ProgressBar from "#lib/components/progress-bar.svelte";
 	import { ModeWatcher } from "mode-watcher";
+	import { onNavigate } from "$app/navigation";
 
 	let { children }: LayoutProps = $props();
+
+	onNavigate((navigation) => {
+		if (!document.startViewTransition) return;
+
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 </script>
 
 <svelte:head>

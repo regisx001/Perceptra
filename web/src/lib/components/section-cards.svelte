@@ -12,6 +12,7 @@
 	import { Skeleton } from "#lib/components/ui/skeleton/index.js";
 	import { analyticsClient, type AnalyticsOverview } from "#lib/analytics.js";
 	import { cn } from "#lib/utils.js";
+	import * as m from "#lib/paraglide/messages.js";
 
 	interface Props {
 		class?: string;
@@ -42,7 +43,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<SearchIcon class="size-4 text-primary" />
-				Total Visual Searches
+				{m.analytics_kpi_total_searches()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				{#if isLoading}
@@ -54,15 +55,15 @@
 			<Card.Action>
 				<Badge variant="outline" class="gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/20">
 					<TrendingUpIcon class="size-3" />
-					Recorded
+					{m.analytics_kpi_searches_recorded()}
 				</Badge>
 			</Card.Action>
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				Persisted Query Sessions
+				{m.analytics_kpi_searches_footer_title()}
 			</div>
-			<div class="text-muted-foreground">Historical visual search activities across scopes</div>
+			<div class="text-muted-foreground">{m.analytics_kpi_searches_footer_desc()}</div>
 		</Card.Footer>
 	</Card.Root>
 
@@ -71,7 +72,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<ThumbUpIcon class="size-4 text-primary" />
-				Relevance Feedback Sessions
+				{m.analytics_kpi_feedback_sessions()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				{#if isLoading}
@@ -88,10 +89,10 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				{overview?.total_feedback_judgments ?? 0} total judgments
+				{m.analytics_kpi_feedback_judgments({ total: overview?.total_feedback_judgments ?? 0 })}
 			</div>
 			<div class="text-muted-foreground">
-				{overview?.relevant_judgments ?? 0} relevant · {overview?.irrelevant_judgments ?? 0} irrelevant
+				{m.analytics_kpi_feedback_relevant({ relevant: overview?.relevant_judgments ?? 0, irrelevant: overview?.irrelevant_judgments ?? 0 })}
 			</div>
 		</Card.Footer>
 	</Card.Root>
@@ -101,7 +102,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<TargetIcon class="size-4 text-primary" />
-				Avg Iterations / Search
+				{m.analytics_kpi_iterations_title()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				{#if isLoading}
@@ -118,9 +119,9 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				Refinement Depth
+				{m.analytics_kpi_iterations_footer_title()}
 			</div>
-			<div class="text-muted-foreground">Initial retrieval + multi-round FRE re-ranking</div>
+			<div class="text-muted-foreground">{m.analytics_kpi_iterations_footer_desc()}</div>
 		</Card.Footer>
 	</Card.Root>
 
@@ -129,7 +130,7 @@
 		<Card.Header>
 			<Card.Description class="flex items-center gap-1.5 font-medium">
 				<RefreshDotIcon class="size-4 text-primary" />
-				Avg Retrieval Time
+				{m.analytics_kpi_latency_title()}
 			</Card.Description>
 			<Card.Title class="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
 				{#if isLoading}
@@ -146,7 +147,7 @@
 		</Card.Header>
 		<Card.Footer class="flex-col items-start gap-1 text-xs">
 			<div class="line-clamp-1 flex gap-1.5 font-medium text-foreground">
-				Feature extraction + FRE ranking
+				{m.analytics_kpi_latency_footer_title()}
 			</div>
 			<div class="text-muted-foreground">Measured across candidate search spaces</div>
 		</Card.Footer>

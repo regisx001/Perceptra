@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>Perceptra - Retrieval Analytics &amp; History</title>
+	<title>{m.analytics_title()} • Perceptra</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col">
@@ -17,10 +17,10 @@
 		<div class="flex flex-col gap-2 px-4 pt-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
 			<div>
 				<h1 class="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-					Retrieval Analytics &amp; Search History
+					{m.analytics_title()}
 				</h1>
 				<p class="text-xs text-muted-foreground sm:text-sm">
-					Real-time visual search telemetry, Feature Relevance Estimation (FRE Group 13) tracking, and history logs
+					{m.analytics_subtitle()}
 				</p>
 			</div>
 

@@ -4,6 +4,7 @@
 	import { cubicInOut } from "svelte/easing";
 	import * as Card from "#lib/components/ui/card/index.js";
 	import * as Chart from "#lib/components/ui/chart/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import type { LbpHistogramFeature } from "#lib/images.js";
 
 	let { data }: { data?: LbpHistogramFeature } = $props();
@@ -61,10 +62,10 @@
 	<Card.Header class="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
 		<div class="flex flex-1 flex-col justify-center gap-1 px-4 py-3 sm:px-6 sm:py-4">
 			<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-				Local Binary Patterns ({bins.length || 256} Bins)
+				{m.image_detail_lbp_title()} ({bins.length || 256} Bins)
 			</Card.Title>
 			<Card.Description class="text-xs text-muted-foreground">
-				Texture micro-pattern distribution across {bins.length || 256} binary combinations (P=8, R=1)
+				{m.image_detail_lbp_desc()}
 			</Card.Description>
 		</div>
 

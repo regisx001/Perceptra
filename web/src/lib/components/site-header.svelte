@@ -3,10 +3,13 @@
 	import { Separator } from "#lib/components/ui/separator/index.js";
 	import { useHeaderPortal } from "#lib/header-portal.svelte.js";
 	import ThemeToggle from "#lib/components/theme-toggle.svelte";
+	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import { useLocale } from "#lib/i18n.svelte.js";
 	import * as m from "#lib/paraglide/messages.js";
 	import { page } from "$app/state";
 
 	const portal = useHeaderPortal();
+	const locale = useLocale();
 
 	interface BreadcrumbItem {
 		label: string;
@@ -56,6 +59,22 @@
 		if (pathname.startsWith("/dashboard/categories")) {
 			items.push({
 				label: m.nav_categories ? m.nav_categories() : "Categories",
+				isCurrent: true
+			});
+			return items;
+		}
+
+		if (pathname.startsWith("/dashboard/query")) {
+			items.push({
+				label: m.nav_visual_query ? m.nav_visual_query() : "Visual Query",
+				isCurrent: true
+			});
+			return items;
+		}
+
+		if (pathname.startsWith("/dashboard/favorites")) {
+			items.push({
+				label: m.nav_favorites ? m.nav_favorites() : "Favorites",
 				isCurrent: true
 			});
 			return items;
@@ -139,5 +158,15 @@
 			{@render portal.content()}
 		{/if}
 		<ThemeToggle />
+		<button
+			type="button"
+			onclick={() => locale.toggle()}
+			class="inline-flex h-8 items-center gap-1.5 px-2 text-xs font-semibold border border-input rounded-md shadow-2xs hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+			title={m.nav_toggle_language()}
+			aria-label={m.nav_toggle_language()}
+		>
+			<GlobeIcon class="size-3.5" />
+			<span class="font-mono text-[11px]">{locale.current.toUpperCase()}</span>
+		</button>
 	</div>
 </header>

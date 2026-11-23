@@ -7,6 +7,7 @@
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { analyticsClient, type AnalyticsActivity } from "#lib/analytics.js";
 	import { cn } from "#lib/utils.js";
+	import * as m from "#lib/paraglide/messages.js";
 
 	interface Props {
 		class?: string;
@@ -46,18 +47,18 @@
 		}));
 	});
 
-	const chartConfig = {
-		searches: { label: "Visual Searches", color: "var(--primary)" },
-		iterations: { label: "Refinement Iterations (FRE)", color: "hsl(var(--muted-foreground))" },
-	} satisfies Chart.ChartConfig;
+	const chartConfig = $derived({
+		searches: { label: m.analytics_chart_traffic_searches(), color: "var(--primary)" },
+		iterations: { label: m.analytics_chart_traffic_iterations(), color: "hsl(var(--muted-foreground))" },
+	} satisfies Chart.ChartConfig);
 </script>
 
 <Card.Root class={cn("@container/card flex flex-col justify-between", className)}>
 	<Card.Header class="flex flex-col items-start gap-4 @[767px]/card:flex-row @[767px]/card:items-center">
 		<div>
-			<Card.Title>Visual Search &amp; Refinement Volume</Card.Title>
+			<Card.Title>{m.analytics_chart_traffic_title()}</Card.Title>
 			<Card.Description>
-				Real-time search frequency and Feature Relevance Estimation iterations over time
+				{m.analytics_chart_traffic_desc()}
 			</Card.Description>
 		</div>
 		<Card.Action>
@@ -82,12 +83,12 @@
 				series={[
 					{
 						key: "searches",
-						label: "Initial Searches",
+						label: m.analytics_chart_traffic_searches(),
 						color: chartConfig.searches.color,
 					},
 					{
 						key: "iterations",
-						label: "Total Iterations (FRE)",
+						label: m.analytics_chart_traffic_iterations(),
 						color: chartConfig.iterations.color,
 					},
 				]}

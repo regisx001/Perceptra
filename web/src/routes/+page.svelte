@@ -371,7 +371,7 @@
 						size="sm"
 						class="h-8 px-3.5 text-xs font-semibold shadow-xs rounded-md"
 					>
-						Get Started
+						{m.auth_signup_button()}
 					</Button>
 				{/if}
 			</div>
@@ -389,18 +389,17 @@
 			<!-- Announcement Pill -->
 			<div class="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-1 text-xs font-semibold text-foreground shadow-2xs mb-6">
 				<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-				<span class="text-muted-foreground font-normal">Production Interface</span>
-				<span class="font-mono text-primary font-bold">7 Integrated Modules</span>
+				<span class="text-muted-foreground font-normal">{m.landing_hero_badge_prod()}</span>
 			</div>
 
 			<!-- Big Headline -->
 			<h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground text-balance leading-[1.08] max-w-4xl">
-				Visual discovery engineered for real-world precision
+				{m.landing_hero_headline()}
 			</h1>
 
 			<!-- Subtitle -->
 			<p class="mt-5 text-base sm:text-xl text-muted-foreground max-w-3xl text-balance leading-relaxed">
-				Explore 10,000 GHIM reference images with multi-descriptor fusion, Rocchio relevance feedback, Google Photos justified browsing, and live sequential latency telemetry.
+				{m.landing_hero_lead()}
 			</p>
 
 			<!-- Action Row -->
@@ -410,7 +409,7 @@
 					size="lg"
 					class="h-11 px-6 text-sm font-semibold shadow-sm gap-2"
 				>
-					<span>Launch Dashboard</span>
+					<span>{m.landing_cta_dashboard()}</span>
 					<ArrowRightIcon class="size-4" />
 				</Button>
 				<Button
@@ -420,7 +419,7 @@
 					class="h-11 px-6 text-sm font-semibold shadow-2xs gap-2"
 				>
 					<TargetIcon class="size-4 text-primary" />
-					<span>Try Visual Query</span>
+					<span>{m.landing_btn_try_query()}</span>
 				</Button>
 				<Button
 					href="/dashboard/images"
@@ -429,7 +428,7 @@
 					class="h-11 px-5 text-sm font-semibold text-muted-foreground hover:text-foreground gap-2"
 				>
 					<PhotoIcon class="size-4" />
-					<span>Explore 58+ Images</span>
+					<span>{m.landing_btn_explore_images()}</span>
 				</Button>
 			</div>
 
@@ -461,7 +460,7 @@
 							{:else}
 								<FolderIcon class="size-3.5" />
 							{/if}
-							<span>{screen.title.split('&')[0].trim()}</span>
+							<span>{screen.id === 'query' ? m.landing_showcase_query() : screen.id === 'images' ? m.landing_showcase_library() : screen.id === 'overview' ? m.landing_showcase_analytics() : screen.id === 'transform' ? m.landing_showcase_transform() : screen.id === 'upload' ? m.landing_showcase_upload() : screen.id === 'categories' ? m.landing_showcase_categories() : screen.title.split('&')[0].trim()}</span>
 						</button>
 					{/each}
 				</div>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Card from "#lib/components/ui/card/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 	import type { GlcmFeature, GlcmMetricSet } from "#lib/images.js";
 
 	let { data }: { data?: GlcmFeature } = $props();
@@ -46,10 +47,10 @@
 		<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
 			<div>
 				<Card.Title class="text-sm font-semibold tracking-tight text-foreground">
-					GLCM Texture Analysis
+					{m.image_detail_glcm_title()}
 				</Card.Title>
 				<Card.Description class="text-xs text-muted-foreground">
-					Gray-Level Co-occurrence Matrix (32 levels, distance $d=1$)
+					{m.image_detail_glcm_desc()}
 				</Card.Description>
 			</div>
 

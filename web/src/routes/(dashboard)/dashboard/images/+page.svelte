@@ -392,10 +392,10 @@
 				showFavoritesOnly = !showFavoritesOnly;
 				fetchImages(true);
 			}}
-			title="Filter by favorites"
+			title={m.nav_favorites()}
 		>
 			<HeartIcon class="size-3.5 {showFavoritesOnly ? 'fill-current' : ''}" />
-			<span class="hidden sm:inline">Favorites</span>
+			<span class="hidden sm:inline">{m.nav_favorites()}</span>
 		</Button>
 
 		<!-- Refresh Button -->
@@ -440,17 +440,17 @@
 
 			<!-- Photo Row Height / Density Selector -->
 			<div class="flex items-center gap-2 pt-2 sm:pt-0">
-				<label for="gallery-size-select" class="text-xs text-muted-foreground font-medium shrink-0">Size:</label>
+				<label for="gallery-size-select" class="text-xs text-muted-foreground font-medium shrink-0">{m.favorites_size_label()}</label>
 				<select
 					id="gallery-size-select"
 					value={targetRowHeight}
 					onchange={(e) => setRowHeight(Number(e.currentTarget.value))}
 					class="h-8 rounded-md border border-input bg-background/80 px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-					aria-label="Photo size"
+					aria-label={m.favorites_size_label()}
 				>
-					<option value={160}>Compact (160px)</option>
-					<option value={210}>Normal (210px)</option>
-					<option value={270}>Large (270px)</option>
+					<option value={160}>{m.favorites_size_compact()}</option>
+					<option value={210}>{m.favorites_size_normal()}</option>
+					<option value={270}>{m.favorites_size_large()}</option>
 				</select>
 			</div>
 		</div>
@@ -536,6 +536,7 @@
 							src={img.url}
 							alt={img.filename}
 							class="size-full object-cover transition-transform"
+							style="view-transition-name: image-{img.id};"
 							loading="lazy"
 							onerror={(e) => {
 								const target = e.currentTarget as HTMLImageElement;
@@ -582,7 +583,7 @@
 											}}
 										>
 											<SearchIcon class="size-3.5 text-muted-foreground" />
-											<span>Search Similar</span>
+											<span>{m.query_btn_search()}</span>
 										</DropdownMenu.Item>
 										<DropdownMenu.Item
 											class="gap-2.5 text-xs cursor-pointer"
@@ -593,7 +594,7 @@
 											}}
 										>
 											<PencilIcon class="size-3.5 text-muted-foreground" />
-											<span>Edit in Studio</span>
+											<span>{m.favorites_edit_studio()}</span>
 										</DropdownMenu.Item>
 										<DropdownMenu.Item
 											class="gap-2.5 text-xs cursor-pointer"
@@ -608,7 +609,7 @@
 													? 'fill-current text-rose-500'
 													: 'text-muted-foreground'}"
 											/>
-											<span>{img.isFavorite ? "Remove from Favorites" : "Add to Favorites"}</span>
+											<span>{img.isFavorite ? m.favorites_remove() : m.favorites_add()}</span>
 										</DropdownMenu.Item>
 										<DropdownMenu.Separator />
 										<DropdownMenu.Item
@@ -621,7 +622,7 @@
 											}}
 										>
 											<Trash2Icon class="size-3.5" />
-											<span>Delete Image</span>
+											<span>{m.favorites_delete_btn()}</span>
 										</DropdownMenu.Item>
 									</DropdownMenu.Content>
 								</DropdownMenu.Root>
@@ -672,14 +673,14 @@
 <AlertDialog.Root bind:open={isDeleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete Image?</AlertDialog.Title>
+			<AlertDialog.Title>{m.favorites_delete_modal_title()}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to permanently delete "{imageToDelete?.filename}"? This action removes the file and its associated index descriptors.
+				{m.favorites_delete_modal_desc({ filename: imageToDelete?.filename || "" })}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel onclick={() => { isDeleteDialogOpen = false; imageToDelete = null; }}>
-				Cancel
+				{m.categories_dialog_cancel()}
 			</AlertDialog.Cancel>
 			<AlertDialog.Action
 				variant="destructive"
@@ -689,7 +690,7 @@
 				{#if isDeleting}
 					<Loader2Icon class="size-3.5 animate-spin mr-1" />
 				{/if}
-				Delete Image
+				{m.favorites_delete_btn()}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
@@ -701,10 +702,10 @@
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
 				<FolderInputIcon class="size-5 text-primary" />
-				<span>Move to Collection</span>
+				<span>{m.favorites_move_modal_title()}</span>
 			</Dialog.Title>
 			<Dialog.Description>
-				Select the destination collection for {selectedCount} {selectedCount === 1 ? 'image' : 'images'}.
+				{m.favorites_move_modal_desc({ count: selectedCount })}
 			</Dialog.Description>
 		</Dialog.Header>
 
@@ -717,14 +718,14 @@
 
 			<div class="space-y-1.5">
 				<label for="move-collection-select" class="text-xs font-semibold text-foreground">
-					Target Collection / Category
+					{m.favorites_move_target_label()}
 				</label>
 				<select
 					id="move-collection-select"
 					bind:value={targetCollectionId}
 					class="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
 				>
-					<option value="uncategorized">None (Uncategorized)</option>
+					<option value="uncategorized">{m.categories_dialog_parent_root()}</option>
 					{#each categories as cat (cat.id)}
 						<option value={cat.id}>{cat.name}</option>
 					{/each}
@@ -739,7 +740,7 @@
 				onclick={() => { isMoveDialogOpen = false; }}
 				disabled={isBatchProcessing}
 			>
-				Cancel
+				{m.categories_dialog_cancel()}
 			</Button>
 			<Button
 				variant="default"
@@ -751,7 +752,7 @@
 				{#if isBatchProcessing}
 					<Loader2Icon class="size-3.5 animate-spin" />
 				{/if}
-				<span>Move Images</span>
+				<span>{m.favorites_move_btn()}</span>
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
@@ -761,14 +762,14 @@
 <AlertDialog.Root bind:open={isBulkDeleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete {selectedCount} Images?</AlertDialog.Title>
+			<AlertDialog.Title>{m.favorites_bulk_delete_title({ count: selectedCount })}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to permanently delete {selectedCount} {selectedCount === 1 ? 'image' : 'images'}? This action cannot be undone and will remove the files and their feature descriptors.
+				{m.favorites_bulk_delete_desc({ count: selectedCount })}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel onclick={() => { isBulkDeleteDialogOpen = false; }}>
-				Cancel
+				{m.categories_dialog_cancel()}
 			</AlertDialog.Cancel>
 			<AlertDialog.Action
 				variant="destructive"
@@ -778,7 +779,7 @@
 				{#if isBatchProcessing}
 					<Loader2Icon class="size-3.5 animate-spin mr-1" />
 				{/if}
-				Delete {selectedCount} Images
+				{m.favorites_bulk_delete_btn({ count: selectedCount })}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

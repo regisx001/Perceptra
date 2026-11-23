@@ -94,7 +94,7 @@
 		<div class="px-3 pt-3 pb-1 group-data-[collapsible=icon]:px-1.5 group-data-[collapsible=icon]:py-1.5">
 			<div class="flex items-center gap-2">
 				<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 shrink-0 group-data-[collapsible=icon]:hidden">
-					Collections
+					{m.nav_collections()}
 				</span>
 				<div class="h-px w-full bg-sidebar-border/60"></div>
 			</div>
@@ -106,12 +106,12 @@
 					<Sidebar.MenuItem>
 						<Sidebar.MenuButton
 							isActive={page.url.pathname.startsWith("/dashboard/favorites")}
-							tooltipContent="Favorites"
+							tooltipContent={m.nav_favorites()}
 						>
 							{#snippet child({ props })}
 								<a href="/dashboard/favorites" {...props}>
 									<HeartIcon />
-									<span>Favorites</span>
+									<span>{m.nav_favorites()}</span>
 								</a>
 							{/snippet}
 						</Sidebar.MenuButton>

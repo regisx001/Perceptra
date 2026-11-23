@@ -3,6 +3,7 @@
 	import * as Dialog from "#lib/components/ui/dialog/index.js";
 	import { Badge } from "#lib/components/ui/badge/index.js";
 	import { Button } from "#lib/components/ui/button/index.js";
+	import * as m from "#lib/paraglide/messages.js";
 
 	let {
 		open = $bindable(false),
@@ -34,13 +35,13 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<Dialog.Title class="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
-						<span>Derived Variations & Lineage</span>
+						<span>{m.image_detail_lineage_title()}</span>
 						<Badge variant="secondary" class="font-mono text-xs">
 							{derivatives.length}
 						</Badge>
 					</Dialog.Title>
 					<Dialog.Description class="text-xs text-muted-foreground mt-0.5">
-						Track transformation history, parent origin, and generated variations for this image
+						{m.image_detail_lineage_desc()}
 					</Dialog.Description>
 				</div>
 			</div>

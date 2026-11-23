@@ -393,9 +393,9 @@
 
 			let label = "";
 			if (isToday) {
-				label = "Today";
+				label = m.favorites_date_today();
 			} else if (isYesterday) {
-				label = "Yesterday";
+				label = m.favorites_date_yesterday();
 			} else {
 				label = date.toLocaleDateString(undefined, {
 					weekday: "short",
@@ -413,7 +413,7 @@
 
 			return { key, label, formattedDate };
 		} catch {
-			return { key: "earlier", label: "Earlier", formattedDate: "" };
+			return { key: "earlier", label: m.favorites_date_earlier(), formattedDate: "" };
 		}
 	}
 
@@ -475,7 +475,7 @@
 </script>
 
 <svelte:head>
-	<title>Favorite Images - Perceptra</title>
+	<title>{m.favorites_title()} - Perceptra</title>
 </svelte:head>
 
 <HeaderActionPortal>
@@ -486,7 +486,7 @@
 				class="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
 			/>
 			<Input
-				placeholder="Search favorites..."
+				placeholder={m.favorites_search_placeholder()}
 				bind:value={searchQuery}
 				class="pl-8 text-xs bg-background/50 h-8 rounded-md"
 			/>
@@ -499,10 +499,10 @@
 				bind:value={selectedCategoryFilter}
 				onchange={() => fetchFavoriteImages(true)}
 				class="h-8 rounded-md border border-input bg-background/80 px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-				aria-label="Category filter"
+				aria-label={m.favorites_category_all()}
 			>
-				<option value="all">All Categories</option>
-				<option value="uncategorized">Uncategorized</option>
+				<option value="all">{m.favorites_category_all()}</option>
+				<option value="uncategorized">{m.favorites_category_uncategorized()}</option>
 				{#each categories as cat (cat.id)}
 					<option value={cat.id}>{cat.name}</option>
 				{/each}
@@ -515,10 +515,10 @@
 			size="sm"
 			class="h-8 gap-1.5 px-2.5 text-xs shadow-2xs font-semibold cursor-pointer"
 			onclick={() => fetchFavoriteImages(true)}
-			title="Refresh favorites"
+			title={m.favorites_refresh_tooltip()}
 		>
 			<RefreshCwIcon class="size-3.5 {isLoading ? 'animate-spin' : ''}" />
-			<span class="hidden sm:inline">Refresh</span>
+			<span class="hidden sm:inline">{m.favorites_refresh()}</span>
 		</Button>
 
 		<!-- Browse All Images Link -->
@@ -529,7 +529,7 @@
 			class="h-8 gap-1.5 px-2.5 text-xs font-semibold shadow-2xs cursor-pointer"
 		>
 			<PhotoIcon class="size-3.5" />
-			<span class="hidden sm:inline">All Images</span>
+			<span class="hidden sm:inline">{m.favorites_all_images()}</span>
 		</Button>
 	</div>
 </HeaderActionPortal>
@@ -546,14 +546,14 @@
 						class="text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2"
 					>
 						<HeartIcon class="size-5 text-rose-500 fill-rose-500/20 shrink-0" />
-						<span>Favorite Images</span>
+						<span>{m.favorites_title()}</span>
 					</h1>
 					<span class="font-mono text-xs text-muted-foreground font-medium">
-						({totalImages} {totalImages === 1 ? "image" : "images"})
+						({totalImages} {totalImages === 1 ? m.favorites_counter_singular() : m.favorites_counter_plural()})
 					</span>
 				</div>
 				<p class="text-xs text-muted-foreground sm:text-sm mt-0.5">
-					Curated collection sorted by the date favorited (most recent first).
+					{m.favorites_subtitle()}
 				</p>
 			</div>
 
@@ -562,18 +562,18 @@
 				<label
 					for="favorites-size-select"
 					class="text-xs text-muted-foreground font-medium shrink-0"
-					>Size:</label
+					>{m.favorites_size_label()}</label
 				>
 				<select
 					id="favorites-size-select"
 					value={targetRowHeight}
 					onchange={(e) => setRowHeight(Number(e.currentTarget.value))}
 					class="h-8 rounded-md border border-input bg-background/80 px-2.5 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-					aria-label="Photo size"
+					aria-label={m.favorites_size_label()}
 				>
-					<option value={160}>Compact (160px)</option>
-					<option value={210}>Normal (210px)</option>
-					<option value={270}>Large (270px)</option>
+					<option value={160}>{m.favorites_size_compact()}</option>
+					<option value={210}>{m.favorites_size_normal()}</option>
+					<option value={270}>{m.favorites_size_large()}</option>
 				</select>
 			</div>
 		</div>
@@ -607,10 +607,10 @@
 						<HeartIcon class="size-8 stroke-1 fill-rose-500/10" />
 					</div>
 					<p class="text-base font-semibold text-foreground">
-						No favorite images yet
+						{m.favorites_empty_title()}
 					</p>
 					<p class="text-xs mt-1 max-w-sm text-muted-foreground">
-						Mark images as favorites across your image library or visual query results to quickly access them here.
+						{m.favorites_empty_desc()}
 					</p>
 					<div class="flex items-center gap-2 mt-4">
 						<Button
@@ -620,7 +620,7 @@
 							class="gap-1.5 text-xs shadow-2xs cursor-pointer"
 						>
 							<PhotoIcon class="size-3.5" />
-							<span>Browse Images</span>
+							<span>{m.favorites_browse_images()}</span>
 						</Button>
 						<Button
 							href="/dashboard/query"
@@ -629,7 +629,7 @@
 							class="gap-1.5 text-xs shadow-2xs cursor-pointer"
 						>
 							<PlusIcon class="size-3.5" />
-							<span>Visual Query</span>
+							<span>{m.favorites_visual_query()}</span>
 						</Button>
 					</div>
 				</div>
@@ -695,6 +695,7 @@
 											src={img.url}
 											alt={img.filename}
 											class="size-full object-cover transition-transform"
+											style="view-transition-name: image-{img.id};"
 											loading="lazy"
 											onerror={(e) => {
 												const target = e.currentTarget as HTMLImageElement;
@@ -743,7 +744,7 @@
 															}}
 														>
 															<SearchIcon class="size-3.5 text-muted-foreground" />
-															<span>Search Similar</span>
+															<span>{m.query_btn_search()}</span>
 														</DropdownMenu.Item>
 														<DropdownMenu.Item
 															class="gap-2.5 text-xs cursor-pointer"
@@ -754,7 +755,7 @@
 															}}
 														>
 															<PencilIcon class="size-3.5 text-muted-foreground" />
-															<span>Edit in Studio</span>
+															<span>{m.favorites_edit_studio()}</span>
 														</DropdownMenu.Item>
 														<DropdownMenu.Item
 															class="gap-2.5 text-xs cursor-pointer"
@@ -767,7 +768,7 @@
 															<HeartIcon
 																class="size-3.5 fill-current text-rose-500"
 															/>
-															<span>Remove from Favorites</span>
+															<span>{m.favorites_remove()}</span>
 														</DropdownMenu.Item>
 														<DropdownMenu.Separator />
 														<DropdownMenu.Item
@@ -780,7 +781,7 @@
 															}}
 														>
 															<Trash2Icon class="size-3.5" />
-															<span>Delete Image</span>
+															<span>{m.favorites_delete_btn()}</span>
 														</DropdownMenu.Item>
 													</DropdownMenu.Content>
 												</DropdownMenu.Root>
@@ -810,21 +811,21 @@
 						>
 							{#if isLoadingMore}
 								<Loader2Icon class="size-3.5 animate-spin" />
-								<span>Loading more...</span>
+								<span>{m.favorites_loading_more()}</span>
 							{:else}
 								<PlusIcon class="size-3.5" />
-								<span>Load more favorites</span>
+								<span>{m.favorites_load_more()}</span>
 							{/if}
 						</Button>
 						<span class="text-[11px] text-muted-foreground font-mono">
-							{filteredImages.length} / {totalImages} favorites
+							{m.favorites_counter({ loaded: filteredImages.length, total: totalImages })}
 						</span>
 					</div>
 				{:else if filteredImages.length > PAGE_SIZE}
 					<div
 						class="pt-8 pb-2 text-center text-[11px] text-muted-foreground font-mono"
 					>
-						All {totalImages} favorite images loaded
+						{m.favorites_all_loaded({ total: totalImages })}
 					</div>
 				{/if}
 			{/if}
@@ -836,9 +837,9 @@
 <AlertDialog.Root bind:open={isDeleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete Image?</AlertDialog.Title>
+			<AlertDialog.Title>{m.favorites_delete_modal_title()}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to permanently delete "{imageToDelete?.filename}"? This action removes the file and its associated index descriptors.
+				{m.favorites_delete_modal_desc({ filename: imageToDelete?.filename || "" })}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
@@ -858,7 +859,7 @@
 				{#if isDeleting}
 					<Loader2Icon class="size-3.5 animate-spin mr-1" />
 				{/if}
-				Delete Image
+				{m.favorites_delete_btn()}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
@@ -870,10 +871,10 @@
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
 				<FolderInputIcon class="size-5 text-primary" />
-				<span>Move to Collection</span>
+				<span>{m.favorites_move_modal_title()}</span>
 			</Dialog.Title>
 			<Dialog.Description>
-				Select the destination collection for {selectedCount} {selectedCount === 1 ? 'favorite' : 'favorites'}.
+				{m.favorites_move_modal_desc({ count: selectedCount })}
 			</Dialog.Description>
 		</Dialog.Header>
 
@@ -886,14 +887,14 @@
 
 			<div class="space-y-1.5">
 				<label for="favorites-move-collection-select" class="text-xs font-semibold text-foreground">
-					Target Collection / Category
+					{m.favorites_move_target_label()}
 				</label>
 				<select
 					id="favorites-move-collection-select"
 					bind:value={targetCollectionId}
 					class="w-full h-9 rounded-md border border-input bg-background px-3 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
 				>
-					<option value="uncategorized">None (Uncategorized)</option>
+					<option value="uncategorized">{m.categories_dialog_parent_root()}</option>
 					{#each categories as cat (cat.id)}
 						<option value={cat.id}>{cat.name}</option>
 					{/each}
@@ -908,7 +909,7 @@
 				onclick={() => { isMoveDialogOpen = false; }}
 				disabled={isBatchProcessing}
 			>
-				Cancel
+				{m.categories_dialog_cancel()}
 			</Button>
 			<Button
 				variant="default"
@@ -920,7 +921,7 @@
 				{#if isBatchProcessing}
 					<Loader2Icon class="size-3.5 animate-spin" />
 				{/if}
-				<span>Move Favorites</span>
+				<span>{m.favorites_move_btn()}</span>
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
@@ -930,14 +931,14 @@
 <AlertDialog.Root bind:open={isBulkDeleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete {selectedCount} Favorites?</AlertDialog.Title>
+			<AlertDialog.Title>{m.favorites_bulk_delete_title({ count: selectedCount })}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to permanently delete {selectedCount} {selectedCount === 1 ? 'image' : 'images'}? This action cannot be undone and will remove the files and their feature descriptors.
+				{m.favorites_bulk_delete_desc({ count: selectedCount })}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel onclick={() => { isBulkDeleteDialogOpen = false; }}>
-				Cancel
+				{m.categories_dialog_cancel()}
 			</AlertDialog.Cancel>
 			<AlertDialog.Action
 				variant="destructive"
@@ -947,7 +948,7 @@
 				{#if isBatchProcessing}
 					<Loader2Icon class="size-3.5 animate-spin mr-1" />
 				{/if}
-				Delete {selectedCount} Images
+				{m.favorites_bulk_delete_btn({ count: selectedCount })}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

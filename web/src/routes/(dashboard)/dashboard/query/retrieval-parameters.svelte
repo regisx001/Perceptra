@@ -7,6 +7,7 @@
 	import { Checkbox } from "#lib/components/ui/checkbox/index.js";
 	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+	import * as m from "#lib/paraglide/messages.js";
 	import type { CategoryItem } from "#lib/categories.js";
 
 	interface Props {
@@ -64,43 +65,43 @@
 		color: string;
 	}
 
-	const FEATURES: FeatureMeta[] = [
+	const FEATURES = $derived<FeatureMeta[]>([
 		{
 			id: "color_histogram",
-			name: "Color Histogram (HSV)",
+			name: m.query_settings_feat_color_hist(),
 			shortName: "HSV",
 			group: "color",
 			color: "#2563EB",
 		},
 		{
 			id: "color_moments",
-			name: "Color Moments",
+			name: m.query_settings_feat_color_moments(),
 			shortName: "Moments",
 			group: "color",
 			color: "#0D9488",
 		},
 		{
 			id: "dominant_colors",
-			name: "Dominant Colors",
+			name: m.query_settings_feat_dominant_colors(),
 			shortName: "Dominant",
 			group: "color",
 			color: "#D97706",
 		},
 		{
 			id: "glcm",
-			name: "GLCM Texture",
+			name: m.query_settings_feat_glcm(),
 			shortName: "GLCM",
 			group: "texture",
 			color: "#16A34A",
 		},
 		{
 			id: "lbp_histogram",
-			name: "LBP Texture",
+			name: m.query_settings_feat_lbp(),
 			shortName: "LBP",
 			group: "texture",
 			color: "#7C3AED",
 		},
-	];
+	]);
 
 	const PRESET_CONFIGS: Record<
 		"balanced" | "color" | "texture",
@@ -129,33 +130,33 @@
 		},
 	};
 
-	const PRESET_LABELS: Record<string, string> = {
-		balanced: "Balanced",
-		color: "Color Focus",
-		texture: "Texture Focus",
-		custom: "Custom",
-	};
+	const PRESET_LABELS = $derived<Record<string, string>>({
+		balanced: m.query_settings_preset_balanced(),
+		color: m.query_settings_preset_color(),
+		texture: m.query_settings_preset_texture(),
+		custom: m.query_settings_preset_custom(),
+	});
 
-	const METRIC_LABELS: Record<string, string> = {
-		cosine: "Cosine Similarity",
-		euclidean: "Euclidean (L2)",
-		manhattan: "Manhattan (L1)",
-		chisquare: "Chi-Square",
-	};
+	const METRIC_LABELS = $derived<Record<string, string>>({
+		cosine: m.query_settings_metric_cosine(),
+		euclidean: m.query_settings_metric_euclidean(),
+		manhattan: m.query_settings_metric_manhattan(),
+		chisquare: m.query_settings_metric_chisquare(),
+	});
 
-	const NORM_LABELS: Record<string, string> = {
-		none: "Raw Vectors",
-		l2: "L2 Normalized",
-		minmax: "Min-Max [0, 1]",
-		zscore: "Z-Score",
-		standard: "Z-Score",
-	};
+	const NORM_LABELS = $derived<Record<string, string>>({
+		none: m.query_settings_norm_none(),
+		l2: m.query_settings_norm_l2(),
+		minmax: m.query_settings_norm_minmax(),
+		zscore: m.query_settings_norm_zscore(),
+		standard: m.query_settings_norm_zscore(),
+	});
 
-	const SCOPE_LABELS: Record<string, string> = {
-		both: "Dataset + Uploads",
-		ghim10k: "GHIM-10K Only",
-		my_images: "Uploads Only",
-	};
+	const SCOPE_LABELS = $derived<Record<string, string>>({
+		both: m.query_settings_scope_both(),
+		ghim10k: m.query_settings_scope_ghim(),
+		my_images: m.query_settings_scope_user(),
+	});
 
 	// Baseline snapshot for detecting modifications
 	function captureSnapshot() {
@@ -179,9 +180,9 @@
 	const userCategories = $derived(categories.filter((c) => !!c.user_id));
 
 	const selectedCategoryLabel = $derived.by(() => {
-		if (selectedCategory === "all") return "All Categories";
+		if (selectedCategory === "all") return m.query_settings_category_all();
 		const found = categories.find((c) => c.id === selectedCategory);
-		return found ? found.name : "Custom";
+		return found ? found.name : m.query_settings_preset_custom();
 	});
 
 	// Calculation & Distribution Pipeline
@@ -338,16 +339,8 @@
 			<span
 				class="text-xs font-semibold uppercase tracking-wider text-foreground"
 			>
-				Retrieval Parameters
+				{m.query_settings_title()}
 			</span>
-
-			<!-- Modified Text Indicator
-			{#if isModified}
-				<span class="inline-flex items-center gap-1 text-2xs font-mono font-medium text-primary animate-in fade-in duration-150">
-					<span class="size-1.5 rounded-full bg-primary"></span>
-					Modified
-				</span>
-			{/if} -->
 
 			<!-- Summary Chips (Visible when collapsed) -->
 			{#if !isSettingsOpen}
@@ -356,7 +349,7 @@
 				>
 					<span class="text-muted-foreground/40">&bull;</span>
 					<span class="font-medium text-foreground">
-						{PRESET_LABELS[selectedPreset] || "Custom"}
+						{PRESET_LABELS[selectedPreset] || m.query_settings_preset_custom()}
 					</span>
 					<span class="text-muted-foreground/40">&bull;</span>
 					<span class="font-mono text-2xs">
@@ -384,7 +377,7 @@
 				isSettingsOpen = !isSettingsOpen;
 			}}
 		>
-			<span>{isSettingsOpen ? "Collapse" : "Expand"}</span>
+			<span>{isSettingsOpen ? m.query_settings_collapse() : m.query_settings_expand()}</span>
 			<ChevronDownIcon
 				class="size-3 transition-transform duration-200 {isSettingsOpen
 					? 'rotate-180'
@@ -408,10 +401,10 @@
 						id="preset-heading"
 						class="text-xs font-semibold text-foreground"
 					>
-						Retrieval Preset
+						{m.query_settings_preset_title()}
 					</h3>
 					<span class="text-2xs text-muted-foreground">
-						Select calibrated weights or customize descriptors below
+						{m.query_settings_preset_desc()}
 					</span>
 				</div>
 
@@ -433,7 +426,7 @@
 					>
 						<div class="flex items-center justify-between w-full">
 							<span class="text-xs font-bold text-foreground"
-								>Balanced</span
+								>{m.query_settings_preset_balanced()}</span
 							>
 							<span
 								class="size-4 rounded-full border flex items-center justify-center transition-colors {selectedPreset ===
@@ -449,7 +442,7 @@
 							</span>
 						</div>
 						<p class="text-2xs text-muted-foreground line-clamp-1">
-							Equal color &amp; texture
+							{m.query_settings_preset_balanced_desc()}
 						</p>
 					</button>
 
@@ -466,7 +459,7 @@
 					>
 						<div class="flex items-center justify-between w-full">
 							<span class="text-xs font-bold text-foreground"
-								>Color Focus</span
+								>{m.query_settings_preset_color()}</span
 							>
 							<span
 								class="size-4 rounded-full border flex items-center justify-center transition-colors {selectedPreset ===
@@ -482,7 +475,7 @@
 							</span>
 						</div>
 						<p class="text-2xs text-muted-foreground line-clamp-1">
-							Prioritize HSV &amp; palette
+							{m.query_settings_preset_color_desc()}
 						</p>
 					</button>
 
@@ -499,7 +492,7 @@
 					>
 						<div class="flex items-center justify-between w-full">
 							<span class="text-xs font-bold text-foreground"
-								>Texture Focus</span
+								>{m.query_settings_preset_texture()}</span
 							>
 							<span
 								class="size-4 rounded-full border flex items-center justify-center transition-colors {selectedPreset ===
@@ -515,7 +508,7 @@
 							</span>
 						</div>
 						<p class="text-2xs text-muted-foreground line-clamp-1">
-							Prioritize GLCM &amp; LBP
+							{m.query_settings_preset_texture_desc()}
 						</p>
 					</button>
 
@@ -532,7 +525,7 @@
 					>
 						<div class="flex items-center justify-between w-full">
 							<span class="text-xs font-bold text-foreground"
-								>Custom</span
+								>{m.query_settings_preset_custom()}</span
 							>
 							<span
 								class="size-4 rounded-full border flex items-center justify-center transition-colors {selectedPreset ===
@@ -548,7 +541,7 @@
 							</span>
 						</div>
 						<p class="text-2xs text-muted-foreground line-clamp-1">
-							Manual feature sliders
+							{m.query_settings_preset_custom_desc()}
 						</p>
 					</button>
 				</div>
@@ -562,7 +555,7 @@
 				<!-- Candidate Scope -->
 				<div class="flex flex-col gap-1.5">
 					<h3 class="text-xs font-semibold text-foreground">
-						Candidate Scope
+						{m.query_settings_scope_title()}
 					</h3>
 					<Select.Root
 						type="single"
@@ -575,23 +568,21 @@
 							class="w-full h-8.5 text-xs font-medium border-border/80 bg-background px-2.5"
 						>
 							<span class="truncate">
-								{#if searchScope === "both"}Both (GHIM-10K + My
-									Uploads)
-								{:else if searchScope === "ghim10k"}GHIM-10K
-									Reference Dataset Only
-								{:else}My Uploaded Images Only
+								{#if searchScope === "both"}{m.query_settings_scope_both()}
+								{:else if searchScope === "ghim10k"}{m.query_settings_scope_ghim()}
+								{:else}{m.query_settings_scope_user()}
 								{/if}
 							</span>
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Item value="both"
-								>Both (GHIM-10K + My Uploads)</Select.Item
+								>{m.query_settings_scope_both()}</Select.Item
 							>
 							<Select.Item value="ghim10k"
-								>GHIM-10K Reference Dataset Only</Select.Item
+								>{m.query_settings_scope_ghim()}</Select.Item
 							>
 							<Select.Item value="my_images"
-								>My Uploaded Images Only</Select.Item
+								>{m.query_settings_scope_user()}</Select.Item
 							>
 						</Select.Content>
 					</Select.Root>
@@ -600,7 +591,7 @@
 				<!-- Category Filter -->
 				<div class="flex flex-col gap-1.5">
 					<h3 class="text-xs font-semibold text-foreground">
-						Category Filter
+						{m.query_settings_category_title()}
 					</h3>
 					<Select.Root
 						type="single"
@@ -614,13 +605,13 @@
 						>
 							<span class="truncate">
 								{selectedCategory === "all"
-									? "All Categories (Unrestricted)"
+									? m.query_settings_category_all()
 									: selectedCategoryLabel}
 							</span>
 						</Select.Trigger>
 						<Select.Content class="max-h-60">
 							<Select.Item value="all"
-								>All Categories (Unrestricted)</Select.Item
+								>{m.query_settings_category_all()}</Select.Item
 							>
 							{#if datasetCategories.length > 0}
 								<Select.Separator />
@@ -628,7 +619,7 @@
 									<Select.GroupHeading
 										class="text-2xs font-bold uppercase tracking-wider text-muted-foreground/80 px-2 py-1"
 									>
-										GHIM-10K Classes
+										{m.query_settings_category_ghim_group()}
 									</Select.GroupHeading>
 									{#each datasetCategories as cat (cat.id)}
 										<Select.Item value={cat.id}
@@ -643,7 +634,7 @@
 									<Select.GroupHeading
 										class="text-2xs font-bold uppercase tracking-wider text-muted-foreground/80 px-2 py-1"
 									>
-										My Categories
+										{m.query_settings_category_user_group()}
 									</Select.GroupHeading>
 									{#each userCategories as cat (cat.id)}
 										<Select.Item value={cat.id}
@@ -660,10 +651,10 @@
 				<div class="flex flex-col gap-1.5">
 					<div class="flex items-center justify-between text-2xs">
 						<h3 class="text-xs font-semibold text-foreground">
-							Results (Top-K)
+							{m.query_settings_results_title()}
 						</h3>
 						<span class="font-mono text-primary font-bold">
-							{topK} images
+							{m.query_settings_results_count({ count: topK })}
 						</span>
 					</div>
 					<div
@@ -702,14 +693,14 @@
 							id="weights-heading"
 							class="text-xs font-semibold text-foreground"
 						>
-							Feature Weights
+							{m.query_settings_weights_title()}
 						</h3>
 						<span
 							class="text-2xs font-mono {isValid
 								? 'text-muted-foreground'
 								: 'text-destructive font-semibold'}"
 						>
-							({activeCount}/{FEATURES.length} active)
+							{m.query_settings_active_count({ active: activeCount, total: FEATURES.length })}
 						</span>
 					</div>
 
@@ -720,7 +711,7 @@
 							class="h-7 px-2 text-2xs font-medium text-muted-foreground hover:text-foreground"
 							onclick={equalizeWeights}
 						>
-							Equalize
+							{m.query_settings_equalize()}
 						</Button>
 						<Button
 							variant="ghost"
@@ -730,8 +721,8 @@
 						>
 							<span
 								>{isSlidersOpen
-									? "Hide Sliders"
-									: "Show Sliders"}</span
+									? m.query_settings_hide_sliders()
+									: m.query_settings_show_sliders()}</span
 							>
 							<ChevronDownIcon
 								class="size-3 transition-transform duration-200 {isSlidersOpen
@@ -801,11 +792,9 @@
 						/>
 						<span>
 							{#if activeCount === 0}
-								Enable at least one feature descriptor to
-								execute visual query.
+								{m.query_settings_warn_no_feature()}
 							{:else}
-								Increase at least one active feature weight
-								above 0.00.
+								{m.query_settings_warn_zero_weight()}
 							{/if}
 						</span>
 					</div>
@@ -821,7 +810,7 @@
 							<div
 								class="text-2xs font-bold uppercase tracking-wider text-muted-foreground pb-1.5 border-b border-border/50"
 							>
-								Color Descriptors
+								{m.query_settings_group_color()}
 							</div>
 							<div class="flex flex-col gap-1.5">
 								{#each FEATURES.filter((f) => f.group === "color") as feat (feat.id)}
@@ -925,7 +914,7 @@
 							<div
 								class="text-2xs font-bold uppercase tracking-wider text-muted-foreground pb-1.5 border-b border-border/50"
 							>
-								Texture Descriptors
+								{m.query_settings_group_texture()}
 							</div>
 							<div class="flex flex-col gap-1.5">
 								{#each FEATURES.filter((f) => f.group === "texture") as feat (feat.id)}
@@ -1043,7 +1032,7 @@
 							id="advanced-heading"
 							class="text-xs font-semibold text-foreground"
 						>
-							Advanced Vector Settings
+							{m.query_settings_advanced_toggle()}
 						</span>
 						<span
 							class="text-2xs text-muted-foreground hidden sm:inline"
@@ -1068,7 +1057,7 @@
 						<!-- Similarity Metric -->
 						<div class="flex flex-col gap-1.5">
 							<h3 class="text-xs font-semibold text-foreground">
-								Similarity Metric
+								{m.query_settings_metric_title()}
 							</h3>
 							<Select.Root
 								type="single"
@@ -1087,16 +1076,16 @@
 								</Select.Trigger>
 								<Select.Content>
 									<Select.Item value="cosine"
-										>Cosine Similarity [0, 1]</Select.Item
+										>{m.query_settings_metric_cosine()}</Select.Item
 									>
 									<Select.Item value="euclidean"
-										>Euclidean Distance (L2)</Select.Item
+										>{m.query_settings_metric_euclidean()}</Select.Item
 									>
 									<Select.Item value="manhattan"
-										>Manhattan Distance (L1)</Select.Item
+										>{m.query_settings_metric_manhattan()}</Select.Item
 									>
 									<Select.Item value="chisquare"
-										>Chi-Square Distance</Select.Item
+										>{m.query_settings_metric_chisquare()}</Select.Item
 									>
 								</Select.Content>
 							</Select.Root>
@@ -1105,7 +1094,7 @@
 						<!-- Vector Normalization -->
 						<div class="flex flex-col gap-1.5">
 							<h3 class="text-xs font-semibold text-foreground">
-								Vector Normalization
+								{m.query_settings_norm_title()}
 							</h3>
 							<Select.Root
 								type="single"
@@ -1124,16 +1113,16 @@
 								</Select.Trigger>
 								<Select.Content>
 									<Select.Item value="none"
-										>None (Raw Vectors)</Select.Item
+										>{m.query_settings_norm_none()}</Select.Item
 									>
 									<Select.Item value="l2"
-										>L2 Unit Normalization</Select.Item
+										>{m.query_settings_norm_l2()}</Select.Item
 									>
 									<Select.Item value="minmax"
-										>Min-Max Scaling [0, 1]</Select.Item
+										>{m.query_settings_norm_minmax()}</Select.Item
 									>
 									<Select.Item value="zscore"
-										>Z-Score Standardization</Select.Item
+										>{m.query_settings_norm_zscore()}</Select.Item
 									>
 								</Select.Content>
 							</Select.Root>
@@ -1156,7 +1145,7 @@
 					class="text-xs text-muted-foreground hover:text-foreground h-8 px-2"
 					onclick={resetDefaults}
 				>
-					Reset Defaults
+					{m.query_settings_reset_defaults()}
 				</Button>
 
 				<div
@@ -1182,9 +1171,9 @@
 			>
 				{#if isSearching}
 					<Spinner class="size-3.5" />
-					<span>Retrieving...</span>
+					<span>{m.query_btn_searching()}</span>
 				{:else}
-					<span>Run Query</span>
+					<span>{m.query_btn_run_query()}</span>
 				{/if}
 			</Button>
 		</footer>
