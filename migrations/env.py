@@ -97,6 +97,11 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        if connection.dialect.name == "sqlite":
+            # SQLite requires disabling foreign keys on the raw DBAPI connection outside of transactions
+            raw_conn = getattr(connection.connection, "dbapi_connection", connection.connection)
+            raw_conn.execute("PRAGMA foreign_keys = OFF;")
+
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),

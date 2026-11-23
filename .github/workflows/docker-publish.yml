@@ -1,0 +1,118 @@
+name: Build and Publish Docker Image to GHCR
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Optional custom tag (e.g., v1.0.0, prod, staging)'
+        required: false
+        default: 'latest'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build, Test & Push Container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase image name for GHCR
+        id: image-name
+        run: |
+          echo "image=${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract Docker metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}
+          flavor: |
+            latest=false
+          tags: |
+            type=raw,value=${{ inputs.tag || 'latest' }}
+            type=raw,value=latest
+            type=sha,format=short
+            type=ref,event=branch
+
+      - name: Build Docker image for testing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: perceptra:ci-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test container with Nginx & Backend
+        run: |
+          echo "==> Starting container in test mode..."
+          docker run -d \
+            --name perceptra-test-runner \
+            -p 8080:80 \
+            -e FLASK_ENV=production \
+            -e SECRET_KEY="ci-test-secret-key-at-least-32-bytes-long" \
+            -e JWT_SECRET_KEY="ci-test-jwt-secret-key-at-least-32-bytes-long" \
+            perceptra:ci-test
+
+          echo "==> Waiting for Nginx and Backend to become healthy..."
+          ATTEMPTS=0
+          MAX_ATTEMPTS=30
+          until curl -s -f http://localhost:8080/api/v1/version > /dev/null || [ $ATTEMPTS -eq $MAX_ATTEMPTS ]; do
+            ATTEMPTS=$((ATTEMPTS+1))
+            echo "Waiting for container ($ATTEMPTS/$MAX_ATTEMPTS)..."
+            sleep 2
+          done
+
+          if [ $ATTEMPTS -eq $MAX_ATTEMPTS ]; then
+            echo "ERROR: Container failed healthcheck within timeout."
+            docker logs perceptra-test-runner
+            exit 1
+          fi
+
+          echo "==> Testing Nginx direct healthz endpoint..."
+          curl -f http://localhost:8080/healthz
+
+          echo "==> Testing SvelteKit static SPA root route..."
+          curl -f http://localhost:8080/ | grep -q "html"
+
+          echo "==> Testing Backend API route via Nginx reverse proxy..."
+          VERSION_RESPONSE=$(curl -s http://localhost:8080/api/v1/version)
+          echo "API Response: $VERSION_RESPONSE"
+          echo "$VERSION_RESPONSE" | grep -q "1.0.0"
+
+          echo "==> Container smoke tests passed successfully!"
+          docker stop perceptra-test-runner
+          docker rm perceptra-test-runner
+
+      - name: Push Docker image to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

@@ -1,0 +1,90 @@
+# =============================================================================
+# Perceptra Production Nginx Configuration
+# =============================================================================
+
+server {
+    listen ${PORT};
+    server_name _;
+
+    # Security: Suppress server version signature
+    server_tokens off;
+
+    # Maximum allowed request body size (high-resolution images up to 50MB)
+    client_max_body_size 50M;
+
+    # Root directory containing compiled SvelteKit SPA static assets
+    root /app/web_dist;
+    index index.html;
+
+    # Compression Configuration
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/x-javascript
+        application/xml
+        application/xml+rss
+        image/svg+xml;
+
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Healthcheck direct route
+    location = /healthz {
+        access_log off;
+        return 200 'OK';
+        add_header Content-Type text/plain;
+    }
+
+    # Cache immutable SvelteKit Vite build assets indefinitely (1 year)
+    location /_app/immutable/ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        access_log off;
+    }
+
+    # Cache static images, fonts, icons, and showcase media (30 days)
+    location ~* \.(?:ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot)$ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        access_log off;
+    }
+
+    # Reverse Proxy: Forward all API calls to Gunicorn/Flask backend
+    location /api/ {
+        proxy_pass http://127.0.0.1:5555;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        # Disable buffering for multi-part file uploads and streaming responses
+        proxy_request_buffering off;
+        proxy_buffering off;
+
+        # Timeouts for heavy descriptor extraction and distance calculations
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 180s;
+        proxy_read_timeout 180s;
+    }
+
+    # Single Page Application (SPA): Fallback all route requests to index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
