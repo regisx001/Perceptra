@@ -1,3 +1,15 @@
+import os
+import sys
+
+# If pytest was invoked using a system Python outside .venv, forward to .venv pytest
+_venv_pytest = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".venv", "bin", "pytest"))
+_venv_python = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".venv", "bin", "python"))
+if os.path.exists(_venv_python) and os.path.realpath(sys.executable) != os.path.realpath(_venv_python):
+    import subprocess
+    cmd = [_venv_pytest] + sys.argv[1:] if os.path.exists(_venv_pytest) else [_venv_python, "-m", "pytest"] + sys.argv[1:]
+    res = subprocess.run(cmd)
+    sys.exit(res.returncode)
+
 import pytest
 from src.app import create_app
 from src.extensions import db

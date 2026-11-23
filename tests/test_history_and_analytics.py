@@ -140,6 +140,12 @@ def test_retrieval_history_and_analytics_flow(app, auth_client_and_user):
     assert performance_res.status_code == 200
     perf_data = performance_res.get_json()
     assert "average_ms" in perf_data
+    assert "stage_breakdown" in perf_data
+    assert "extraction_ms" in perf_data["stage_breakdown"]
+    assert "db_fetch_ms" in perf_data["stage_breakdown"]
+    assert "similarity_ms" in perf_data["stage_breakdown"]
+    assert "reranking_ms" in perf_data["stage_breakdown"]
+    assert len(perf_data["stage_breakdown"]["stages"]) == 4
 
     # 7. Delete Search history
     del_res = client.delete(f"/api/v1/retrieval-history/{session_id}", headers=headers)
