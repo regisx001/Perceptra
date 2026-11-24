@@ -1,66 +1,513 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import * as m from '#lib/paraglide/messages.js';
+	import { onMount } from 'svelte';
+	import { auth, type User } from '#lib/auth.js';
 	import { useLocale } from '#lib/i18n.svelte.js';
+	import * as m from '#lib/paraglide/messages.js';
+
+	// shadcn-svelte UI components
+	import * as Card from '#lib/components/ui/card/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
-	import { auth, type User } from '#lib/auth.js';
-	import { onMount } from 'svelte';
+	import * as Tabs from '#lib/components/ui/tabs/index.js';
+	import { Slider } from '#lib/components/ui/slider/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Separator } from '#lib/components/ui/separator/index.js';
 	import ThemeToggle from '#lib/components/theme-toggle.svelte';
 
 	// Icons
 	import GlobeIcon from '@lucide/svelte/icons/globe';
-	import LogInIcon from '@lucide/svelte/icons/log-in';
-	import ArrowRightIcon from '@tabler/icons-svelte/icons/arrow-right';
-	import PhotoIcon from '@tabler/icons-svelte/icons/photo';
-	import DatabaseIcon from '@tabler/icons-svelte/icons/database';
-	import BoltIcon from '@tabler/icons-svelte/icons/bolt';
-	import TargetIcon from '@tabler/icons-svelte/icons/target';
-	import RefreshDotIcon from '@tabler/icons-svelte/icons/refresh-dot';
-	import SparklesIcon from '@tabler/icons-svelte/icons/sparkles';
-	import LayersIcon from '@lucide/svelte/icons/layers';
-	import CpuIcon from '@lucide/svelte/icons/cpu';
-	import CheckIcon from '@tabler/icons-svelte/icons/check';
-	import ThumbsUpIcon from '@lucide/svelte/icons/thumbs-up';
-	import ThumbsDownIcon from '@lucide/svelte/icons/thumbs-down';
-	import FolderIcon from '@tabler/icons-svelte/icons/folder';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import ActivityIcon from '@tabler/icons-svelte/icons/activity';
-	import CropIcon from '@tabler/icons-svelte/icons/crop';
-	import UploadIcon from '@tabler/icons-svelte/icons/upload';
 	import Maximize2Icon from '@lucide/svelte/icons/maximize-2';
 	import XIcon from '@lucide/svelte/icons/x';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import SlidersIcon from '@tabler/icons-svelte/icons/adjustments';
+	import SparklesIcon from '@lucide/svelte/icons/sparkles';
+	import SlidersHorizontalIcon from '@lucide/svelte/icons/sliders-horizontal';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import UploadCloudIcon from '@lucide/svelte/icons/upload-cloud';
+	import SearchIcon from '@lucide/svelte/icons/search';
+	import CropIcon from '@lucide/svelte/icons/crop';
+	import RotateCwIcon from '@lucide/svelte/icons/rotate-cw';
+	import FlipHorizontalIcon from '@lucide/svelte/icons/flip-horizontal';
 
 	const locale = useLocale();
 	let currentUser = $state<User | null>(null);
-	let emailSignup = $state('');
-	let isRedirecting = $state(typeof window !== 'undefined' && auth.isAuthenticated());
-
-	if (typeof window !== 'undefined' && auth.isAuthenticated()) {
-		goto('/dashboard', { replaceState: true });
-	}
 
 	onMount(async () => {
-		if (auth.isAuthenticated()) {
-			isRedirecting = true;
-			await goto('/dashboard', { replaceState: true });
-			return;
-		}
 		currentUser = auth.getUser();
 		try {
 			const updated = await auth.fetchCurrentUser();
-			if (updated) {
-				currentUser = updated;
-			}
+			if (updated) currentUser = updated;
 		} catch {
 			// Guest visitor
 		}
 	});
 
-	// Real Application Pages Showcase Catalog
-	interface AppScreen {
+	/* ------------------------------------------------------------------------
+	   1. TOAST NOTIFICATION
+	   ------------------------------------------------------------------------ */
+	let toastMessage = $state<string>('');
+	let isToastVisible = $state(false);
+	let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function showToast(msg: string) {
+		toastMessage = msg;
+		isToastVisible = true;
+		if (toastTimer) clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => {
+			isToastVisible = false;
+		}, 2600);
+	}
+
+	function copyText(text: string) {
+		if (typeof navigator !== 'undefined' && navigator.clipboard) {
+			navigator.clipboard.writeText(text).then(
+				() => showToast(`Copied ${text} to clipboard`),
+				() => copyFallback(text)
+			);
+		} else {
+			copyFallback(text);
+		}
+	}
+
+	function copyFallback(text: string) {
+		try {
+			const ta = document.createElement('textarea');
+			ta.value = text;
+			ta.style.position = 'fixed';
+			ta.style.opacity = '0';
+			document.body.appendChild(ta);
+			ta.select();
+			document.execCommand('copy');
+			document.body.removeChild(ta);
+			showToast(`Copied ${text} to clipboard`);
+		} catch {
+			showToast(`HEX: ${text}`);
+		}
+	}
+
+	/* ------------------------------------------------------------------------
+	   2. CURATED GALLERY DATASET & PRESETS
+	   ------------------------------------------------------------------------ */
+	interface CandidateResult {
+		title: string;
+		file: string;
+		url: string;
+		colorSim: number;
+		texSim: number;
+	}
+
+	interface GalleryPhoto {
+		id: string;
+		title: string;
+		filename: string;
+		category: string;
+		resolution: string;
+		dominantHex: string;
+		url: string;
+		palette?: { hex: string; pct: number; rgb: string }[];
+		candidates?: CandidateResult[];
+	}
+
+	const GALLERY_ITEMS: GalleryPhoto[] = [
+		{
+			id: 'terraced',
+			title: 'Terraced Fields',
+			filename: '04_2184.jpg',
+			category: 'Landscapes',
+			resolution: '1600×1200',
+			dominantHex: '#6F8B3E',
+			url: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=800&q=80',
+			palette: [
+				{ hex: '#6F8B3E', pct: 34, rgb: '111, 139, 62' },
+				{ hex: '#B99848', pct: 24, rgb: '185, 152, 72' },
+				{ hex: '#3A4F25', pct: 19, rgb: '58, 79, 37' },
+				{ hex: '#D4CFC2', pct: 14, rgb: '212, 207, 194' },
+				{ hex: '#262C1E', pct: 9, rgb: '38, 44, 30' }
+			],
+			candidates: [
+				{ title: 'Emerald Terraces', file: '04_2191.jpg', url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80', colorSim: 0.96, texSim: 0.91 },
+				{ title: 'Highland Pasture', file: '04_2208.jpg', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=600&q=80', colorSim: 0.89, texSim: 0.97 },
+				{ title: 'Golden Valley', file: '04_2140.jpg', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80', colorSim: 0.94, texSim: 0.82 },
+				{ title: 'Contour Ridge', file: '04_2312.jpg', url: 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=600&q=80', colorSim: 0.84, texSim: 0.95 }
+			]
+		},
+		{
+			id: 'temple',
+			title: 'Imperial Temple',
+			filename: '12_6023.jpg',
+			category: 'Architecture',
+			resolution: '1200×1600',
+			dominantHex: '#4A80D4',
+			url: 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=800&q=80',
+			palette: [
+				{ hex: '#4A80D4', pct: 39, rgb: '74, 128, 212' },
+				{ hex: '#171010', pct: 21, rgb: '23, 16, 16' },
+				{ hex: '#584C50', pct: 16, rgb: '88, 76, 80' },
+				{ hex: '#B4694A', pct: 15, rgb: '180, 105, 74' },
+				{ hex: '#C3BDAE', pct: 9, rgb: '195, 189, 174' }
+			],
+			candidates: [
+				{ title: 'Pavilion Eaves', file: '12_6002.jpg', url: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?auto=format&fit=crop&w=600&q=80', colorSim: 0.95, texSim: 0.94 },
+				{ title: 'Stone Courtyard', file: '12_6041.jpg', url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80', colorSim: 0.86, texSim: 0.96 },
+				{ title: 'Vermilion Gate', file: '12_6089.jpg', url: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=600&q=80', colorSim: 0.97, texSim: 0.83 },
+				{ title: 'Timber Pagoda', file: '12_6110.jpg', url: 'https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=600&q=80', colorSim: 0.82, texSim: 0.93 }
+			]
+		},
+		{
+			id: 'autumn',
+			title: 'Autumn Canopy',
+			filename: '08_4410.jpg',
+			category: 'Autumn',
+			resolution: '1600×1067',
+			dominantHex: '#D9822B',
+			url: 'https://images.unsplash.com/photo-1507041957456-9c397ce39c97?auto=format&fit=crop&w=800&q=80',
+			palette: [
+				{ hex: '#D9822B', pct: 37, rgb: '217, 130, 43' },
+				{ hex: '#8F3F1E', pct: 23, rgb: '143, 63, 30' },
+				{ hex: '#EAB64D', pct: 18, rgb: '234, 182, 77' },
+				{ hex: '#3D2B1F', pct: 13, rgb: '61, 43, 31' },
+				{ hex: '#7A8E9C', pct: 9, rgb: '122, 142, 156' }
+			],
+			candidates: [
+				{ title: 'Amber Birch Grove', file: '08_4429.jpg', url: 'https://images.unsplash.com/photo-1476820865390-c52aeebb9891?auto=format&fit=crop&w=600&q=80', colorSim: 0.97, texSim: 0.89 },
+				{ title: 'Forest Floor Grain', file: '08_4455.jpg', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80', colorSim: 0.84, texSim: 0.96 },
+				{ title: 'Maple Reflection', file: '08_4471.jpg', url: 'https://images.unsplash.com/photo-1509565840034-3c385bbe6451?auto=format&fit=crop&w=600&q=80', colorSim: 0.95, texSim: 0.84 },
+				{ title: 'Cedar Timberline', file: '08_4502.jpg', url: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80', colorSim: 0.81, texSim: 0.94 }
+			]
+		},
+		{
+			id: 'glacier',
+			title: 'Alpine Basin',
+			filename: '04_2240.jpg',
+			category: 'Landscapes',
+			resolution: '1600×1200',
+			dominantHex: '#3B6E8C',
+			url: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'misty',
+			title: 'Misty Highlands',
+			filename: '04_2276.jpg',
+			category: 'Landscapes',
+			resolution: '1600×1067',
+			dominantHex: '#4E6B5E',
+			url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'kyoto',
+			title: 'Vermilion Shrine',
+			filename: '12_6089.jpg',
+			category: 'Architecture',
+			resolution: '1600×1067',
+			dominantHex: '#C94B32',
+			url: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'stone-arch',
+			title: 'Stone Citadel',
+			filename: '12_6041.jpg',
+			category: 'Architecture',
+			resolution: '1600×1200',
+			dominantHex: '#7A766E',
+			url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'birch',
+			title: 'Golden Birch Road',
+			filename: '08_4429.jpg',
+			category: 'Autumn',
+			resolution: '1600×1067',
+			dominantHex: '#E09F3E',
+			url: 'https://images.unsplash.com/photo-1476820865390-c52aeebb9891?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'maple',
+			title: 'Crimson Foliage',
+			filename: '08_4471.jpg',
+			category: 'Autumn',
+			resolution: '1600×1200',
+			dominantHex: '#B84A27',
+			url: 'https://images.unsplash.com/photo-1509565840034-3c385bbe6451?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'vessel',
+			title: 'Harbor Vessel',
+			filename: '19_8812.jpg',
+			category: 'Maritime',
+			resolution: '1600×1067',
+			dominantHex: '#3A5E7A',
+			url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'sailing',
+			title: 'Deep Water Horizon',
+			filename: '19_8845.jpg',
+			category: 'Maritime',
+			resolution: '1600×1200',
+			dominantHex: '#2C4E6E',
+			url: 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=800&q=80'
+		},
+		{
+			id: 'coast',
+			title: 'Coastal Pier',
+			filename: '19_8890.jpg',
+			category: 'Maritime',
+			resolution: '1600×1067',
+			dominantHex: '#5C7C8A',
+			url: 'https://images.unsplash.com/photo-1468581264429-2548ef9eb732?auto=format&fit=crop&w=800&q=80'
+		}
+	];
+
+	/* ------------------------------------------------------------------------
+	   3. HERO WORKBENCH STATE
+	   ------------------------------------------------------------------------ */
+	let activeQueryKey = $state('terraced');
+	let customQueryObj = $state<GalleryPhoto | null>(null);
+	let colorWeight = $state(50);
+	const textureWeight = $derived(100 - colorWeight);
+	let activePreset = $state<'balanced' | 'color' | 'texture' | null>('balanced');
+
+	const activeQueryData = $derived.by(() => {
+		if (customQueryObj) return customQueryObj;
+		return GALLERY_ITEMS.find((item) => item.id === activeQueryKey) || GALLERY_ITEMS[0];
+	});
+
+	const workbenchPalette = $derived(activeQueryData.palette || GALLERY_ITEMS[0].palette || []);
+
+	const rankedWorkbenchCandidates = $derived.by(() => {
+		const cW = colorWeight / 100;
+		const tW = textureWeight / 100;
+		const list = activeQueryData.candidates || GALLERY_ITEMS[0].candidates || [];
+		return list
+			.map((cand) => {
+				const score = (cand.colorSim * cW + cand.texSim * tW) * 100;
+				return { ...cand, score };
+			})
+			.sort((a, b) => b.score - a.score);
+	});
+
+	const simulatedLatency = $derived(
+		(14.6 + Math.abs(colorWeight - 50) * 0.04 + (activeQueryData.filename.length % 4) * 0.6).toFixed(1)
+	);
+
+	function setQueryPreset(preset: 'balanced' | 'color' | 'texture') {
+		activePreset = preset;
+		if (preset === 'balanced') colorWeight = 50;
+		if (preset === 'color') colorWeight = 80;
+		if (preset === 'texture') colorWeight = 20;
+	}
+
+	function selectQueryTab(key: string) {
+		customQueryObj = null;
+		activeQueryKey = key;
+	}
+
+	/* ------------------------------------------------------------------------
+	   4. HSV 256-BIN SVG CHART INTERACTIVITY
+	   ------------------------------------------------------------------------ */
+	const BINS = 256;
+	const hsvData = { h: [] as number[], s: [] as number[], v: [] as number[] };
+
+	for (let i = 0; i < BINS; i++) {
+		const hVal =
+			0.165 * Math.exp(-Math.pow((i - 156) / 6.5, 2)) +
+			0.095 * Math.exp(-Math.pow((i - 163) / 5, 2)) +
+			0.052 * Math.exp(-Math.pow((i - 18) / 11, 2)) +
+			0.012 +
+			0.008 * Math.sin(i * 0.27) * Math.cos(i * 0.11);
+
+		const sVal =
+			0.048 * Math.exp(-Math.pow((i - 188) / 22, 2)) +
+			0.036 * Math.exp(-Math.pow((i - 28) / 18, 2)) +
+			0.014 +
+			0.005 * Math.sin(i * 0.19);
+
+		const vVal =
+			0.042 * Math.exp(-Math.pow((i - 216) / 28, 2)) +
+			0.031 * Math.exp(-Math.pow((i - 104) / 24, 2)) +
+			0.018 +
+			0.004 * Math.cos(i * 0.15);
+
+		hsvData.h.push(Math.max(0.002, hVal));
+		hsvData.s.push(Math.max(0.002, sVal));
+		hsvData.v.push(Math.max(0.002, vVal));
+	}
+
+	function buildCurvePath(arr: number[], closeArea = false): string {
+		const w = 640,
+			base = 196,
+			maxH = 180,
+			scaleMax = 0.18;
+		let d = '';
+		for (let i = 0; i < arr.length; i += 2) {
+			const x = (i / (arr.length - 1)) * w;
+			const y = base - Math.min(1, arr[i] / scaleMax) * maxH;
+			d += i === 0 ? `M ${x.toFixed(1)} ${y.toFixed(1)}` : ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+		}
+		if (closeArea) {
+			d += ` L ${w} ${base} L 0 ${base} Z`;
+		}
+		return d;
+	}
+
+	const pathCurveH = buildCurvePath(hsvData.h);
+	const pathCurveS = buildCurvePath(hsvData.s);
+	const pathCurveV = buildCurvePath(hsvData.v);
+	const pathAreaH = buildCurvePath(hsvData.h, true);
+	const pathAreaS = buildCurvePath(hsvData.s, true);
+	const pathAreaV = buildCurvePath(hsvData.v, true);
+
+	let activeHsvFilter = $state<'all' | 'h' | 's' | 'v'>('all');
+	let cursorBin = $state(157);
+	let cursorX = $derived((cursorBin / (BINS - 1)) * 640);
+	const yFromVal = (v: number) => 196 - Math.min(1, v / 0.18) * 180;
+	let dotHY = $derived(yFromVal(hsvData.h[cursorBin]));
+	let dotSY = $derived(yFromVal(hsvData.s[cursorBin]));
+	let dotVY = $derived(yFromVal(hsvData.v[cursorBin]));
+
+	function handleHsvMouseMove(e: MouseEvent & { currentTarget: SVGSVGElement }) {
+		const rect = e.currentTarget.getBoundingClientRect();
+		const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+		cursorBin = Math.min(BINS - 1, Math.round(ratio * (BINS - 1)));
+	}
+
+	/* ------------------------------------------------------------------------
+	   5. K-MEANS DOMINANT CLUSTERS (k=5 / k=8)
+	   ------------------------------------------------------------------------ */
+	const CLUSTERS = {
+		5: [
+			{ hex: '#4A80D4', pct: 39.4, rgb: '74, 128, 212' },
+			{ hex: '#171010', pct: 21.4, rgb: '23, 16, 16' },
+			{ hex: '#584C50', pct: 15.6, rgb: '88, 76, 80' },
+			{ hex: '#B4694A', pct: 15.4, rgb: '180, 105, 74' },
+			{ hex: '#C3BDAE', pct: 8.2, rgb: '195, 189, 174' }
+		],
+		8: [
+			{ hex: '#4A80D4', pct: 26.2, rgb: '74, 128, 212' },
+			{ hex: '#6EA0E6', pct: 13.2, rgb: '110, 160, 230' },
+			{ hex: '#171010', pct: 14.8, rgb: '23, 16, 16' },
+			{ hex: '#3B2F2F', pct: 9.6, rgb: '59, 47, 47' },
+			{ hex: '#584C50', pct: 11.4, rgb: '88, 76, 80' },
+			{ hex: '#B4694A', pct: 10.6, rgb: '180, 105, 74' },
+			{ hex: '#D48A6A', pct: 7.4, rgb: '212, 138, 106' },
+			{ hex: '#C3BDAE', pct: 6.8, rgb: '195, 189, 174' }
+		]
+	};
+	let kmeansK = $state<5 | 8>(5);
+	const activeClusters = $derived(CLUSTERS[kmeansK]);
+
+	/* ------------------------------------------------------------------------
+	   6. FEATURE RELEVANCE ESTIMATION (FRE)
+	   ------------------------------------------------------------------------ */
+	const FRE_CHANNELS = [
+		{ key: 'hsv', label: 'HSV', color: 'var(--chart-1)' },
+		{ key: 'moments', label: 'Moments', color: 'var(--chart-2)' },
+		{ key: 'dominant', label: 'Dominant', color: 'var(--chart-3)' },
+		{ key: 'glcm', label: 'GLCM', color: 'var(--chart-4)' },
+		{ key: 'lbp', label: 'LBP', color: 'var(--chart-5)' }
+	] as const;
+
+	const FRE_ITEMS = [
+		{
+			id: 'fre1',
+			title: 'Pavilion Eaves',
+			url: 'https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?auto=format&fit=crop&w=500&q=80',
+			bias: { hsv: 8, moments: 3, dominant: 7, glcm: -9, lbp: -9 }
+		},
+		{
+			id: 'fre2',
+			title: 'Stone Courtyard',
+			url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=500&q=80',
+			bias: { hsv: -8, moments: -4, dominant: -6, glcm: 10, lbp: 8 }
+		},
+		{
+			id: 'fre3',
+			title: 'Vermilion Gate',
+			url: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&w=500&q=80',
+			bias: { hsv: 6, moments: 5, dominant: 8, glcm: -10, lbp: -9 }
+		}
+	];
+
+	let freJudgments = $state<Record<string, number>>({ fre1: 0, fre2: 0, fre3: 0 });
+	let freRound = $state(0);
+
+	const freWeights = $derived.by(() => {
+		const raw: Record<string, number> = { hsv: 20, moments: 20, dominant: 20, glcm: 20, lbp: 20 };
+		let activeCount = 0;
+		FRE_ITEMS.forEach((item) => {
+			const j = freJudgments[item.id] || 0;
+			if (j !== 0) {
+				activeCount++;
+				for (const k of Object.keys(raw)) {
+					raw[k] = Math.max(6, raw[k] + (item.bias as any)[k] * j);
+				}
+			}
+		});
+
+		const total = Object.values(raw).reduce((s, v) => s + v, 0);
+		const norm: Record<string, number> = {};
+		for (const k of Object.keys(raw)) {
+			norm[k] = Math.round((raw[k] / total) * 100);
+		}
+		const sumNorm = Object.values(norm).reduce((s, v) => s + v, 0);
+		norm.hsv += 100 - sumNorm;
+
+		const precision = (78.4 + activeCount * 3.1 + (freRound > 0 ? 1.4 : 0)).toFixed(1);
+		const cappedPrecision = Math.min(96.8, Number(precision)).toFixed(1);
+
+		return {
+			norm,
+			precision: cappedPrecision,
+			gain: activeCount > 0 ? (Number(cappedPrecision) - 78.4).toFixed(1) : null
+		};
+	});
+
+	function toggleJudgment(id: string, val: number) {
+		freJudgments[id] = freJudgments[id] === val ? 0 : val;
+		freRound++;
+	}
+
+	function resetFRE() {
+		freJudgments = { fre1: 0, fre2: 0, fre3: 0 };
+		freRound = 0;
+	}
+
+	/* ------------------------------------------------------------------------
+	   7. NON-DESTRUCTIVE TRANSFORM STUDIO STATE
+	   ------------------------------------------------------------------------ */
+	let tfRotate = $state<0 | 90 | 180>(0);
+	let tfFlipX = $state(false);
+	let tfShear = $state(0);
+	let tfAspect = $state<'original' | '1-1' | '16-9'>('original');
+
+	const tfDerivedOps = $derived.by(() => {
+		const ops: string[] = [];
+		if (tfRotate !== 0) ops.push(`rot${tfRotate}°`);
+		if (tfFlipX) ops.push('flipH');
+		if (tfShear !== 0) ops.push(`shear${tfShear}°`);
+		if (tfAspect !== 'original') ops.push(tfAspect.replace('-', ':'));
+		return ops.length ? `Derived Asset (${ops.join(', ')})` : 'Derived Asset (Unmodified)';
+	});
+
+	const tfDims = $derived.by(() => {
+		if (tfAspect === '1-1') return '900 × 900 px';
+		if (tfAspect === '16-9') return '1200 × 675 px';
+		return '1200 × 900 px';
+	});
+
+	function resetTransform() {
+		tfRotate = 0;
+		tfFlipX = false;
+		tfShear = 0;
+		tfAspect = 'original';
+	}
+
+	/* ------------------------------------------------------------------------
+	   8. REAL APPLICATION SCREENS SHOWCASE (All 9 high-res Screenshots)
+	   ------------------------------------------------------------------------ */
+	interface AppScreenShowcase {
 		id: string;
 		title: string;
 		badge: string;
@@ -68,1241 +515,1328 @@
 		image: string;
 		description: string;
 		tags: string[];
-		actionHref: string;
-		actionLabel: string;
-		keyFeatures: { label: string; detail: string }[];
+		highlights: string[];
 	}
 
-	const showcaseScreens: AppScreen[] = [
+	const appScreens: AppScreenShowcase[] = [
+		{
+			id: 'overview',
+			title: 'Overview & Sequential Latency Telemetry',
+			badge: 'Real-Time SLA & Performance Metrics',
+			path: '/dashboard',
+			image: '/screenshots/01-Overview-Page.png',
+			description:
+				'Operational telemetry dashboard tracking sequential CBIR iterations with horizontal average latency reference benchmarks, 100-bin latency distribution histograms, and relevance judgment ratio distributions.',
+			tags: ['Sequential Latency AreaChart', 'Average SLA Line', 'Latency Distribution Histogram', 'FRE Relevance Ratio'],
+			highlights: ['AreaChart showing sequential retrieval iterations', 'Sub-20ms threshold indicator', 'Descriptor & Modality Split breakdown']
+		},
 		{
 			id: 'query',
-			title: 'Visual Query Studio',
-			badge: 'Multi-Descriptor Engine',
+			title: 'Visual Query Studio & Similarity Search',
+			badge: 'Multi-Descriptor Engine & Top-K',
 			path: '/dashboard/query',
-			image: '/showcase/query-studio.jpg',
-			description: 'Interactive query composition with live feature tuning. Upload any reference image or pick from library, dial in descriptor weights (HSV, Moments, Dominant Colors, GLCM, LBP), and run sub-20ms cosine similarity searches with Rocchio relevance feedback.',
-			tags: ['Balanced & Custom Presets', 'Dynamic Weight Sliders', 'Candidate Scope Filtering', 'Rocchio Relevance Loop'],
-			actionHref: '/dashboard/query',
-			actionLabel: 'Open Query Studio',
-			keyFeatures: [
-				{ label: 'Feature Sliders', detail: 'Calibrate color vs texture weights on the fly' },
-				{ label: 'Scope Control', detail: 'Filter candidates across GHIM-10K and personal uploads' },
-				{ label: 'Top-K Partitioning', detail: 'Retrieve 8, 12, 24, or 48 nearest visual neighbors' }
-			]
+			image: '/screenshots/09-retreiving-page.png',
+			description:
+				'Compose visual similarity queries using uploaded reference images or dataset items. Fine-tune weights across HSV, Moments, Dominant Colors, GLCM, and LBP descriptors, and inspect nearest-neighbor cosine distances.',
+			tags: ['5-Descriptor Weight Calibration', 'Cosine & Euclidean Partitions', 'Candidate Scope Filtering', 'Rocchio Relevance Loop'],
+			highlights: ['Interactive descriptor sliders with balanced presets', 'Nearest neighbor ranking with distance matrices', 'Direct pivoting into relevance feedback']
 		},
 		{
 			id: 'images',
 			title: 'Justified Photo Wall & Batch Operations',
-			badge: 'Google Photos Layout',
+			badge: 'Google Photos Layout Engine',
 			path: '/dashboard/images',
-			image: '/showcase/gallery-photos.jpg',
-			description: 'A responsive justified photo wall modeled after Google Photos that preserves native aspect ratios without distortion. Includes hover/tap top-left checkmark badges and a floating batch action bar for moving images to collections and deleting.',
-			tags: ['Aspect Ratio Preserved', 'Multi-Select Checkmarks', 'Batch Collection Assign', 'Batch Delete Modal', 'Infinite Scroll'],
-			actionHref: '/dashboard/images',
-			actionLabel: 'Explore Image Gallery',
-			keyFeatures: [
-				{ label: 'Zero Cropping', detail: 'Dynamic row height respects natural portrait and landscape aspect ratios' },
-				{ label: 'Google Photos Multi-Select', detail: 'Checkmark badges trigger instant floating action bar' },
-				{ label: 'Batch Collections', detail: 'Assign dozens of images to categories in a single operation' }
-			]
-		},
-		{
-			id: 'overview',
-			title: 'Telemetry & Sequential Latency Trendline',
-			badge: 'Live Telemetry & SLAs',
-			path: '/dashboard',
-			image: '/showcase/overview-dark.png',
-			description: 'Comprehensive operational telemetry dashboard. Real-time AreaChart tracking sequential retrieval iterations with horizontal dashed average latency reference lines, search volume timelines, and relevance judgment ratio distributions.',
-			tags: ['Sequential Latency Trendline', 'Average Latency Reference Line', 'Search Traffic AreaChart', 'FRE Ratio Gauge'],
-			actionHref: '/dashboard',
-			actionLabel: 'View Telemetry Dashboard',
-			keyFeatures: [
-				{ label: 'Sequential Trendline', detail: 'AreaChart showing chronological latency spikes with average SLA line' },
-				{ label: 'Relevance Feedback Ratio', detail: 'Monitors relevant vs irrelevant judgment metrics for FRE Group 13' },
-				{ label: 'Activity Timeline', detail: 'Daily search frequency and Feature Relevance Estimation iterations' }
-			]
-		},
-		{
-			id: 'inspection',
-			title: 'Deep Feature Analysis & Color Clustering',
-			badge: 'MiniBatchKMeans & 256 Bins',
-			path: '/dashboard/images/[id]',
-			image: '/showcase/image-descriptors.jpg',
-			description: 'Inspect extracted high-dimensional descriptors for any image. Visualizes clustered dominant color centroids via MiniBatchKMeans (k=5) with exact hex codes and percentages, alongside continuous 256-bin HSV frequency distribution curves.',
-			tags: ['MiniBatchKMeans (k=5)', 'RGB & Hex Proportions', '256-Bin Continuous HSV Curves', 'GLCM Texture Energy'],
-			actionHref: '/dashboard/images',
-			actionLabel: 'Inspect Sample Image',
-			keyFeatures: [
-				{ label: 'Dominant Color Palette', detail: 'MiniBatchKMeans clustering with RGB/Hex values and proportions' },
-				{ label: 'HSV Continuous Curves', detail: 'Full 256-bin Hue, Saturation, and Value spectrum graph' },
-				{ label: 'Lineage & Similarity', detail: 'One-click similar image retrieval and non-destructive image transform' }
-			]
+			image: '/screenshots/03-Image-list.png',
+			description:
+				'A responsive justified flex layout preserving native image aspect ratios without distortion. Features hover/tap multi-select checkmarks and a floating batch action bar.',
+			tags: ['Aspect Ratio Preserved', 'Multi-Select Checkmarks', 'Batch Collection Assign', 'Batch Delete Modal', 'View Transitions'],
+			highlights: ['Zero letterboxing or cropping in grid layout', 'One-click floating batch bar for collections', 'Native View Transitions into detail view']
 		},
 		{
 			id: 'transform',
-			title: 'Interactive Image Transform Studio',
+			title: 'Image Transform Studio & Affine Engine',
 			badge: 'Client-Side Canvas 2D',
 			path: '/dashboard/transform',
-			image: '/showcase/image-transform.jpg',
-			description: 'In-browser non-destructive image pre-processing. Crop to preset ratios (1:1, 16:9, 9:16), rotate, flip, shear, scale, and apply affine matrix transforms before running feature extraction and CBIR queries.',
-			tags: ['Crop & Aspect Presets', 'Rotate, Flip & Shear', 'Affine Matrix Transforms', 'Interactive Canvas Zoom'],
-			actionHref: '/dashboard/transform',
-			actionLabel: 'Launch Transform Studio',
-			keyFeatures: [
-				{ label: 'Aspect Ratio Presets', detail: 'Square 1:1, Landscape 16:9, and Portrait 9:16 crop presets' },
-				{ label: 'Affine Matrix Controls', detail: 'Interactive numeric rotation, shear, and affine transforms' },
-				{ label: 'Derived Image Export', detail: 'Save transformed variations to test transform invariant retrieval' }
-			]
+			image: '/screenshots/04-Transform-studio.png',
+			description:
+				'Interactive non-destructive image pre-processing. Rotate, flip, shear, scale, and crop images to preset ratios before running feature extraction and test transform-invariant similarity retrieval.',
+			tags: ['Crop & Aspect Presets', 'Rotate, Flip & Shear', 'Affine Matrix Transforms', 'Asset Lineage Tracking'],
+			highlights: ['Live numeric control over affine matrices', 'Lineage tracking linking parent and derived assets', 'Instant re-extraction on modified variations']
+		},
+		{
+			id: 'details',
+			title: 'Deep Feature Inspection & Histograms',
+			badge: '256 Bins & MiniBatchKMeans (k=5)',
+			path: '/dashboard/images/[id]',
+			image: '/screenshots/08-image-details-page.png',
+			description:
+				'Inspect extracted high-dimensional descriptors for any image. Visualizes clustered dominant color centroids via MiniBatchKMeans with exact hex values, alongside full 256-bin continuous HSV frequency curves.',
+			tags: ['MiniBatchKMeans (k=5)', 'Exact Hex & Proportions', '256-Bin Continuous HSV Curves', 'GLCM & LBP Texture Vectors'],
+			highlights: ['Continuous Hue, Saturation, and Value graphs', 'Copyable hex code chips for dominant palettes', 'One-click similar image retrieval']
 		},
 		{
 			id: 'upload',
-			title: 'High-Throughput Batch Ingestion Queue',
-			badge: 'Automated Extraction',
+			title: 'High-Throughput Batch Upload Queue',
+			badge: 'Automated Extraction Pipeline',
 			path: '/dashboard/upload',
-			image: '/showcase/upload-queue.png',
-			description: 'Drag-and-drop batch ingestion with automatic descriptor extraction. Features a toggleable Auto-On descriptor pipeline, target category routing, and real-time per-file progress meters with failure recovery.',
+			image: '/screenshots/05-upload-page.png',
+			description:
+				'Drag-and-drop batch ingestion with automatic descriptor extraction. Features a toggleable Auto-On descriptor pipeline, target category routing, and real-time per-file progress meters with failure resilience.',
 			tags: ['Drag & Drop Multi-file', 'Auto-On Extraction Toggle', 'Target Category Selector', 'Real-time Progress Bars'],
-			actionHref: '/dashboard/upload',
-			actionLabel: 'Upload Your Dataset',
-			keyFeatures: [
-				{ label: 'Auto-Processing Switch', detail: 'Toggle immediate background extraction of Color, GLCM, and LBP descriptors' },
-				{ label: 'Folder & Category Routing', detail: 'Assign newly uploaded batches directly to existing or new categories' },
-				{ label: 'Resilient Queue', detail: 'Per-file status indicators (Pending, Processing, Done) with failure recovery' }
-			]
+			highlights: ['Automated background feature extraction', 'Folder & category routing on ingest', 'Failure recovery and retry queue']
 		},
 		{
 			id: 'categories',
 			title: 'Category Hierarchy & Collections',
 			badge: 'Semantic Partitioning',
 			path: '/dashboard/categories',
-			image: '/showcase/categories-hierarchy.jpg',
-			description: 'Organize your visual collection into nested category structures and root folder partitions. Search categories in real-time, view image assignment counts, and explore categorized assets in clean grids.',
-			tags: ['Nested Category Tree', 'Root & Subfolder Partitions', 'Instant Search Filter', 'Categorized vs Uncategorized KPIs'],
-			actionHref: '/dashboard/categories',
-			actionLabel: 'Manage Collections',
-			keyFeatures: [
-				{ label: 'Hierarchy Navigation', detail: 'Root partitions and subfolder levels for structured visual cataloging' },
-				{ label: 'Live Search & Filter', detail: 'Instant client-side filter across the entire category hierarchy' },
-				{ label: 'Class Indexing', detail: 'Indexes assigned images directly into semantic class clusters' }
-			]
+			image: '/screenshots/06-category-page.png',
+			description:
+				'Organize your visual collection into nested category structures and root partitions. Search categories in real-time, view image assignment counts, and explore categorized assets in clean grids.',
+			tags: ['Nested Category Tree', 'Root & Subfolder Partitions', 'Instant Search Filter', 'Coverage KPI Metrics'],
+			highlights: ['Tree hierarchy for structured image cataloging', 'Real-time category filtering', 'Semantic class cluster assignments']
+		},
+		{
+			id: 'favorites',
+			title: 'Curated Favorites & Visual Bookmarks',
+			badge: 'Personalized Collections',
+			path: '/dashboard/favorites',
+			image: '/screenshots/07-favourite-page.png',
+			description:
+				'Bookmarked visual assets organized for rapid reference, batch category management, and instant transition to the similarity retrieval pipeline with smooth view transitions.',
+			tags: ['One-Click Bookmark Toggle', 'Batch Operations', 'Seamless View Transitions', 'Google Photos Wall'],
+			highlights: ['Rapid bookmark toggle on any image', 'Batch assign favorite assets to categories', 'Preserves natural aspect ratios']
+		},
+		{
+			id: 'auth',
+			title: 'Secure Authentication & Session Access',
+			badge: 'JWT & Access Control',
+			path: '/login',
+			image: '/screenshots/02-auth-page.png',
+			description:
+				'Clean authenticated gateway with visual branding, persistent session cookies, and single-click credential verification with automated redirect.',
+			tags: ['JWT Token Storage', 'Split Hero Layout', 'Instant Form Validation', 'Secure Cookie Storage'],
+			highlights: ['Robust JWT authentication flow', 'Split-screen editorial vector branding', 'Seamless session persistence']
 		}
 	];
 
-	let activeScreenId = $state<string>('query');
-	let activeScreen = $derived(showcaseScreens.find((s) => s.id === activeScreenId) ?? showcaseScreens[0]);
+	let activeScreenId = $state('overview');
+	const activeScreen = $derived(appScreens.find((s) => s.id === activeScreenId) || appScreens[0]);
 	let zoomedImage = $state<string | null>(null);
+	let isLightboxOpen = $state(false);
 
-	// Interactive Simulator State
-	const querySamples = [
-		{
-			id: 'sample-1',
-			title: 'Alpine Glacial Lake',
-			category: 'Nature & Landscapes',
-			colorDist: 65,
-			textureDist: 25,
-			edgeDist: 10,
-			baseSim: 0.964,
-			bgGradient: 'from-sky-500/20 via-blue-600/10 to-teal-500/20',
-			iconColor: 'text-sky-500',
-			results: [
-				{ id: 'res-11', name: 'ghim_nature_alpine_lake_02.jpg', category: 'Nature & Landscapes', similarity: 0.968, delta: '+0.04' },
-				{ id: 'res-12', name: 'ghim_nature_mountain_fjord.jpg', category: 'Nature & Landscapes', similarity: 0.941, delta: '+0.02' },
-				{ id: 'res-13', name: 'ghim_nature_emerald_creek.jpg', category: 'Nature & Landscapes', similarity: 0.915, delta: '-0.01' },
-				{ id: 'res-14', name: 'ghim_nature_highland_reservoir.jpg', category: 'Water Partitions', similarity: 0.887, delta: '-0.03' }
-			]
-		},
-		{
-			id: 'sample-2',
-			title: 'Gothic Cathedral Spire',
-			category: 'Architecture & Buildings',
-			colorDist: 15,
-			textureDist: 55,
-			edgeDist: 30,
-			baseSim: 0.942,
-			bgGradient: 'from-stone-500/20 via-amber-600/10 to-slate-500/20',
-			iconColor: 'text-amber-500',
-			results: [
-				{ id: 'res-21', name: 'ghim_arch_cathedral_portal.jpg', category: 'Architecture & Buildings', similarity: 0.952, delta: '+0.03' },
-				{ id: 'res-22', name: 'ghim_arch_medieval_belfry.jpg', category: 'Architecture & Buildings', similarity: 0.934, delta: '+0.01' },
-				{ id: 'res-23', name: 'ghim_arch_buttress_vault.jpg', category: 'Architecture & Buildings', similarity: 0.908, delta: '-0.02' },
-				{ id: 'res-24', name: 'ghim_arch_stone_masonry.jpg', category: 'Textures', similarity: 0.879, delta: '-0.05' }
-			]
-		},
-		{
-			id: 'sample-3',
-			title: 'Woven Linen Textile',
-			category: 'Patterns & Textures',
-			colorDist: 20,
-			textureDist: 70,
-			edgeDist: 10,
-			baseSim: 0.925,
-			bgGradient: 'from-orange-500/20 via-rose-600/10 to-amber-500/20',
-			iconColor: 'text-rose-500',
-			results: [
-				{ id: 'res-31', name: 'ghim_texture_twill_weave_08.jpg', category: 'Patterns & Textures', similarity: 0.961, delta: '+0.05' },
-				{ id: 'res-32', name: 'ghim_texture_burlap_fabric.jpg', category: 'Patterns & Textures', similarity: 0.938, delta: '+0.02' },
-				{ id: 'res-33', name: 'ghim_texture_cotton_canvas.jpg', category: 'Patterns & Textures', similarity: 0.912, delta: '-0.01' },
-				{ id: 'res-34', name: 'ghim_texture_herringbone.jpg', category: 'Patterns & Textures', similarity: 0.884, delta: '-0.04' }
-			]
-		},
-		{
-			id: 'sample-4',
-			title: 'Red Fox in Snowfield',
-			category: 'Fauna & Wildlife',
-			colorDist: 50,
-			textureDist: 35,
-			edgeDist: 15,
-			baseSim: 0.918,
-			bgGradient: 'from-orange-600/20 via-red-600/10 to-amber-500/20',
-			iconColor: 'text-orange-500',
-			results: [
-				{ id: 'res-41', name: 'ghim_fauna_red_fox_standing.jpg', category: 'Fauna & Wildlife', similarity: 0.957, delta: '+0.04' },
-				{ id: 'res-42', name: 'ghim_fauna_arctic_fox_winter.jpg', category: 'Fauna & Wildlife', similarity: 0.928, delta: '+0.01' },
-				{ id: 'res-43', name: 'ghim_fauna_timber_wolf.jpg', category: 'Fauna & Wildlife', similarity: 0.896, delta: '-0.02' },
-				{ id: 'res-44', name: 'ghim_nature_snowy_steppe.jpg', category: 'Nature & Landscapes', similarity: 0.871, delta: '-0.04' }
-			]
-		}
-	];
+	function openLightbox(img: string) {
+		zoomedImage = img;
+		isLightboxOpen = true;
+	}
 
-	let selectedSampleIndex = $state(0);
-	let relevanceFeedback = $state<Record<string, 'positive' | 'negative' | null>>({});
+	/* ------------------------------------------------------------------------
+	   9. GALLERY SHOWCASE & FIND SIMILAR BRIDGE
+	   ------------------------------------------------------------------------ */
+	let activeCategory = $state('all');
+	let galleryDensity = $state<'comfortable' | 'compact'>('comfortable');
 
-	let currentSample = $derived(querySamples[selectedSampleIndex]);
+	const filteredGallery = $derived(
+		activeCategory === 'all'
+			? GALLERY_ITEMS
+			: GALLERY_ITEMS.filter((item) => item.category === activeCategory)
+	);
 
-	function toggleFeedback(resultId: string, type: 'positive' | 'negative') {
-		if (relevanceFeedback[resultId] === type) {
-			relevanceFeedback[resultId] = null;
+	function loadPhotoIntoWorkbench(item: GalleryPhoto) {
+		if (item.palette && item.candidates) {
+			customQueryObj = null;
+			activeQueryKey = item.id;
 		} else {
-			relevanceFeedback[resultId] = type;
+			const pool = GALLERY_ITEMS.filter((g) => g.id !== item.id);
+			const sameCat = pool.filter((g) => g.category === item.category);
+			const others = pool.filter((g) => g.category !== item.category);
+			const top4 = [...sameCat, ...others].slice(0, 4).map((g, idx) => ({
+				title: g.title,
+				file: g.filename,
+				url: g.url,
+				colorSim: Number((0.95 - idx * 0.03).toFixed(2)),
+				texSim: Number((0.88 + (idx % 2) * 0.06 - idx * 0.02).toFixed(2))
+			}));
+
+			customQueryObj = {
+				id: item.id,
+				title: item.title,
+				filename: item.filename,
+				url: item.url,
+				resolution: item.resolution,
+				category: item.category,
+				dominantHex: item.dominantHex,
+				palette: [
+					{ hex: item.dominantHex || '#4A80D4', pct: 38, rgb: '74, 128, 212' },
+					{ hex: '#2B303A', pct: 22, rgb: '43, 48, 58' },
+					{ hex: '#7A7870', pct: 18, rgb: '122, 120, 112' },
+					{ hex: '#D4A373', pct: 13, rgb: '212, 163, 115' },
+					{ hex: '#E9ECEF', pct: 9, rgb: '233, 236, 239' }
+				],
+				candidates: top4
+			};
+		}
+
+		if (typeof document !== 'undefined') {
+			const wb = document.getElementById('workbench');
+			if (wb) wb.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+		showToast(`Loaded "${item.filename}" into Visual Query Workbench`);
+	}
+
+	/* ------------------------------------------------------------------------
+	   10. CLOSING BAND LOCAL DRAG-AND-DROP
+	   ------------------------------------------------------------------------ */
+	let isDragOver = $state(false);
+	let fileInputEl = $state<HTMLInputElement | null>(null);
+
+	function handleLocalFile(file: File) {
+		if (!file || !file.type.startsWith('image/')) {
+			showToast('Please select a valid image file (JPG, PNG, WEBP).');
+			return;
+		}
+		const objectUrl = URL.createObjectURL(file);
+		loadPhotoIntoWorkbench({
+			id: 'local-upload',
+			title: file.name,
+			filename: file.name,
+			category: 'Landscapes',
+			resolution: 'Custom Upload',
+			dominantHex: '#3B82F6',
+			url: objectUrl
+		});
+	}
+
+	function onFileInputChange(e: Event & { currentTarget: HTMLInputElement }) {
+		if (e.currentTarget.files && e.currentTarget.files[0]) {
+			handleLocalFile(e.currentTarget.files[0]);
 		}
 	}
 
-	// Live activity ticker items
-	const liveTickerItems = [
-		{ type: 'indexed', label: '10,000+ images indexed across GHIM-10K', time: 'Active' },
-		{ type: 'query', label: 'Query vector #1042 matched at 96.4% cosine similarity', time: '4s ago' },
-		{ type: 'feedback', label: 'Rocchio feedback loop converged in 2 iterations', time: '18s ago' },
-		{ type: 'latency', label: 'Sequential Latency Trendline active (Avg: 728.7 ms)', time: 'Just now' },
-		{ type: 'layout', label: 'Google Photos Justified Grid enabled with zero cropping', time: '1m ago' },
-		{ type: 'precision', label: '84.2% mean average precision @ 20 verified', time: '3m ago' }
-	];
+	function onDrop(e: DragEvent) {
+		e.preventDefault();
+		isDragOver = false;
+		if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+			handleLocalFile(e.dataTransfer.files[0]);
+		}
+	}
 </script>
 
 <svelte:head>
-	<title>Perceptra - Content-Based Image Retrieval & Visual Discovery Platform</title>
+	<title>Perceptra — Content-Based Image Retrieval &amp; Visual Discovery</title>
 	<meta
 		name="description"
-		content="Explore high-dimensional visual retrieval across 10,000 reference images. Fused HSV color histograms, Gabor texture filters, Google Photos justified browsing, and real-time latency telemetry."
+		content="Search images by what they actually look like. Multi-descriptor visual retrieval with 768-D HSV histograms, MiniBatchKMeans dominant colors, GLCM/LBP texture matrices, and Feature Relevance Estimation."
 	/>
 </svelte:head>
 
-{#if !isRedirecting}
-<div class="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
-	<!-- ========================================================================= -->
-	<!-- 1. HEADER                                                                 -->
-	<!-- ========================================================================= -->
-	<header class="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-md">
-		<div class="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-			<!-- Left: Logo & Core Nav -->
-			<div class="flex items-center gap-6">
-				<a href="/" class="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-					<img
-						src="/logo-black.png"
-						alt="Perceptra"
-						class="h-7 w-auto object-contain dark:hidden"
+<div class="min-h-screen bg-background text-foreground antialiased flex flex-col">
+	<!-- ========================================================================
+	     1. STICKY NAVIGATION BAR
+	     ======================================================================== -->
+	<header class="sticky top-0 z-50 h-16 w-full border-b border-border bg-background/85 backdrop-blur-md transition-colors">
+		<div class="container mx-auto flex h-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+			<a href="#workbench" class="flex items-center gap-2.5 text-foreground hover:opacity-90 transition-opacity">
+				<svg class="size-7 shrink-0 text-primary" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+					<rect x="33" y="13" width="13.5" height="13.5" rx="3.2" fill="currentColor" />
+					<rect x="44" y="30" width="14.5" height="14.5" rx="3.4" fill="currentColor" />
+					<rect x="28" y="44" width="13.5" height="13.5" rx="3.2" fill="currentColor" />
+					<rect x="13" y="57" width="13.5" height="13.5" rx="3.2" fill="currentColor" />
+					<path
+						d="M60.5 13H74.5C87.8 13 96 22.8 96 36.5C96 50.2 87.2 60.5 73.5 60.5H59.5C56.5 60.5 54.5 62.5 54.5 65.5V72.5C54.5 81.2 47.2 88.5 38.5 88.5H37.8C36.2 88.5 35 87.3 35 85.7V75.5H29.8C27.8 75.5 26.5 74.2 26.5 72.2V70.3C26.5 68.3 27.8 67 29.8 67H35V60.2C35 56.8 37.5 54.5 41 54.5H48.5C50.4 54.5 51.8 53.1 51.8 51.2V49.2C51.8 46.8 53.7 45 56.2 45H70.8C76.2 45 79.8 41.4 79.8 36.5C79.8 31.6 76.2 28 70.8 28H60.5C57.5 28 55.5 26 55.5 23V18C55.5 15 57.5 13 60.5 13Z"
+						fill="currentColor"
 					/>
-					<img
-						src="/logo-beige.png"
-						alt="Perceptra"
-						class="hidden h-7 w-auto object-contain dark:block"
-					/>
-					<span class="font-extrabold tracking-tight text-base text-foreground font-mono">
-						Perceptra<span class="text-primary text-xs font-normal ml-1 px-1.5 py-0.5 rounded-full bg-primary/10">v2.4</span>
-					</span>
-				</a>
+				</svg>
+				<span class="text-lg font-bold tracking-tight">Perceptra</span>
+			</a>
 
-				<nav class="hidden md:flex items-center gap-5 text-xs font-medium text-muted-foreground">
-					<a href="#showcase" class="hover:text-foreground transition-colors">Platform Screens</a>
-					<a href="#platform" class="hover:text-foreground transition-colors">Features</a>
-					<a href="#simulator" class="hover:text-foreground transition-colors">Simulator</a>
-					<a href="#benchmarks" class="hover:text-foreground transition-colors">Benchmarks</a>
-				</nav>
-			</div>
+			<nav class="hidden md:flex items-center gap-7 text-sm font-medium text-muted-foreground" aria-label="Primary Navigation">
+				<a href="#descriptors" class="hover:text-foreground transition-colors">Descriptors</a>
+				<a href="#workbench" class="hover:text-foreground transition-colors">Query Studio</a>
+				<a href="#transform" class="hover:text-foreground transition-colors">Transform</a>
+				<a href="#screens" class="hover:text-foreground transition-colors">Platform Screens</a>
+				<a href="#gallery" class="hover:text-foreground transition-colors">Gallery</a>
+			</nav>
 
-			<!-- Right: Search pill + Theme/Lang + Auth controls -->
-			<div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
-				<a
-					href="/dashboard/images"
-					class="hidden lg:flex items-center gap-2 rounded-md border border-input bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground shadow-2xs hover:border-primary/40 transition-colors"
+			<div class="flex items-center gap-2">
+				<!-- Language Switcher -->
+				<Button
+					variant="outline"
+					size="icon"
+					class="size-8"
+					onclick={() => locale.toggle()}
+					title={m.nav_toggle_language()}
+					aria-label={m.nav_toggle_language()}
 				>
-					<SearchIcon class="size-3.5" />
-					<span class="font-normal">Search 10,000 GHIM images...</span>
-					<kbd class="ml-2 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">/</kbd>
-				</a>
+					<GlobeIcon class="size-4" />
+				</Button>
 
+				<!-- Theme Toggle -->
 				<ThemeToggle />
 
-				<!-- Language toggle button -->
-				<button
-					type="button"
-					onclick={() => locale.toggle()}
-					class="inline-flex h-8 items-center gap-1.5 px-2.5 text-xs font-semibold border border-input rounded-md shadow-2xs hover:bg-muted transition-colors cursor-pointer"
-					title="Switch language (EN / FR)"
-					aria-label="Switch language"
-				>
-					<GlobeIcon class="size-3.5 text-muted-foreground" />
-					<span class="font-mono text-[11px]">{locale.current.toUpperCase()}</span>
-				</button>
-
 				{#if currentUser}
-					<Button href="/dashboard" size="sm" class="h-8 gap-1.5 px-3.5 text-xs font-semibold shadow-xs">
-						<span>{m.landing_cta_dashboard()}</span>
+					<Button href="/dashboard" size="sm" class="ml-1 gap-1.5 shadow-xs">
+						<span>Dashboard</span>
 						<ArrowRightIcon class="size-3.5" />
 					</Button>
 				{:else}
-					<a
-						href="/login"
-						class="text-xs font-semibold text-foreground hover:text-primary transition-colors px-2 py-1"
-					>
-						{m.auth_sign_in_link()}
-					</a>
-					<Button
-						href="/register"
-						size="sm"
-						class="h-8 px-3.5 text-xs font-semibold shadow-xs rounded-md"
-					>
-						{m.auth_signup_button()}
+					<Button href="/login" variant="ghost" size="sm">
+						Sign In
+					</Button>
+					<Button href="/dashboard/query" size="sm" class="ml-1 gap-1.5 shadow-xs">
+						<span>Launch Studio</span>
+						<ArrowRightIcon class="size-3.5" />
 					</Button>
 				{/if}
 			</div>
 		</div>
 	</header>
 
-	<!-- ========================================================================= -->
-	<!-- 2. HERO SECTION WITH INTERACTIVE APP SHOWCASE                             -->
-	<!-- ========================================================================= -->
-	<section class="relative pt-12 sm:pt-20 pb-16 overflow-hidden bg-background">
-		<!-- Subtle graph-paper grid pattern -->
-		<div class="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.06] [background-image:linear-gradient(to_right,#0969da_1px,transparent_1px),linear-gradient(to_bottom,#0969da_1px,transparent_1px)] [background-size:32px_32px]"></div>
+	<main class="flex-1">
+		<!-- ======================================================================
+		     2. HERO SECTION (ASYMMETRIC 12-COLUMN SPLIT)
+		     ====================================================================== -->
+		<section class="py-12 sm:py-16 lg:py-20 border-b border-border">
+			<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+					<!-- Left Column (5 cols) -->
+					<div class="lg:col-span-5 flex flex-col items-start text-left">
+						<Badge variant="secondary" class="mb-5 gap-2 px-3 py-1 font-mono text-[11px] font-medium tracking-wide border border-border">
+							<span class="size-2 rounded-full bg-primary inline-block animate-pulse"></span>
+							<span>CBIR ENGINE · MULTI-DESCRIPTOR RETRIEVAL</span>
+						</Badge>
 
-		<div class="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
-			<!-- Announcement Pill -->
-			<div class="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-1 text-xs font-semibold text-foreground shadow-2xs mb-6">
-				<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-				<span class="text-muted-foreground font-normal">{m.landing_hero_badge_prod()}</span>
+						<h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-[1.1] mb-5">
+							Search images by what they actually look like.
+						</h1>
+
+						<p class="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl mb-7">
+							Perceptra indexes visual archives through 768-D HSV color histograms, MiniBatchKMeans dominant palettes, and GLCM/LBP texture matrices. Refine nearest-neighbor rankings in milliseconds with iterative Feature Relevance Estimation—zero manual tagging required.
+						</p>
+
+						<div class="flex flex-wrap items-center gap-3 mb-8">
+							<Button href="#workbench" size="default" class="gap-2 shadow-sm">
+								<span>Start Visual Query</span>
+								<ArrowRightIcon class="size-4" />
+							</Button>
+							<Button href="#screens" variant="outline" size="default" class="shadow-2xs">
+								Platform Tour
+							</Button>
+						</div>
+
+						<div class="w-full pt-5 border-t border-border flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-xs text-muted-foreground">
+							<span>5 Descriptors</span>
+							<span class="text-border">|</span>
+							<span>768-D HSV</span>
+							<span class="text-border">|</span>
+							<span>MiniBatchKMeans</span>
+							<span class="text-border">|</span>
+							<span>FRE Re-Ranking</span>
+						</div>
+					</div>
+
+					<!-- Right Column (7 cols): Live Visual Query Workbench -->
+					<div id="workbench" class="lg:col-span-7">
+						<Card.Root class="shadow-md border-border bg-card overflow-hidden">
+							<Card.Header class="p-4 sm:p-5 pb-3 border-b border-border">
+								<div class="flex flex-wrap items-center justify-between gap-3">
+									<div class="flex items-center gap-1.5 p-1 rounded-lg bg-muted/60 border border-border">
+										<Button
+											type="button"
+											variant={activeQueryKey === 'terraced' && !customQueryObj ? 'secondary' : 'ghost'}
+											size="sm"
+											class="h-7 text-xs font-medium px-2.5 {activeQueryKey === 'terraced' && !customQueryObj ? 'shadow-2xs' : ''}"
+											onclick={() => selectQueryTab('terraced')}
+										>
+											Terraced Fields
+										</Button>
+										<Button
+											type="button"
+											variant={activeQueryKey === 'temple' && !customQueryObj ? 'secondary' : 'ghost'}
+											size="sm"
+											class="h-7 text-xs font-medium px-2.5 {activeQueryKey === 'temple' && !customQueryObj ? 'shadow-2xs' : ''}"
+											onclick={() => selectQueryTab('temple')}
+										>
+											Imperial Temple
+										</Button>
+										<Button
+											type="button"
+											variant={activeQueryKey === 'autumn' && !customQueryObj ? 'secondary' : 'ghost'}
+											size="sm"
+											class="h-7 text-xs font-medium px-2.5 {activeQueryKey === 'autumn' && !customQueryObj ? 'shadow-2xs' : ''}"
+											onclick={() => selectQueryTab('autumn')}
+										>
+											Autumn Canopy
+										</Button>
+									</div>
+
+									<Badge variant="outline" class="font-mono text-xs gap-1.5 px-2.5 py-1">
+										<span>Cosine</span>
+										<span class="font-semibold text-emerald-600 dark:text-emerald-400">{simulatedLatency} ms</span>
+									</Badge>
+								</div>
+							</Card.Header>
+
+							<Card.Content class="p-4 sm:p-5">
+								<div class="grid grid-cols-1 sm:grid-cols-12 gap-5">
+									<!-- Query Reference & Weight Controls (5 cols) -->
+									<div class="sm:col-span-5 flex flex-col gap-4 p-3 rounded-lg bg-muted/40 border border-border/60">
+										<div class="relative aspect-4/3 w-full rounded-md overflow-hidden bg-muted border border-border/80">
+											<img src={activeQueryData.url} alt={activeQueryData.title} class="size-full object-cover" />
+											<span class="absolute bottom-2 left-2 font-mono text-[10px] bg-background/85 text-foreground px-2 py-0.5 rounded backdrop-blur-xs shadow-xs border border-border/50">
+												{activeQueryData.filename}
+											</span>
+										</div>
+
+										<!-- 5-Cluster Dominant Color Strip -->
+										<div class="flex flex-col gap-1.5">
+											<div class="flex justify-between items-center text-[11px] font-mono text-muted-foreground">
+												<span>DOMINANT PALETTE</span>
+												<span>k=5</span>
+											</div>
+											<div class="flex h-2.5 w-full rounded-full overflow-hidden border border-border/70" aria-label="Dominant color proportions">
+												{#each workbenchPalette as c}
+													<div class="h-full transition-all duration-300" style="width:{c.pct}%; background-color:{c.hex};" title="{c.hex} ({c.pct}%)"></div>
+												{/each}
+											</div>
+										</div>
+
+										<!-- Weight Presets & Sliders -->
+										<div class="flex flex-col gap-3 pt-2 border-t border-border/60">
+											<div class="flex items-center gap-1.5">
+												<Button
+													type="button"
+													variant={activePreset === 'balanced' ? 'default' : 'outline'}
+													size="sm"
+													class="h-6 text-[11px] px-2"
+													onclick={() => setQueryPreset('balanced')}
+												>
+													Balanced
+												</Button>
+												<Button
+													type="button"
+													variant={activePreset === 'color' ? 'default' : 'outline'}
+													size="sm"
+													class="h-6 text-[11px] px-2"
+													onclick={() => setQueryPreset('color')}
+												>
+													Color
+												</Button>
+												<Button
+													type="button"
+													variant={activePreset === 'texture' ? 'default' : 'outline'}
+													size="sm"
+													class="h-6 text-[11px] px-2"
+													onclick={() => setQueryPreset('texture')}
+												>
+													Texture
+												</Button>
+											</div>
+
+											<div class="space-y-1.5">
+												<div class="flex justify-between text-xs font-medium">
+													<span class="text-primary">Color Weight</span>
+													<span class="font-mono text-muted-foreground">{colorWeight}%</span>
+												</div>
+												<Slider
+													type="single"
+													bind:value={colorWeight}
+													min={0}
+													max={100}
+													step={1}
+													class="cursor-pointer"
+												/>
+											</div>
+
+											<div class="flex justify-between text-xs font-medium text-muted-foreground">
+												<span>Texture Weight (Inverse)</span>
+												<span class="font-mono">{textureWeight}%</span>
+											</div>
+										</div>
+									</div>
+
+									<!-- Ranked Candidates Grid (7 cols) -->
+									<div class="sm:col-span-7 flex flex-col gap-3">
+										<div class="flex justify-between items-center text-xs font-mono text-muted-foreground pb-1">
+											<span>TOP-4 RETRIEVED NEIGHBORS</span>
+											<span>GHIM-10K · Cosine</span>
+										</div>
+
+										<div class="grid grid-cols-2 gap-3">
+											{#each rankedWorkbenchCandidates as cand, idx}
+												<div class="group flex flex-col gap-2 p-2 rounded-lg bg-card border border-border shadow-2xs hover:shadow-sm transition-all text-left">
+													<div class="relative aspect-4/3 w-full rounded-md overflow-hidden bg-muted">
+														<img src={cand.url} alt={cand.title} loading="lazy" class="size-full object-cover group-hover:scale-105 transition-transform duration-300" />
+														<Badge class="absolute top-1.5 left-1.5 h-4.5 px-1.5 text-[10px] font-mono">
+															#{idx + 1}
+														</Badge>
+														<span class="absolute top-1.5 right-1.5 font-mono text-[10px] bg-background/90 text-foreground px-1.5 py-0.5 rounded backdrop-blur-xs font-medium border border-border/40">
+															{cand.score.toFixed(1)}%
+														</span>
+													</div>
+													<div class="flex flex-col px-0.5">
+														<span class="text-xs font-medium truncate text-foreground" title={cand.title}>{cand.title}</span>
+														<span class="text-[10px] font-mono text-muted-foreground">{cand.file}</span>
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								</div>
+							</Card.Content>
+						</Card.Root>
+					</div>
+				</div>
 			</div>
+		</section>
 
-			<!-- Big Headline -->
-			<h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground text-balance leading-[1.08] max-w-4xl">
-				{m.landing_hero_headline()}
-			</h1>
+		<!-- ======================================================================
+		     3. MULTI-DESCRIPTOR ARCHITECTURE (#descriptors)
+		     ====================================================================== -->
+		<section id="descriptors" class="py-16 sm:py-20 border-b border-border">
+			<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div class="max-w-3xl mb-12 text-left">
+					<Badge variant="outline" class="mb-3 font-mono text-[11px] uppercase tracking-wider">
+						Descriptor Pipeline
+					</Badge>
+					<h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-4">
+						Five complementary visual signatures, fused into one query vector.
+					</h2>
+					<p class="text-muted-foreground text-base sm:text-lg leading-relaxed">
+						Every ingested image is decomposed into continuous color distributions, perceptual centroids, and spatial texture matrices—enabling precise retrieval across lighting, scale, and structural variations.
+					</p>
+				</div>
 
-			<!-- Subtitle -->
-			<p class="mt-5 text-base sm:text-xl text-muted-foreground max-w-3xl text-balance leading-relaxed">
-				{m.landing_hero_lead()}
-			</p>
+				<!-- Bento Grid -->
+				<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+					<!-- Panel A: Interactive HSV 256-Bin Chart (7 cols) -->
+					<Card.Root class="lg:col-span-7 shadow-xs border-border bg-card">
+						<Card.Header class="p-5 pb-3">
+							<div class="flex flex-wrap items-center justify-between gap-3">
+								<div>
+									<Card.Title class="text-lg font-semibold">HSV Color Distribution (256 Bins)</Card.Title>
+									<Card.Description class="text-xs">Continuous frequency curves for Hue, Saturation, and Value channels.</Card.Description>
+								</div>
 
-			<!-- Action Row -->
-			<div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-				<Button
-					href="/dashboard"
-					size="lg"
-					class="h-11 px-6 text-sm font-semibold shadow-sm gap-2"
-				>
-					<span>{m.landing_cta_dashboard()}</span>
-					<ArrowRightIcon class="size-4" />
-				</Button>
-				<Button
-					href="/dashboard/query"
-					variant="outline"
-					size="lg"
-					class="h-11 px-6 text-sm font-semibold shadow-2xs gap-2"
-				>
-					<TargetIcon class="size-4 text-primary" />
-					<span>{m.landing_btn_try_query()}</span>
-				</Button>
-				<Button
-					href="/dashboard/images"
-					variant="ghost"
-					size="lg"
-					class="h-11 px-5 text-sm font-semibold text-muted-foreground hover:text-foreground gap-2"
-				>
-					<PhotoIcon class="size-4" />
-					<span>{m.landing_btn_explore_images()}</span>
-				</Button>
+								<div class="flex items-center gap-1 p-0.5 rounded-lg bg-muted/60 border border-border">
+									<Button
+										type="button"
+										variant={activeHsvFilter === 'all' ? 'secondary' : 'ghost'}
+										size="sm"
+										class="h-6 text-xs px-2"
+										onclick={() => (activeHsvFilter = 'all')}
+									>
+										All
+									</Button>
+									<Button
+										type="button"
+										variant={activeHsvFilter === 'h' ? 'secondary' : 'ghost'}
+										size="sm"
+										class="h-6 text-xs px-2"
+										onclick={() => (activeHsvFilter = 'h')}
+									>
+										Hue
+									</Button>
+									<Button
+										type="button"
+										variant={activeHsvFilter === 's' ? 'secondary' : 'ghost'}
+										size="sm"
+										class="h-6 text-xs px-2"
+										onclick={() => (activeHsvFilter = 's')}
+									>
+										Sat
+									</Button>
+									<Button
+										type="button"
+										variant={activeHsvFilter === 'v' ? 'secondary' : 'ghost'}
+										size="sm"
+										class="h-6 text-xs px-2"
+										onclick={() => (activeHsvFilter = 'v')}
+									>
+										Val
+									</Button>
+								</div>
+							</div>
+						</Card.Header>
+
+						<Card.Content class="p-5 pt-1 flex flex-col gap-4">
+							<div class="relative w-full rounded-lg bg-muted/30 border border-border p-3 overflow-hidden">
+								<svg
+									class="w-full h-48 cursor-crosshair overflow-visible"
+									role="img"
+									viewBox="0 0 640 210"
+									preserveAspectRatio="none"
+									aria-label="HSV 256-bin frequency chart"
+									onmousemove={handleHsvMouseMove}
+								>
+									<!-- Horizontal Reference Lines -->
+									<line x1="0" y1="42" x2="640" y2="42" stroke="currentColor" class="text-border" stroke-dasharray="3 4" />
+									<line x1="0" y1="96" x2="640" y2="96" stroke="currentColor" class="text-border" stroke-dasharray="3 4" />
+									<line x1="0" y1="150" x2="640" y2="150" stroke="currentColor" class="text-border" stroke-dasharray="3 4" />
+									<line x1="0" y1="196" x2="640" y2="196" stroke="currentColor" class="text-border" />
+
+									<!-- Area Fills -->
+									<path class="transition-opacity duration-200" fill="var(--chart-1)" fill-opacity="0.15" d={pathAreaH} style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 'h' ? 1 : 0};"></path>
+									<path class="transition-opacity duration-200" fill="var(--chart-3)" fill-opacity="0.15" d={pathAreaS} style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 's' ? 1 : 0};"></path>
+									<path class="transition-opacity duration-200" fill="var(--chart-2)" fill-opacity="0.15" d={pathAreaV} style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 'v' ? 1 : 0};"></path>
+
+									<!-- Frequency Curves -->
+									<path class="transition-opacity duration-200" fill="none" stroke="var(--chart-1)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d={pathCurveH} style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 'h' ? 1 : 0.12};"></path>
+									<path class="transition-opacity duration-200" fill="none" stroke="var(--chart-3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d={pathCurveS} style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 's' ? 1 : 0.12};"></path>
+									<path class="transition-opacity duration-200" fill="none" stroke="var(--chart-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d={pathCurveV} style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 'v' ? 1 : 0.12};"></path>
+
+									<!-- Cursor & Intersection Dots -->
+									<line x1={cursorX.toFixed(1)} y1="8" x2={cursorX.toFixed(1)} y2="196" stroke="currentColor" class="text-muted-foreground" stroke-width="1" stroke-dasharray="3 3" opacity="0.65" />
+									<circle cx={cursorX.toFixed(1)} cy={dotHY.toFixed(1)} r="3.5" fill="var(--chart-1)" style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 'h' ? 1 : 0.15};" />
+									<circle cx={cursorX.toFixed(1)} cy={dotSY.toFixed(1)} r="3.5" fill="var(--chart-3)" style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 's' ? 1 : 0.15};" />
+									<circle cx={cursorX.toFixed(1)} cy={dotVY.toFixed(1)} r="3.5" fill="var(--chart-2)" style="opacity: {activeHsvFilter === 'all' || activeHsvFilter === 'v' ? 1 : 0.15};" />
+								</svg>
+
+								<!-- Tooltip Readout -->
+								<div class="absolute top-3 right-3 p-2.5 rounded-md bg-background/95 border border-border shadow-sm text-xs font-mono pointer-events-none min-w-36">
+									<div class="text-muted-foreground mb-1">Bin {cursorBin + 1} (of 256)</div>
+									<div class="flex justify-between gap-4"><span style="color:var(--chart-1);">Hue</span><span>{hsvData.h[cursorBin].toFixed(3)}</span></div>
+									<div class="flex justify-between gap-4"><span style="color:var(--chart-3);">Sat</span><span>{hsvData.s[cursorBin].toFixed(3)}</span></div>
+									<div class="flex justify-between gap-4"><span style="color:var(--chart-2);">Val</span><span>{hsvData.v[cursorBin].toFixed(3)}</span></div>
+								</div>
+							</div>
+
+							<div class="flex flex-wrap justify-between items-center text-xs font-mono text-muted-foreground pt-1 border-t border-border/60">
+								<span>Peak Hue: <strong class="text-foreground">16.91%</strong> · Peak Sat: <strong class="text-foreground">3.27%</strong></span>
+								<span>Resolution: 256 bins · Vector: 768-D (L1)</span>
+							</div>
+						</Card.Content>
+					</Card.Root>
+
+					<!-- Panel B: Dominant Colors Clustered Analysis (5 cols) -->
+					<Card.Root class="lg:col-span-5 shadow-xs border-border bg-card">
+						<Card.Header class="p-5 pb-3">
+							<div class="flex flex-wrap items-center justify-between gap-3">
+								<div>
+									<Card.Title class="text-lg font-semibold">Dominant Colors Analysis</Card.Title>
+									<Card.Description class="text-xs">Perceptual centroids via MiniBatchKMeans.</Card.Description>
+								</div>
+
+								<div class="flex items-center gap-1 p-0.5 rounded-lg bg-muted/60 border border-border">
+									<Button
+										type="button"
+										variant={kmeansK === 5 ? 'secondary' : 'ghost'}
+										size="sm"
+										class="h-6 text-xs px-2"
+										onclick={() => (kmeansK = 5)}
+									>
+										k=5
+									</Button>
+									<Button
+										type="button"
+										variant={kmeansK === 8 ? 'secondary' : 'ghost'}
+										size="sm"
+										class="h-6 text-xs px-2"
+										onclick={() => (kmeansK = 8)}
+									>
+										k=8
+									</Button>
+								</div>
+							</div>
+						</Card.Header>
+
+						<Card.Content class="p-5 pt-1 flex flex-col gap-4">
+							<div class="flex flex-col gap-1.5">
+								<div class="flex justify-between items-center text-[11px] font-mono text-muted-foreground">
+									<span>CLUSTER PROPORTIONS</span>
+									<span>{kmeansK} Clusters · 100%</span>
+								</div>
+								<div class="flex h-3 w-full rounded-full overflow-hidden border border-border">
+									{#each activeClusters as c}
+										<div class="h-full transition-all duration-300" style="width:{c.pct}%; background-color:{c.hex};" title="{c.hex} ({c.pct}%)"></div>
+									{/each}
+								</div>
+							</div>
+
+							<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+								{#each activeClusters as c}
+									<button
+										type="button"
+										class="flex flex-col gap-1 p-2 rounded-lg bg-muted/40 border border-border/80 hover:border-primary/50 text-left transition-colors cursor-pointer group"
+										onclick={() => copyText(c.hex)}
+										title="Click to copy {c.hex}"
+									>
+										<div class="flex items-center justify-between gap-1.5">
+											<span class="size-3 rounded-full border border-border/60 shrink-0" style="background-color:{c.hex};"></span>
+											<span class="font-mono text-xs font-semibold text-foreground">{c.pct.toFixed(1)}%</span>
+										</div>
+										<span class="font-mono text-[11px] text-muted-foreground group-hover:text-foreground">{c.hex}</span>
+										<span class="font-mono text-[10px] text-muted-foreground/80">rgb({c.rgb})</span>
+									</button>
+								{/each}
+							</div>
+
+							<div class="flex justify-between items-center text-xs font-mono text-muted-foreground pt-3 border-t border-border/60 mt-auto">
+								<span>Click swatch to copy HEX</span>
+								<span>Space: CIELAB / sRGB</span>
+							</div>
+						</Card.Content>
+					</Card.Root>
+				</div>
+
+				<!-- Compact Technical Strip: Color Moments, GLCM, LBP -->
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+					<!-- Color Moments -->
+					<Card.Root class="shadow-xs border-border bg-card">
+						<Card.Header class="p-4 pb-2">
+							<div class="flex justify-between items-center">
+								<div class="flex items-center gap-2">
+									<span class="size-2.5 rounded-full" style="background-color: var(--chart-2);"></span>
+									<span class="font-semibold text-sm">Color Moments</span>
+								</div>
+								<Badge variant="outline" class="font-mono text-[10px]">9-D · Global</Badge>
+							</div>
+						</Card.Header>
+						<Card.Content class="p-4 pt-1 flex flex-col gap-3">
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								First three statistical moments across H, S, V channels capturing chromatic balance and exposure.
+							</p>
+							<div class="grid grid-cols-3 gap-2 pt-2 border-t border-border/60 font-mono text-center">
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Mean</span><span class="text-xs font-semibold text-foreground">0.482</span></div>
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Std Dev</span><span class="text-xs font-semibold text-foreground">0.214</span></div>
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Skew</span><span class="text-xs font-semibold text-foreground">+0.341</span></div>
+							</div>
+						</Card.Content>
+					</Card.Root>
+
+					<!-- GLCM Texture -->
+					<Card.Root class="shadow-xs border-border bg-card">
+						<Card.Header class="p-4 pb-2">
+							<div class="flex justify-between items-center">
+								<div class="flex items-center gap-2">
+									<span class="size-2.5 rounded-full" style="background-color: var(--chart-4);"></span>
+									<span class="font-semibold text-sm">GLCM Texture</span>
+								</div>
+								<Badge variant="outline" class="font-mono text-[10px]">24-D · 4 Angles</Badge>
+							</div>
+						</Card.Header>
+						<Card.Content class="p-4 pt-1 flex flex-col gap-3">
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Gray-Level Co-occurrence spatial statistics quantifying surface roughness, contrast, and periodicity.
+							</p>
+							<div class="grid grid-cols-3 gap-2 pt-2 border-t border-border/60 font-mono text-center">
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Contrast</span><span class="text-xs font-semibold text-foreground">14.28</span></div>
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Homog.</span><span class="text-xs font-semibold text-foreground">0.794</span></div>
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Energy</span><span class="text-xs font-semibold text-foreground">0.312</span></div>
+							</div>
+						</Card.Content>
+					</Card.Root>
+
+					<!-- LBP Texture -->
+					<Card.Root class="shadow-xs border-border bg-card">
+						<Card.Header class="p-4 pb-2">
+							<div class="flex justify-between items-center">
+								<div class="flex items-center gap-2">
+									<span class="size-2.5 rounded-full" style="background-color: var(--chart-5);"></span>
+									<span class="font-semibold text-sm">LBP Texture</span>
+								</div>
+								<Badge variant="outline" class="font-mono text-[10px]">128-D · Uniform</Badge>
+							</div>
+						</Card.Header>
+						<Card.Content class="p-4 pt-1 flex flex-col gap-3">
+							<p class="text-xs text-muted-foreground leading-relaxed">
+								Rotation-invariant Local Binary Patterns encoding micro-edges, foliage grain, and fine surface details.
+							</p>
+							<div class="grid grid-cols-3 gap-2 pt-2 border-t border-border/60 font-mono text-center">
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Radius</span><span class="text-xs font-semibold text-foreground">R=2 px</span></div>
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Neighbors</span><span class="text-xs font-semibold text-foreground">P=16</span></div>
+								<div class="flex flex-col"><span class="text-[10px] text-muted-foreground">Entropy</span><span class="text-xs font-semibold text-foreground">4.82 b</span></div>
+							</div>
+						</Card.Content>
+					</Card.Root>
+				</div>
 			</div>
+		</section>
 
-			<!-- ========================================================================= -->
-			<!-- HERO INTERACTIVE APP SHOWCASE WINDOW (Image Tabs + High-Res Mockup)       -->
-			<!-- ========================================================================= -->
-			<div id="showcase" class="w-full mt-12 text-left">
-				<!-- Selector Tabs Bar -->
-				<div class="flex items-center justify-center gap-1.5 sm:gap-2 overflow-x-auto pb-4 max-w-full">
-					{#each showcaseScreens as screen}
-						{@const isActive = activeScreenId === screen.id}
-						<button
+		<!-- ======================================================================
+		     4. INTERACTIVE WORKFLOW SECTION (#studio & #transform)
+		     ====================================================================== -->
+		<section class="py-16 sm:py-20 border-b border-border">
+			<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div class="max-w-3xl mb-12 text-left">
+					<Badge variant="outline" class="mb-3 font-mono text-[11px] uppercase tracking-wider">
+						Interactive Workflows
+					</Badge>
+					<h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-4">
+						Steer retrieval precision and prepare derived assets in place.
+					</h2>
+					<p class="text-muted-foreground text-base sm:text-lg leading-relaxed">
+						Test Perceptra’s Feature Relevance Estimation feedback loop and non-destructive client-side image transform studio right on this page.
+					</p>
+				</div>
+
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<!-- Left: Feature Relevance Estimation (FRE) Mini-Demo -->
+					<Card.Root id="studio" class="shadow-xs border-border bg-card">
+						<Card.Header class="p-5 pb-3">
+							<div class="flex items-center justify-between">
+								<div>
+									<Card.Title class="text-lg font-semibold">Feature Relevance Estimation (FRE)</Card.Title>
+									<Card.Description class="text-xs">Mark candidates relevant or irrelevant to calibrate descriptor weights.</Card.Description>
+								</div>
+								<Button variant="ghost" size="sm" class="h-8 text-xs gap-1" onclick={resetFRE}>
+									<RefreshCwIcon class="size-3.5" />
+									<span>Reset</span>
+								</Button>
+							</div>
+						</Card.Header>
+
+						<Card.Content class="p-5 pt-1 flex flex-col gap-4">
+							<div class="flex justify-between items-center p-2.5 rounded-lg bg-muted/40 border border-border font-mono text-xs">
+								<span>Round: <strong class="text-foreground">{freRound}</strong></span>
+								<span>mAP@20: <strong class="text-emerald-600 dark:text-emerald-400 font-semibold">{freWeights.precision}%</strong></span>
+							</div>
+
+							<!-- 3 Retrieved Images with Feedback Actions -->
+							<div class="grid grid-cols-3 gap-3">
+								{#each FRE_ITEMS as item}
+									{@const j = freJudgments[item.id] || 0}
+									<div class="flex flex-col gap-2 p-2 rounded-lg bg-muted/30 border transition-all {j === 1 ? 'border-emerald-500 bg-emerald-500/5' : j === -1 ? 'border-destructive bg-destructive/5 opacity-80' : 'border-border'}">
+										<div class="aspect-4/3 w-full rounded-md overflow-hidden bg-muted">
+											<img src={item.url} alt={item.title} loading="lazy" class="size-full object-cover" />
+										</div>
+										<span class="text-xs font-medium truncate px-0.5 text-foreground">{item.title}</span>
+										<div class="grid grid-cols-2 gap-1.5">
+											<Button
+												type="button"
+												variant={j === 1 ? 'default' : 'outline'}
+												size="sm"
+												class="h-7 text-xs {j === 1 ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}"
+												onclick={() => toggleJudgment(item.id, 1)}
+												title="Relevant (+)"
+											>
+												+
+											</Button>
+											<Button
+												type="button"
+												variant={j === -1 ? 'destructive' : 'outline'}
+												size="sm"
+												class="h-7 text-xs"
+												onclick={() => toggleJudgment(item.id, -1)}
+												title="Irrelevant (-)"
+											>
+												−
+											</Button>
+										</div>
+									</div>
+								{/each}
+							</div>
+
+							<!-- 5-Segment Dynamic Weights Bar -->
+							<div class="flex flex-col gap-1.5 pt-2">
+								<div class="flex justify-between items-center text-[11px] font-mono text-muted-foreground">
+									<span>ADAPTIVE WEIGHTS</span>
+									<span>{freWeights.gain ? `+${freWeights.gain}% mAP gain` : 'Baseline Weights'}</span>
+								</div>
+								<div class="flex h-3 w-full rounded-full overflow-hidden border border-border">
+									{#each FRE_CHANNELS as ch}
+										<div class="h-full transition-all duration-300" style="width:{freWeights.norm[ch.key]}%; background-color:{ch.color};" title="{ch.label}: {freWeights.norm[ch.key]}%"></div>
+									{/each}
+								</div>
+								<div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-mono text-muted-foreground pt-1">
+									{#each FRE_CHANNELS as ch}
+										<span class="inline-flex items-center gap-1.5">
+											<span class="size-2 rounded-full" style="background-color:{ch.color};"></span>
+											{ch.label} {freWeights.norm[ch.key]}%
+										</span>
+									{/each}
+								</div>
+							</div>
+						</Card.Content>
+					</Card.Root>
+
+					<!-- Right: Non-Destructive Image Transform Studio Mini-Demo -->
+					<Card.Root id="transform" class="shadow-xs border-border bg-card">
+						<Card.Header class="p-5 pb-3">
+							<div class="flex items-center justify-between">
+								<div>
+									<Card.Title class="text-lg font-semibold">Transform Studio</Card.Title>
+									<Card.Description class="text-xs">Rotate, mirror flip, shear, and aspect crop with asset lineage.</Card.Description>
+								</div>
+								<Button variant="ghost" size="sm" class="h-8 text-xs gap-1" onclick={resetTransform}>
+									<RefreshCwIcon class="size-3.5" />
+									<span>Reset</span>
+								</Button>
+							</div>
+						</Card.Header>
+
+						<Card.Content class="p-5 pt-1 flex flex-col gap-4">
+							<div class="h-52 w-full rounded-lg bg-muted/40 border border-border flex items-center justify-center p-3 overflow-hidden">
+								<div
+									class="rounded-md overflow-hidden bg-background shadow-xs transition-all duration-200"
+									style="
+										aspect-ratio: {tfAspect === '1-1' ? '1/1' : tfAspect === '16-9' ? '16/9' : '4/3'};
+										width: {tfAspect === '1-1' ? '170px' : tfAspect === '16-9' ? '250px' : '200px'};
+									"
+								>
+									<img
+										src="https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=800&q=80"
+										alt="Temple preview"
+										class="size-full object-cover transition-transform duration-200"
+										style="transform: rotate({tfRotate}deg) scaleX({tfFlipX ? -1 : 1}) skewX({tfShear}deg);"
+									/>
+								</div>
+							</div>
+
+							<!-- Controls -->
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+								<div class="flex flex-col gap-1.5">
+									<span class="font-medium text-muted-foreground">Rotation</span>
+									<div class="flex items-center gap-1">
+										<Button
+											type="button"
+											variant={tfRotate === 0 ? 'default' : 'outline'}
+											size="sm"
+											class="h-7 text-xs flex-1"
+											onclick={() => (tfRotate = 0)}
+										>
+											0°
+										</Button>
+										<Button
+											type="button"
+											variant={tfRotate === 90 ? 'default' : 'outline'}
+											size="sm"
+											class="h-7 text-xs flex-1"
+											onclick={() => (tfRotate = 90)}
+										>
+											90°
+										</Button>
+										<Button
+											type="button"
+											variant={tfRotate === 180 ? 'default' : 'outline'}
+											size="sm"
+											class="h-7 text-xs flex-1"
+											onclick={() => (tfRotate = 180)}
+										>
+											180°
+										</Button>
+									</div>
+								</div>
+
+								<div class="flex flex-col gap-1.5">
+									<span class="font-medium text-muted-foreground">Aspect Crop</span>
+									<div class="flex items-center gap-1">
+										<Button
+											type="button"
+											variant={tfAspect === 'original' ? 'default' : 'outline'}
+											size="sm"
+											class="h-7 text-xs flex-1"
+											onclick={() => (tfAspect = 'original')}
+										>
+											Orig
+										</Button>
+										<Button
+											type="button"
+											variant={tfAspect === '1-1' ? 'default' : 'outline'}
+											size="sm"
+											class="h-7 text-xs flex-1"
+											onclick={() => (tfAspect = '1-1')}
+										>
+											1:1
+										</Button>
+										<Button
+											type="button"
+											variant={tfAspect === '16-9' ? 'default' : 'outline'}
+											size="sm"
+											class="h-7 text-xs flex-1"
+											onclick={() => (tfAspect = '16-9')}
+										>
+											16:9
+										</Button>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex items-center justify-between gap-4 pt-1">
+								<Button
+									type="button"
+									variant={tfFlipX ? 'default' : 'outline'}
+									size="sm"
+									class="h-7 text-xs gap-1.5"
+									onclick={() => (tfFlipX = !tfFlipX)}
+								>
+									<FlipHorizontalIcon class="size-3.5" />
+									<span>Flip Horizontal</span>
+								</Button>
+
+								<div class="flex items-center gap-2 flex-1 max-w-xs">
+									<span class="text-xs font-mono text-muted-foreground shrink-0">Shear: {tfShear}°</span>
+									<Slider
+										type="single"
+										bind:value={tfShear}
+										min={-15}
+										max={15}
+										step={1}
+										class="cursor-pointer"
+									/>
+								</div>
+							</div>
+
+							<div class="flex justify-between items-center text-xs font-mono text-muted-foreground p-2 rounded bg-muted/40 border border-border">
+								<span>12_6023.jpg → <strong class="text-foreground">{tfDerivedOps}</strong></span>
+								<span>{tfDims}</span>
+							</div>
+						</Card.Content>
+					</Card.Root>
+				</div>
+			</div>
+		</section>
+
+		<!-- ======================================================================
+		     5. REAL APPLICATION SCREENS SHOWCASE (#screens)
+		     ====================================================================== -->
+		<section id="screens" class="py-16 sm:py-20 border-b border-border bg-muted/20">
+			<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div class="max-w-3xl mb-10 text-left">
+					<Badge variant="outline" class="mb-3 font-mono text-[11px] uppercase tracking-wider">
+						Platform Tour
+					</Badge>
+					<h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-4">
+						Production Interface &amp; Integrated Modules.
+					</h2>
+					<p class="text-muted-foreground text-base sm:text-lg leading-relaxed">
+						Inspect the 9 production interfaces powering Perceptra’s content-based image retrieval platform—from telemetry dashboards and similarity studios to non-destructive transforms.
+					</p>
+				</div>
+
+				<!-- Screen Selector Tabs -->
+				<div class="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-none">
+					{#each appScreens as s}
+						<Button
 							type="button"
-							onclick={() => activeScreenId = screen.id}
-							class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border {isActive ? 'bg-primary text-primary-foreground border-primary shadow-xs' : 'bg-card text-muted-foreground hover:text-foreground border-border hover:bg-muted/50'}"
+							variant={activeScreenId === s.id ? 'default' : 'outline'}
+							size="sm"
+							class="text-xs h-8 whitespace-nowrap shadow-2xs"
+							onclick={() => (activeScreenId = s.id)}
 						>
-							{#if screen.id === 'query'}
-								<TargetIcon class="size-3.5" />
-							{:else if screen.id === 'images'}
-								<PhotoIcon class="size-3.5" />
-							{:else if screen.id === 'overview'}
-								<ActivityIcon class="size-3.5" />
-							{:else if screen.id === 'inspection'}
-								<SparklesIcon class="size-3.5" />
-							{:else if screen.id === 'transform'}
-								<CropIcon class="size-3.5" />
-							{:else if screen.id === 'upload'}
-								<UploadIcon class="size-3.5" />
-							{:else}
-								<FolderIcon class="size-3.5" />
-							{/if}
-							<span>{screen.id === 'query' ? m.landing_showcase_query() : screen.id === 'images' ? m.landing_showcase_library() : screen.id === 'overview' ? m.landing_showcase_analytics() : screen.id === 'transform' ? m.landing_showcase_transform() : screen.id === 'upload' ? m.landing_showcase_upload() : screen.id === 'categories' ? m.landing_showcase_categories() : screen.title.split('&')[0].trim()}</span>
-						</button>
+							<span>{s.title.split('&')[0].trim()}</span>
+						</Button>
 					{/each}
 				</div>
 
-				<!-- Browser Frame Window -->
-				<div class="rounded-2xl border border-border/80 bg-card shadow-2xl overflow-hidden">
-					<!-- Top Window Chrome -->
-					<div class="flex items-center justify-between px-4 py-3 bg-muted/40 border-b border-border/60">
-						<div class="flex items-center gap-2">
-							<span class="size-3 rounded-full bg-rose-500/80"></span>
-							<span class="size-3 rounded-full bg-amber-500/80"></span>
-							<span class="size-3 rounded-full bg-emerald-500/80"></span>
-						</div>
-
-						<!-- Address Bar Mockup -->
-						<div class="flex items-center gap-2 px-3 py-1 rounded-md bg-background/80 border border-border/60 text-xs font-mono text-muted-foreground max-w-sm sm:max-w-md w-full mx-4">
-							<span class="text-emerald-500">https://</span>
-							<span class="text-foreground truncate">perceptra.internal{activeScreen.path}</span>
-						</div>
-
-						<div class="flex items-center gap-2">
-							<Badge variant="outline" class="hidden sm:inline-flex text-[10px] font-mono border-primary/30 text-primary">
-								{activeScreen.badge}
-							</Badge>
+				<!-- Featured Screen Card -->
+				<Card.Root class="shadow-md border-border bg-card mb-8 overflow-hidden">
+					<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center p-5 sm:p-6">
+						<!-- Screenshot Preview Column (7 cols) -->
+						<div class="lg:col-span-7">
 							<button
 								type="button"
-								onclick={() => zoomedImage = activeScreen.image}
-								class="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-								title="Zoom fullscreen"
-								aria-label="Zoom image fullscreen"
+								class="group relative w-full aspect-16/9 rounded-lg overflow-hidden border border-border bg-muted cursor-zoom-in block text-left"
+								onclick={() => openLightbox(activeScreen.image)}
+								aria-label="Inspect screenshot in full size"
 							>
-								<Maximize2Icon class="size-3.5" />
+								<img src={activeScreen.image} alt={activeScreen.title} class="size-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+								<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+									<Badge variant="secondary" class="gap-1.5 shadow-md">
+										<Maximize2Icon class="size-3.5" />
+										<span>Click to enlarge (1920×962)</span>
+									</Badge>
+								</div>
 							</button>
-							<Button href={activeScreen.actionHref} size="sm" variant="ghost" class="h-7 px-2 text-xs gap-1 hidden sm:flex">
-								<span>Open</span>
-								<ExternalLinkIcon class="size-3" />
-							</Button>
 						</div>
-					</div>
 
-					<!-- Screenshot Frame -->
-					<div class="relative group bg-muted/20">
-						<button
-							type="button"
-							class="w-full text-left cursor-zoom-in block"
-							onclick={() => zoomedImage = activeScreen.image}
-							aria-label="Click to enlarge screenshot"
-						>
-							<img
-								src={activeScreen.image}
-								alt={activeScreen.title}
-								class="w-full h-auto max-h-[640px] object-cover object-top transition-transform duration-300 group-hover:scale-[1.005]"
-								loading="eager"
-							/>
-						</button>
-
-						<div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-							<span class="px-2.5 py-1 rounded-md bg-background/90 text-foreground text-xs font-semibold shadow-md border border-border inline-flex items-center gap-1.5">
-								<Maximize2Icon class="size-3" />
-								<span>Click to Zoom</span>
-							</span>
-						</div>
-					</div>
-
-					<!-- Bottom Spec & Capabilities Bar -->
-					<div class="p-5 sm:p-6 bg-card border-t border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-						<div class="space-y-1.5 max-w-2xl">
-							<div class="flex items-center gap-2">
-								<h3 class="text-lg font-bold text-foreground">{activeScreen.title}</h3>
-								<Badge variant="secondary" class="text-xs">{activeScreen.badge}</Badge>
+						<!-- Details Column (5 cols) -->
+						<div class="lg:col-span-5 flex flex-col items-start text-left gap-4">
+							<div class="flex flex-wrap items-center gap-2">
+								<Badge variant="outline" class="font-mono text-[11px]">{activeScreen.path}</Badge>
+								<Badge variant="secondary" class="text-[11px]">{activeScreen.badge}</Badge>
 							</div>
-							<p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+
+							<h3 class="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{activeScreen.title}</h3>
+
+							<p class="text-sm text-muted-foreground leading-relaxed">
 								{activeScreen.description}
 							</p>
-							<div class="flex flex-wrap items-center gap-1.5 pt-1">
+
+							<div class="space-y-2 w-full pt-2">
+								{#each activeScreen.highlights as hl}
+									<div class="flex items-start gap-2 text-xs text-foreground">
+										<CheckIcon class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+										<span>{hl}</span>
+									</div>
+								{/each}
+							</div>
+
+							<div class="flex flex-wrap gap-1.5 pt-2">
 								{#each activeScreen.tags as tag}
-									<span class="px-2 py-0.5 rounded text-[11px] font-mono bg-muted/50 text-foreground border border-border/50">
+									<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-muted text-muted-foreground border border-border/60">
 										{tag}
 									</span>
 								{/each}
 							</div>
-						</div>
 
-						<div class="shrink-0 flex items-center gap-3">
-							<Button
-								href={activeScreen.actionHref}
-								class="h-9 px-4 text-xs font-semibold gap-1.5 shadow-xs"
-							>
-								<span>{activeScreen.actionLabel}</span>
-								<ArrowRightIcon class="size-3.5" />
-							</Button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Signature GitHub Spectrum Multi-Color Border -->
-		<div class="h-1 w-full bg-gradient-to-r from-blue-500 via-indigo-500 via-purple-500 via-pink-500 to-emerald-500 mt-16"></div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 3. LIVE ACTIVITY TICKER RIBBON                                            -->
-	<!-- ========================================================================= -->
-	<section class="border-b border-border bg-card/60 py-3 overflow-x-auto">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center gap-8 whitespace-nowrap text-xs">
-			<div class="flex items-center gap-2 font-bold text-foreground">
-				<span class="size-2 rounded-full bg-emerald-500 animate-ping"></span>
-				<span class="text-emerald-600 dark:text-emerald-400 font-mono">LIVE TELEMETRY</span>
-			</div>
-			<div class="h-4 w-px bg-border"></div>
-			{#each liveTickerItems as item}
-				<div class="flex items-center gap-2 text-muted-foreground">
-					{#if item.type === 'indexed'}
-						<DatabaseIcon class="size-3.5 text-primary" />
-					{:else if item.type === 'query'}
-						<TargetIcon class="size-3.5 text-emerald-500" />
-					{:else if item.type === 'latency'}
-						<ActivityIcon class="size-3.5 text-blue-500" />
-					{:else if item.type === 'layout'}
-						<PhotoIcon class="size-3.5 text-indigo-500" />
-					{:else}
-						<CpuIcon class="size-3.5 text-amber-500" />
-					{/if}
-					<span class="font-medium text-foreground">{item.label}</span>
-					<span class="text-[10px] text-muted-foreground font-mono">({item.time})</span>
-				</div>
-				<div class="h-3 w-px bg-border/60"></div>
-			{/each}
-		</div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 4. "INSIDE PERCEPTRA" BENTO SHOWCASE (Real Screenshots & Deep Dives)      -->
-	<!-- ========================================================================= -->
-	<section id="platform" class="py-16 sm:py-24 border-b border-border bg-background">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<!-- Section Header -->
-			<div class="text-center max-w-3xl mx-auto mb-16">
-				<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-3">
-					<SparklesIcon class="size-3.5" />
-					<span>Production Modules</span>
-				</div>
-				<h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-					Inside the Perceptra Platform
-				</h2>
-				<p class="mt-3 text-sm sm:text-base text-muted-foreground">
-					Explore the production interface: multi-descriptor query studio, Google Photos justified wall, deep KMeans color clustering, and live latency telemetry.
-				</p>
-			</div>
-
-			<!-- Bento Grid Section 1: Hero Split Feature (Visual Query Studio) -->
-			<div class="rounded-2xl border border-border bg-card shadow-sm overflow-hidden mb-12">
-				<div class="grid grid-cols-1 lg:grid-cols-12 gap-0 items-center">
-					<!-- Visual Screenshot -->
-					<div class="lg:col-span-7 bg-muted/30 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-border">
-						<div class="rounded-xl overflow-hidden border border-border shadow-md group relative">
-							<button
-								type="button"
-								class="w-full text-left cursor-zoom-in block"
-								onclick={() => zoomedImage = '/showcase/query-studio.jpg'}
-								aria-label="Zoom Visual Query Studio screenshot"
-							>
-								<img
-									src="/showcase/query-studio.jpg"
-									alt="Visual Query Studio interface"
-									class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-								/>
-							</button>
-						</div>
-					</div>
-
-					<!-- Detailed Feature Info -->
-					<div class="lg:col-span-5 p-6 sm:p-8 space-y-5">
-						<div class="space-y-2">
-							<Badge variant="outline" class="border-primary/30 text-primary font-mono text-xs">
-								Core Engine • /dashboard/query
-							</Badge>
-							<h3 class="text-2xl font-bold text-foreground">Visual Query Studio</h3>
-							<p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-								Compose queries using any reference image. Dial in feature weights across color and texture descriptors, select candidate scopes, and refine results with Rocchio relevance feedback.
-							</p>
-						</div>
-
-						<div class="space-y-3 pt-2 text-xs">
-							<div class="flex items-start gap-2.5">
-								<CheckIcon class="size-4 text-emerald-500 shrink-0 mt-0.5" />
-								<div>
-									<strong class="text-foreground">Dynamic Weight Sliders:</strong>
-									<span class="text-muted-foreground"> Live sliders for HSV Color Histogram, Moments, Dominant Colors, GLCM, and LBP.</span>
-								</div>
-							</div>
-							<div class="flex items-start gap-2.5">
-								<CheckIcon class="size-4 text-emerald-500 shrink-0 mt-0.5" />
-								<div>
-									<strong class="text-foreground">Instant Presets:</strong>
-									<span class="text-muted-foreground"> One-click switching between Balanced, Color Focus, Texture Focus, and Custom modes.</span>
-								</div>
-							</div>
-							<div class="flex items-start gap-2.5">
-								<CheckIcon class="size-4 text-emerald-500 shrink-0 mt-0.5" />
-								<div>
-									<strong class="text-foreground">Candidate Scopes:</strong>
-									<span class="text-muted-foreground"> Search strictly within the 10,000 GHIM reference set, personal uploads, or combined.</span>
-								</div>
-							</div>
-						</div>
-
-						<div class="pt-4 border-t border-border flex items-center justify-between">
-							<span class="text-xs font-mono text-muted-foreground">Cosine Latency: <strong class="text-foreground">16.8 ms</strong></span>
-							<Button href="/dashboard/query" size="sm" class="h-8 text-xs font-semibold gap-1.5">
-								<span>Launch Studio</span>
-								<ArrowRightIcon class="size-3.5" />
-							</Button>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Bento Grid Section 2: Two Equal Cards (Google Photos Justified Wall & Telemetry Trendline) -->
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-				<!-- Card 1: Google Photos Justified Wall -->
-				<div class="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
-					<div class="space-y-4">
-						<div class="flex items-center justify-between">
-							<span class="text-xs font-mono text-primary font-bold px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-								Google Photos Layout
-							</span>
-							<span class="text-[11px] font-mono text-muted-foreground">/dashboard/images</span>
-						</div>
-
-						<div class="rounded-xl overflow-hidden border border-border shadow-xs group relative">
-							<button
-								type="button"
-								class="w-full text-left cursor-zoom-in block"
-								onclick={() => zoomedImage = '/showcase/gallery-photos.jpg'}
-								aria-label="Zoom Google Photos Justified Wall screenshot"
-							>
-								<img
-									src="/showcase/gallery-photos.jpg"
-									alt="Google Photos justified gallery"
-									class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-								/>
-							</button>
-						</div>
-
-						<div class="space-y-1.5">
-							<h3 class="text-lg font-bold text-foreground">Justified Image Wall & Batch Actions</h3>
-							<p class="text-xs text-muted-foreground leading-relaxed">
-								Images flow naturally at fixed row heights without cropping or distortion. Select images with top-left badges to launch the floating toolbar for moving to collections or batch deleting.
-							</p>
-						</div>
-
-						<div class="grid grid-cols-2 gap-2 text-xs pt-2">
-							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
-								<div class="font-semibold text-foreground">Zero Image Distortion</div>
-								<div class="text-[11px] text-muted-foreground">Calculated aspect ratios maintain full fidelity</div>
-							</div>
-							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
-								<div class="font-semibold text-foreground">Floating Batch Bar</div>
-								<div class="text-[11px] text-muted-foreground">Move to collection or delete in one step</div>
+							<div class="pt-2">
+								<Button href={activeScreen.path} size="sm" class="gap-1.5 shadow-xs">
+									<span>Open {activeScreen.title.split('&')[0].trim()}</span>
+									<ArrowRightIcon class="size-3.5" />
+								</Button>
 							</div>
 						</div>
 					</div>
+				</Card.Root>
 
-					<div class="mt-6 pt-4 border-t border-border flex items-center justify-between">
-						<span class="text-xs text-muted-foreground">Batch Operations: <strong class="text-foreground">Supported</strong></span>
-						<Button href="/dashboard/images" variant="outline" size="sm" class="h-8 text-xs font-semibold gap-1.5">
-							<span>Browse Gallery</span>
-							<ArrowRightIcon class="size-3" />
+				<!-- All 9 Screenshots Quick-Switch Grid -->
+				<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
+					{#each appScreens as s}
+						<button
+							type="button"
+							class="group flex flex-col gap-2 p-2.5 rounded-lg border text-left transition-all cursor-pointer bg-card hover:shadow-sm {activeScreenId === s.id ? 'border-primary ring-1 ring-primary' : 'border-border'}"
+							onclick={() => (activeScreenId = s.id)}
+						>
+							<div class="relative aspect-16/9 w-full rounded-md overflow-hidden bg-muted border border-border/80">
+								<img src={s.image} alt={s.title} loading="lazy" class="size-full object-cover group-hover:scale-105 transition-transform duration-300" />
+								<span class="absolute bottom-1.5 left-1.5 font-mono text-[9px] bg-background/90 text-foreground px-1.5 py-0.5 rounded border border-border/40 backdrop-blur-xs">
+									{s.path}
+								</span>
+							</div>
+							<div class="flex flex-col px-0.5">
+								<span class="text-xs font-semibold truncate text-foreground">{s.title.split('&')[0].trim()}</span>
+								<span class="text-[10px] text-muted-foreground truncate">{s.badge}</span>
+							</div>
+						</button>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<!-- ======================================================================
+		     6. VISUAL GALLERY SHOWCASE (#gallery)
+		     ====================================================================== -->
+		<section id="gallery" class="py-16 sm:py-20 border-b border-border">
+			<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div class="max-w-3xl mb-10 text-left">
+					<Badge variant="outline" class="mb-3 font-mono text-[11px] uppercase tracking-wider">
+						GHIM-10K Visual Archive
+					</Badge>
+					<h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-4">
+						Explore indexed photography and pivot into similarity search.
+					</h2>
+					<p class="text-muted-foreground text-base sm:text-lg leading-relaxed">
+						Filter by visual class or density, inspect dominant color signatures, and click <strong>Find Similar</strong> on any frame to load it directly into the Live Visual Query Workbench.
+					</p>
+				</div>
+
+				<!-- Toolbar -->
+				<div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+					<div class="flex flex-wrap items-center gap-1.5">
+						<Button
+							type="button"
+							variant={activeCategory === 'all' ? 'default' : 'outline'}
+							size="sm"
+							class="text-xs h-7"
+							onclick={() => (activeCategory = 'all')}
+						>
+							All
+						</Button>
+						<Button
+							type="button"
+							variant={activeCategory === 'Landscapes' ? 'default' : 'outline'}
+							size="sm"
+							class="text-xs h-7"
+							onclick={() => (activeCategory = 'Landscapes')}
+						>
+							Landscapes
+						</Button>
+						<Button
+							type="button"
+							variant={activeCategory === 'Architecture' ? 'default' : 'outline'}
+							size="sm"
+							class="text-xs h-7"
+							onclick={() => (activeCategory = 'Architecture')}
+						>
+							Architecture
+						</Button>
+						<Button
+							type="button"
+							variant={activeCategory === 'Autumn' ? 'default' : 'outline'}
+							size="sm"
+							class="text-xs h-7"
+							onclick={() => (activeCategory = 'Autumn')}
+						>
+							Autumn
+						</Button>
+						<Button
+							type="button"
+							variant={activeCategory === 'Maritime' ? 'default' : 'outline'}
+							size="sm"
+							class="text-xs h-7"
+							onclick={() => (activeCategory = 'Maritime')}
+						>
+							Maritime
+						</Button>
+					</div>
+
+					<div class="flex items-center gap-1 p-0.5 rounded-lg bg-muted/60 border border-border">
+						<Button
+							type="button"
+							variant={galleryDensity === 'comfortable' ? 'secondary' : 'ghost'}
+							size="sm"
+							class="h-6 text-xs px-2.5"
+							onclick={() => (galleryDensity = 'comfortable')}
+						>
+							Comfortable
+						</Button>
+						<Button
+							type="button"
+							variant={galleryDensity === 'compact' ? 'secondary' : 'ghost'}
+							size="sm"
+							class="h-6 text-xs px-2.5"
+							onclick={() => (galleryDensity = 'compact')}
+						>
+							Compact
 						</Button>
 					</div>
 				</div>
 
-				<!-- Card 2: Telemetry & Sequential Latency Trendline -->
-				<div class="rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-primary/40 transition-all flex flex-col justify-between">
-					<div class="space-y-4">
-						<div class="flex items-center justify-between">
-							<span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-								Sequential Latency Trendline
-							</span>
-							<span class="text-[11px] font-mono text-muted-foreground">/dashboard</span>
-						</div>
-
-						<div class="rounded-xl overflow-hidden border border-border shadow-xs group relative">
-							<button
-								type="button"
-								class="w-full text-left cursor-zoom-in block"
-								onclick={() => zoomedImage = '/showcase/overview-dark.png'}
-								aria-label="Zoom Telemetry and Sequential Latency Trendline screenshot"
-							>
-								<img
-									src="/showcase/overview-dark.png"
-									alt="Telemetry and latency trendline in dark mode"
-									class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-								/>
-							</button>
-						</div>
-
-						<div class="space-y-1.5">
-							<h3 class="text-lg font-bold text-foreground">Telemetry & Latency Monitoring</h3>
-							<p class="text-xs text-muted-foreground leading-relaxed">
-								Live performance monitoring across iterations. Interactive AreaChart visualizes chronological latency progression alongside a dashed horizontal reference line for Average Latency and SLA thresholds.
-							</p>
-						</div>
-
-						<div class="grid grid-cols-2 gap-2 text-xs pt-2">
-							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
-								<div class="font-semibold text-foreground">Dashed SLA Reference</div>
-								<div class="text-[11px] text-muted-foreground">Visualizes average latency drift instantly</div>
-							</div>
-							<div class="p-2.5 rounded-lg bg-muted/30 border border-border/50">
-								<div class="font-semibold text-foreground">Relevance Ratio Tracking</div>
-								<div class="text-[11px] text-muted-foreground">Monitors relevant vs irrelevant feedback</div>
-							</div>
-						</div>
-					</div>
-
-					<div class="mt-6 pt-4 border-t border-border flex items-center justify-between">
-						<span class="text-xs text-muted-foreground">Status: <strong class="text-emerald-500">Live Telemetry</strong></span>
-						<Button href="/dashboard" variant="outline" size="sm" class="h-8 text-xs font-semibold gap-1.5">
-							<span>View Dashboard</span>
-							<ArrowRightIcon class="size-3" />
-						</Button>
-					</div>
-				</div>
-			</div>
-
-			<!-- Bento Grid Section 3: Three Cards (Descriptors, Transform, Upload) -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-				<!-- Card 3A: Deep Descriptors & KMeans -->
-				<div class="rounded-xl border border-border bg-card p-5 space-y-3.5 shadow-2xs flex flex-col justify-between">
-					<div class="space-y-3">
-						<div class="rounded-lg overflow-hidden border border-border group relative">
-							<button
-								type="button"
-								class="w-full text-left cursor-zoom-in block"
-								onclick={() => zoomedImage = '/showcase/image-descriptors.jpg'}
-								aria-label="Zoom deep descriptor inspection screenshot"
-							>
-								<img
-									src="/showcase/image-descriptors.jpg"
-									alt="Dominant color and HSV curves"
-									class="w-full h-40 object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
-								/>
-							</button>
-						</div>
-						<div class="space-y-1">
-							<Badge variant="outline" class="text-[10px] font-mono text-purple-600 dark:text-purple-400">
-								MiniBatchKMeans (k=5)
-							</Badge>
-							<h4 class="text-sm font-bold text-foreground">Feature Inspection & HSV Curves</h4>
-							<p class="text-xs text-muted-foreground leading-relaxed">
-								Clustered dominant colors with RGB/Hex proportions and full 256-bin continuous HSV distribution frequency curves.
-							</p>
-						</div>
-					</div>
-					<Button href="/dashboard/images" variant="outline" size="sm" class="h-7 text-xs font-semibold w-full">
-						Inspect Descriptors
-					</Button>
-				</div>
-
-				<!-- Card 3B: Image Transform Studio -->
-				<div class="rounded-xl border border-border bg-card p-5 space-y-3.5 shadow-2xs flex flex-col justify-between">
-					<div class="space-y-3">
-						<div class="rounded-lg overflow-hidden border border-border group relative">
-							<button
-								type="button"
-								class="w-full text-left cursor-zoom-in block"
-								onclick={() => zoomedImage = '/showcase/image-transform.jpg'}
-								aria-label="Zoom image transform studio screenshot"
-							>
-								<img
-									src="/showcase/image-transform.jpg"
-									alt="Transform workspace tools and resize options"
-									class="w-full h-40 object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
-								/>
-							</button>
-						</div>
-						<div class="space-y-1">
-							<Badge variant="outline" class="text-[10px] font-mono text-amber-600 dark:text-amber-400">
-								Canvas 2D Transformations
-							</Badge>
-							<h4 class="text-sm font-bold text-foreground">Image Transform Studio</h4>
-							<p class="text-xs text-muted-foreground leading-relaxed">
-								Client-side crop to aspect presets (1:1, 16:9, 9:16), rotate, flip, shear, and apply affine matrix transforms non-destructively.
-							</p>
-						</div>
-					</div>
-					<Button href="/dashboard/transform" variant="outline" size="sm" class="h-7 text-xs font-semibold w-full">
-						Launch Transform
-					</Button>
-				</div>
-
-				<!-- Card 3C: Batch Upload & Categories -->
-				<div class="rounded-xl border border-border bg-card p-5 space-y-3.5 shadow-2xs flex flex-col justify-between">
-					<div class="space-y-3">
-						<div class="rounded-lg overflow-hidden border border-border group relative">
-							<button
-								type="button"
-								class="w-full text-left cursor-zoom-in block"
-								onclick={() => zoomedImage = '/showcase/upload-queue.png'}
-								aria-label="Zoom batch upload queue screenshot"
-							>
-								<img
-									src="/showcase/upload-queue.png"
-									alt="Upload queue with progress meters"
-									class="w-full h-40 object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
-								/>
-							</button>
-						</div>
-						<div class="space-y-1">
-							<Badge variant="outline" class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
-								Auto-On Extraction
-							</Badge>
-							<h4 class="text-sm font-bold text-foreground">Batch Upload & Ingestion</h4>
-							<p class="text-xs text-muted-foreground leading-relaxed">
-								Multi-file drag-and-drop with toggleable Auto-On descriptor extraction, folder routing, and live per-file progress meters.
-							</p>
-						</div>
-					</div>
-					<Button href="/dashboard/upload" variant="outline" size="sm" class="h-7 text-xs font-semibold w-full">
-						Upload Images
-					</Button>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 5. INTERACTIVE RETRIEVAL SIMULATOR                                        -->
-	<!-- ========================================================================= -->
-	<section id="simulator" class="py-16 sm:py-20 border-b border-border bg-muted/20">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="text-center max-w-2xl mx-auto mb-10">
-				<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-semibold mb-3">
-					<TargetIcon class="size-3.5" />
-					<span>Interactive Live Simulator</span>
-				</div>
-				<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-					{m.landing_demo_title()}
-				</h2>
-				<p class="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-					{m.landing_demo_subtitle()}
-				</p>
-			</div>
-
-			<!-- Query Selector Pills -->
-			<div class="flex flex-wrap items-center justify-center gap-2 mb-8">
-				{#each querySamples as sample, idx}
-					<button
-						type="button"
-						onclick={() => { selectedSampleIndex = idx; relevanceFeedback = {}; }}
-						class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer {selectedSampleIndex === idx ? 'border-primary bg-primary text-primary-foreground shadow-xs' : 'border-border bg-card text-foreground hover:bg-muted'}"
-					>
-						<PhotoIcon class="size-3.5" />
-						<span>{sample.title}</span>
-					</button>
-				{/each}
-			</div>
-
-			<!-- Interactive Simulator Panel -->
-			<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 rounded-xl border border-border bg-card p-6 shadow-xs">
-				<!-- Left Column: Query Signature & Descriptor Weights -->
-				<div class="lg:col-span-4 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-border pb-6 lg:pb-0 lg:pr-6 space-y-5">
-					<div>
-						<div class="flex items-center justify-between mb-3">
-							<span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">{m.landing_demo_query_label()}</span>
-							<span class="text-[11px] font-semibold text-primary px-2 py-0.5 rounded-full bg-primary/10">Input Vector</span>
-						</div>
-
-						<div class="relative h-44 rounded-lg border border-border bg-gradient-to-br {currentSample.bgGradient} flex flex-col items-center justify-center p-4 text-center overflow-hidden">
-							<div class="p-3 rounded-full bg-background/80 border border-border/60 shadow-xs mb-2">
-								<PhotoIcon class="size-8 {currentSample.iconColor}" />
-							</div>
-							<span class="text-sm font-bold text-foreground">{currentSample.title}</span>
-							<span class="text-xs font-medium text-muted-foreground">{currentSample.category}</span>
-							<div class="absolute bottom-2 right-2 text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-background/90 border border-border">
-								512-D Fused
-							</div>
-						</div>
-					</div>
-
-					<!-- Visual Feature Energy Distribution Bars -->
-					<div class="space-y-3">
-						<span class="text-xs font-semibold text-foreground">Extracted Descriptor Weights</span>
-						
-						<div class="space-y-1">
-							<div class="flex justify-between text-xs">
-								<span class="text-muted-foreground">HSV Color Histogram (72-bin)</span>
-								<span class="font-mono font-semibold">{currentSample.colorDist}%</span>
-							</div>
-							<div class="h-2 rounded-full bg-muted overflow-hidden">
-								<div class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: {currentSample.colorDist}%"></div>
-							</div>
-						</div>
-
-						<div class="space-y-1">
-							<div class="flex justify-between text-xs">
-								<span class="text-muted-foreground">Gabor Texture Energy (24-dim)</span>
-								<span class="font-mono font-semibold">{currentSample.textureDist}%</span>
-							</div>
-							<div class="h-2 rounded-full bg-muted overflow-hidden">
-								<div class="h-full bg-purple-500 rounded-full transition-all duration-300" style="width: {currentSample.textureDist}%"></div>
-							</div>
-						</div>
-
-						<div class="space-y-1">
-							<div class="flex justify-between text-xs">
-								<span class="text-muted-foreground">LBP Micro-patterns</span>
-								<span class="font-mono font-semibold">{currentSample.edgeDist}%</span>
-							</div>
-							<div class="h-2 rounded-full bg-muted overflow-hidden">
-								<div class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: {currentSample.edgeDist}%"></div>
-							</div>
-						</div>
-					</div>
-
-					<div class="rounded-lg bg-muted/50 p-3 border border-border/80 text-[11px] text-muted-foreground leading-normal">
-						<span class="font-semibold text-foreground">Rocchio Relevance Feedback:</span> Click thumbs on the right to simulate dynamic positive/negative query vector adjustment.
-					</div>
-				</div>
-
-				<!-- Right Column: Top-4 Retrieved Nearest Neighbors -->
-				<div class="lg:col-span-8 flex flex-col justify-between space-y-4">
-					<div class="flex items-center justify-between">
-						<span class="text-xs font-bold text-muted-foreground uppercase tracking-wider">{m.landing_demo_results_label()}</span>
-						<span class="text-xs font-mono text-muted-foreground">Index: GHIM-10K &bull; GPU Cosine</span>
-					</div>
-
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-						{#each currentSample.results as res}
-							{@const feedback = relevanceFeedback[res.id]}
-							{@const adjustedSim = feedback === 'positive' ? Math.min(0.999, res.similarity + 0.025) : feedback === 'negative' ? Math.max(0.65, res.similarity - 0.065) : res.similarity}
-
-							<div class="relative rounded-lg border border-border bg-card p-3.5 space-y-3 transition-all hover:border-primary/50 shadow-2xs {feedback === 'positive' ? 'ring-1 ring-emerald-500/50 bg-emerald-50/20 dark:bg-emerald-950/10' : feedback === 'negative' ? 'ring-1 ring-destructive/40 opacity-70' : ''}">
-								<div class="flex items-start justify-between gap-2">
-									<div class="flex items-center gap-2 min-w-0">
-										<div class="size-8 rounded-md bg-muted border border-border flex items-center justify-center shrink-0">
-											<PhotoIcon class="size-4 text-primary" />
-										</div>
-										<div class="min-w-0">
-											<p class="text-xs font-semibold text-foreground truncate" title={res.name}>{res.name}</p>
-											<p class="text-[11px] text-muted-foreground">{res.category}</p>
-										</div>
-									</div>
-
-									<div class="text-right shrink-0">
-										<span class="text-xs font-mono font-bold {adjustedSim > 0.93 ? 'text-emerald-600 dark:text-emerald-400' : 'text-primary'}">
-											{(adjustedSim * 100).toFixed(1)}%
-										</span>
-									</div>
+				<!-- Photo Grid -->
+				<div class="grid gap-4 {galleryDensity === 'compact' ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}">
+					{#each filteredGallery as item}
+						<div class="group relative aspect-4/3 rounded-lg overflow-hidden border border-border bg-muted">
+							<img src={item.url} alt={item.title} loading="lazy" class="size-full object-cover group-hover:scale-105 transition-transform duration-300" />
+							<!-- Scrim Overlay -->
+							<div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-end gap-2 text-white text-left">
+								<div class="flex items-center justify-between text-xs font-mono">
+									<span class="truncate">{item.filename}</span>
+									<span class="size-3 rounded-full border border-white/50 shrink-0" style="background-color:{item.dominantHex};"></span>
 								</div>
-
-								<div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-									<div class="h-full bg-primary rounded-full transition-all duration-300" style="width: {adjustedSim * 100}%"></div>
-								</div>
-
-								<div class="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
-									<span class="text-[10px] text-muted-foreground font-mono">Rank Vector &Delta;: {res.delta}</span>
-									<div class="flex items-center gap-1">
-										<button
-											type="button"
-											onclick={() => toggleFeedback(res.id, 'positive')}
-											class="p-1 rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer {feedback === 'positive' ? '!text-emerald-600 dark:!text-emerald-400 bg-emerald-100/50 dark:bg-emerald-950/30' : ''}"
-											title="Mark relevant (+ weight)"
-											aria-label="Mark relevant"
-										>
-											<ThumbsUpIcon class="size-3.5" />
-										</button>
-										<button
-											type="button"
-											onclick={() => toggleFeedback(res.id, 'negative')}
-											class="p-1 rounded hover:bg-muted text-muted-foreground transition-colors cursor-pointer {feedback === 'negative' ? '!text-destructive bg-destructive/10' : ''}"
-											title="Mark irrelevant (- weight)"
-											aria-label="Mark irrelevant"
-										>
-											<ThumbsDownIcon class="size-3.5" />
-										</button>
-									</div>
-								</div>
+								<div class="text-[10px] font-mono text-white/70">{item.resolution} · {item.category}</div>
+								<Button
+									type="button"
+									size="sm"
+									class="h-7 text-xs w-full mt-1 gap-1"
+									onclick={() => loadPhotoIntoWorkbench(item)}
+								>
+									<span>Find Similar</span>
+									<ArrowRightIcon class="size-3" />
+								</Button>
 							</div>
-						{/each}
-					</div>
-
-					<div class="flex items-center justify-between pt-2 text-xs text-muted-foreground border-t border-border">
-						<span>Average cosine retrieval time: <strong class="text-foreground font-mono">16.8 ms</strong></span>
-						<Button href="/dashboard/query" size="sm" variant="outline" class="h-7 text-xs font-semibold gap-1.5 cursor-pointer">
-							<SearchIcon class="size-3" />
-							<span>Query Custom Image</span>
-						</Button>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 6. BENCHMARK MATRIX & ACADEMIC PRECISION                                   -->
-	<!-- ========================================================================= -->
-	<section id="benchmarks" class="py-16 sm:py-24 border-b border-border bg-background">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="text-center max-w-2xl mx-auto mb-10">
-				<h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-					GHIM-10K Benchmark Performance Matrix
-				</h2>
-				<p class="mt-2 text-xs sm:text-sm text-muted-foreground">
-					Empirical retrieval precision across 10,000 reference images and 20 ground-truth classes.
-				</p>
-			</div>
-
-			<!-- Comparison Table -->
-			<div class="overflow-x-auto rounded-xl border border-border bg-card shadow-xs mb-12">
-				<table class="w-full text-left text-xs">
-					<thead class="border-b border-border bg-muted/50 text-muted-foreground font-semibold">
-						<tr>
-							<th class="px-4 py-3">Feature Extraction Pipeline</th>
-							<th class="px-4 py-3">Vector Dim</th>
-							<th class="px-4 py-3">Distance Metric</th>
-							<th class="px-4 py-3">Mean Average Precision (mAP@20)</th>
-							<th class="px-4 py-3">Average Latency</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-border/70 text-foreground font-medium">
-						<tr class="hover:bg-muted/40 transition-colors">
-							<td class="px-4 py-3 font-semibold">Global Color Histogram (HSV)</td>
-							<td class="px-4 py-3 font-mono text-muted-foreground">64-D</td>
-							<td class="px-4 py-3 text-muted-foreground">Euclidean (L2)</td>
-							<td class="px-4 py-3 font-mono">61.4%</td>
-							<td class="px-4 py-3 font-mono text-muted-foreground">14.2 ms</td>
-						</tr>
-						<tr class="hover:bg-muted/40 transition-colors">
-							<td class="px-4 py-3 font-semibold">GLCM Gray-Level Co-occurrence</td>
-							<td class="px-4 py-3 font-mono text-muted-foreground">24-D</td>
-							<td class="px-4 py-3 text-muted-foreground">Manhattan (L1)</td>
-							<td class="px-4 py-3 font-mono">66.8%</td>
-							<td class="px-4 py-3 font-mono text-muted-foreground">16.1 ms</td>
-						</tr>
-						<tr class="hover:bg-muted/40 transition-colors">
-							<td class="px-4 py-3 font-semibold">Uniform Local Binary Patterns (LBP)</td>
-							<td class="px-4 py-3 font-mono text-muted-foreground">128-D</td>
-							<td class="px-4 py-3 text-muted-foreground">Chi-Square (&chi;&sup2;)</td>
-							<td class="px-4 py-3 font-mono">68.9%</td>
-							<td class="px-4 py-3 font-mono text-muted-foreground">17.5 ms</td>
-						</tr>
-						<tr class="bg-primary/5 hover:bg-primary/10 transition-colors font-bold text-foreground">
-							<td class="px-4 py-3.5 flex items-center gap-2">
-								<span class="size-2 rounded-full bg-primary"></span>
-								<span>Perceptra Hybrid Fusion (Proposed)</span>
-							</td>
-							<td class="px-4 py-3.5 font-mono text-primary">512-D</td>
-							<td class="px-4 py-3.5 text-primary">Weighted Cosine + Z-Score</td>
-							<td class="px-4 py-3.5 font-mono text-emerald-600 dark:text-emerald-400">84.2% (+15.3%)</td>
-							<td class="px-4 py-3.5 font-mono">18.4 ms</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-
-			<!-- 3 Giant Stats -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<div class="rounded-xl border border-border bg-card p-6 flex flex-col justify-center text-center">
-					<span class="text-4xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">10,000</span>
-					<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-2">GHIM-10K reference images indexed</span>
-				</div>
-				<div class="rounded-xl border border-border bg-card p-6 flex flex-col justify-center text-center">
-					<span class="text-4xl font-extrabold font-mono text-primary">84.2%</span>
-					<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-2">Mean average precision @ 20</span>
-				</div>
-				<div class="rounded-xl border border-border bg-card p-6 flex flex-col justify-center text-center">
-					<span class="text-4xl font-extrabold font-mono text-foreground">&lt; 20 ms</span>
-					<span class="text-xs font-mono text-muted-foreground uppercase tracking-wider mt-2">Average cosine retrieval speed</span>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 7. PRE-FOOTER CTA SECTION                                                 -->
-	<!-- ========================================================================= -->
-	<section class="py-16 sm:py-20 border-b border-border bg-background">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-			<div class="lg:col-span-6 space-y-3">
-				<div class="h-1 w-8 bg-[#0969da] rounded-full mb-2"></div>
-				<h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground leading-tight">
-					Ready to experience next-generation visual retrieval?
-				</h2>
-			</div>
-
-			<div class="lg:col-span-6 space-y-4">
-				<p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-					Launch Perceptra to explore multi-descriptor similarity, Google Photos justified browsing, and live latency telemetry across benchmark datasets.
-				</p>
-				<div class="flex flex-col sm:flex-row items-center gap-2.5 w-full">
-					<input
-						type="email"
-						bind:value={emailSignup}
-						placeholder="Enter your email"
-						class="w-full h-10 rounded-md border border-input bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground shadow-2xs"
-					/>
-					<Button
-						href="/register"
-						class="w-full sm:w-auto h-10 px-5 text-xs font-semibold shrink-0 shadow-xs rounded-md"
-					>
-						Get Started Free
-					</Button>
-				</div>
-			</div>
-		</div>
-	</section>
-
-	<!-- ========================================================================= -->
-	<!-- 8. FOOTER                                                                 -->
-	<!-- ========================================================================= -->
-	<footer class="border-t border-border bg-card/40 py-12 text-xs text-muted-foreground">
-		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-10">
-			<!-- Top Row -->
-			<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-8 border-b border-border">
-				<div class="flex items-center gap-3">
-					<img
-						src="/logo-black.png"
-						alt="Perceptra"
-						class="h-8 w-auto object-contain dark:hidden"
-					/>
-					<img
-						src="/logo-beige.png"
-						alt="Perceptra"
-						class="hidden h-8 w-auto object-contain dark:block"
-					/>
-					<div>
-						<div class="flex items-center gap-1.5 font-bold text-foreground">
-							<span class="size-2 rounded-xs bg-[#0969da]"></span>
-							<span>PERCEPTRA VISUAL SEARCH PLATFORM</span>
 						</div>
-						<p class="text-[11px] text-muted-foreground mt-0.5">
-							Content-based image retrieval with multi-descriptor fusion and FRE Group 13 relevance feedback.
-						</p>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<!-- ======================================================================
+		     7. CLOSING BAND
+		     ====================================================================== -->
+		<section class="py-16 sm:py-20 border-b border-border">
+			<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<Card.Root class="shadow-md border-border bg-card p-6 sm:p-10">
+					<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+						<div class="lg:col-span-7 flex flex-col items-start text-left">
+							<Badge variant="outline" class="mb-3 font-mono text-[11px] uppercase tracking-wider">
+								Batch Ingestion · Auto-On Extraction
+							</Badge>
+							<h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-foreground mb-3">
+								Index your visual archive.
+							</h2>
+							<p class="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-xl mb-6">
+								Upload JPG, PNG, or WEBP collections to compute HSV, Color Moments, MiniBatchKMeans, GLCM, and LBP vectors automatically on ingest.
+							</p>
+							<div class="flex flex-wrap items-center gap-3">
+								<Button onclick={() => fileInputEl?.click()} class="gap-2 shadow-xs">
+									<UploadCloudIcon class="size-4" />
+									<span>Upload Images</span>
+								</Button>
+								<Button href="#workbench" variant="outline" class="shadow-2xs">
+									Open Query Studio
+								</Button>
+							</div>
+						</div>
+
+						<!-- Drag & Drop Drop-Zone -->
+						<div class="lg:col-span-5">
+							<div
+								role="button"
+								tabindex="0"
+								class="flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center gap-2.5 {isDragOver ? 'border-primary bg-primary/5' : 'border-border/80 bg-muted/30 hover:border-primary/50'}"
+								onclick={() => fileInputEl?.click()}
+								onkeydown={(e) => e.key === 'Enter' && fileInputEl?.click()}
+								ondragover={(e) => {
+									e.preventDefault();
+									isDragOver = true;
+								}}
+								ondragleave={() => (isDragOver = false)}
+								ondrop={onDrop}
+							>
+								<input
+									bind:this={fileInputEl}
+									type="file"
+									accept="image/*"
+									class="hidden"
+									onchange={onFileInputChange}
+								/>
+								<div class="size-11 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-1">
+									<UploadCloudIcon class="size-5" />
+								</div>
+								<span class="text-sm font-semibold text-foreground">Drop a reference image here</span>
+								<span class="text-xs font-mono text-muted-foreground max-w-xs">
+									Instant local preview in Query Workbench · JPG, PNG, WEBP
+								</span>
+							</div>
+						</div>
 					</div>
-				</div>
-				<Button
-					href="/dashboard"
-					size="sm"
-					class="h-8 px-4 text-xs font-semibold shrink-0 self-start sm:self-auto gap-1"
-				>
-					<span>Open Platform</span>
-					<ArrowRightIcon class="size-3" />
-				</Button>
+				</Card.Root>
+			</div>
+		</section>
+	</main>
+
+	<!-- ========================================================================
+	     8. MINIMAL SINGLE-ROW FOOTER
+	     ======================================================================== -->
+	<footer class="border-t border-border bg-background py-6 text-xs text-muted-foreground">
+		<div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-4">
+			<div class="flex items-center gap-3">
+				<a href="#workbench" class="flex items-center gap-2 text-foreground font-semibold">
+					<svg class="size-4 shrink-0 text-primary" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+						<rect x="33" y="13" width="13.5" height="13.5" rx="3.2" fill="currentColor" />
+						<rect x="44" y="30" width="14.5" height="14.5" rx="3.4" fill="currentColor" />
+						<rect x="28" y="44" width="13.5" height="13.5" rx="3.2" fill="currentColor" />
+						<rect x="13" y="57" width="13.5" height="13.5" rx="3.2" fill="currentColor" />
+						<path
+							d="M60.5 13H74.5C87.8 13 96 22.8 96 36.5C96 50.2 87.2 60.5 73.5 60.5H59.5C56.5 60.5 54.5 62.5 54.5 65.5V72.5C54.5 81.2 47.2 88.5 38.5 88.5H37.8C36.2 88.5 35 87.3 35 85.7V75.5H29.8C27.8 75.5 26.5 74.2 26.5 72.2V70.3C26.5 68.3 27.8 67 29.8 67H35V60.2C35 56.8 37.5 54.5 41 54.5H48.5C50.4 54.5 51.8 53.1 51.8 51.2V49.2C51.8 46.8 53.7 45 56.2 45H70.8C76.2 45 79.8 41.4 79.8 36.5C79.8 31.6 76.2 28 70.8 28H60.5C57.5 28 55.5 26 55.5 23V18C55.5 15 57.5 13 60.5 13Z"
+							fill="currentColor"
+						/>
+					</svg>
+					<span>Perceptra</span>
+				</a>
+				<Badge variant="outline" class="font-mono text-[10px] py-0 px-2">v2.4</Badge>
 			</div>
 
-			<!-- Multi-Column Links Grid -->
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Core Modules</h4>
-					<ul class="space-y-2">
-						<li><a href="/dashboard" class="hover:text-foreground transition-colors">Telemetry Dashboard</a></li>
-						<li><a href="/dashboard/query" class="hover:text-foreground transition-colors">Visual Query Studio</a></li>
-						<li><a href="/dashboard/images" class="hover:text-foreground transition-colors">Justified Photo Gallery</a></li>
-						<li><a href="/dashboard/transform" class="hover:text-foreground transition-colors">Image Transform Studio</a></li>
-						<li><a href="/dashboard/upload" class="hover:text-foreground transition-colors">Batch Ingestion Queue</a></li>
-						<li><a href="/dashboard/categories" class="hover:text-foreground transition-colors">Category Hierarchy</a></li>
-					</ul>
-				</div>
-
-				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">CBIR Descriptors</h4>
-					<ul class="space-y-2">
-						<li><a href="#platform" class="hover:text-foreground transition-colors">HSV Color Histograms (72-D)</a></li>
-						<li><a href="#platform" class="hover:text-foreground transition-colors">Color Moments (Mean, Std, Skew)</a></li>
-						<li><a href="#platform" class="hover:text-foreground transition-colors">MiniBatchKMeans Dominant Colors (k=5)</a></li>
-						<li><a href="#platform" class="hover:text-foreground transition-colors">GLCM Texture Energy (24-D)</a></li>
-						<li><a href="#platform" class="hover:text-foreground transition-colors">Uniform LBP Micro-patterns (128-D)</a></li>
-					</ul>
-				</div>
-
-				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Academic Reference</h4>
-					<ul class="space-y-2">
-						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">GHIM-10K Benchmark</a></li>
-						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">Rocchio Algorithm Reformulation</a></li>
-						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">Mean Average Precision (mAP)</a></li>
-						<li><a href="#benchmarks" class="hover:text-foreground transition-colors">Sequential Latency Trendline</a></li>
-					</ul>
-				</div>
-
-				<div class="space-y-3">
-					<h4 class="font-bold text-foreground uppercase tracking-wider text-[11px]">Project</h4>
-					<ul class="space-y-2">
-						<li><span class="text-foreground font-semibold">Group 13 Project</span></li>
-						<li><a href="/terms" class="hover:text-foreground transition-colors">Terms of Service</a></li>
-						<li><a href="/privacy" class="hover:text-foreground transition-colors">Privacy Policy</a></li>
-					</ul>
-				</div>
-			</div>
-
-			<!-- Bottom Legal Line & Status Indicator -->
-			<div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border text-[11px]">
-				<p>&copy; 2026 Perceptra &bull; Group 13 Academic Project &bull; All rights reserved.</p>
-				<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium">
-					<span class="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-					<span>FAISS Retrieval Engine Operational (10,000 Vectors)</span>
-				</div>
+			<div class="flex flex-wrap items-center gap-6">
+				<a href="#descriptors" class="hover:text-foreground transition-colors">Descriptors</a>
+				<a href="#studio" class="hover:text-foreground transition-colors">FRE Studio</a>
+				<a href="#transform" class="hover:text-foreground transition-colors">Transform</a>
+				<a href="#screens" class="hover:text-foreground transition-colors">Screens</a>
+				<a href="#gallery" class="hover:text-foreground transition-colors">Gallery</a>
+				<span class="font-mono text-[11px] text-muted-foreground/80">GHIM-10K · 768-D HSV</span>
 			</div>
 		</div>
 	</footer>
 
-	<!-- ========================================================================= -->
-	<!-- 9. SCREENSHOT ZOOM LIGHTBOX MODAL                                         -->
-	<!-- ========================================================================= -->
-	{#if zoomedImage}
-		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 animate-in fade-in duration-200"
-		>
-			<button
-				type="button"
-				class="absolute inset-0 bg-transparent w-full h-full cursor-default"
-				onclick={() => zoomedImage = null}
-				aria-label="Close zoomed view"
-			></button>
-
-			<div
-				class="relative z-10 max-w-6xl w-full max-h-[90vh] rounded-2xl overflow-hidden border border-border/60 bg-card shadow-2xl"
-			>
-				<div class="flex items-center justify-between px-4 py-2.5 bg-muted/70 border-b border-border">
-					<span class="text-xs font-mono text-muted-foreground truncate">{zoomedImage}</span>
-					<button
-						type="button"
-						onclick={() => zoomedImage = null}
-						class="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-						aria-label="Close zoomed view"
-					>
-						<XIcon class="size-4" />
-					</button>
-				</div>
-				<div class="overflow-auto max-h-[calc(90vh-42px)] p-2 bg-muted/20">
-					<img
-						src={zoomedImage}
-						alt="Zoomed interface preview"
-						class="w-full h-auto rounded-lg object-contain shadow-sm"
-					/>
-				</div>
-			</div>
+	<!-- Floating Feedback Toast -->
+	{#if isToastVisible}
+		<div class="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-lg bg-card text-card-foreground border border-border shadow-lg text-xs font-medium font-mono animate-in fade-in slide-in-from-bottom-2 duration-200">
+			{toastMessage}
 		</div>
 	{/if}
+
+	<!-- Fullscreen Screenshot Lightbox Modal using shadcn Dialog -->
+	<Dialog.Root bind:open={isLightboxOpen}>
+		<Dialog.Content class="max-w-6xl p-2 bg-card border-border shadow-2xl">
+			<Dialog.Header class="p-3 pb-1 flex flex-row items-center justify-between">
+				<Dialog.Title class="text-xs font-mono text-muted-foreground truncate">{zoomedImage}</Dialog.Title>
+			</Dialog.Header>
+			<div class="relative w-full rounded-md overflow-hidden bg-muted flex items-center justify-center p-1">
+				{#if zoomedImage}
+					<img src={zoomedImage} alt="Enlarged screenshot" class="max-w-full max-h-[82vh] object-contain rounded" />
+				{/if}
+			</div>
+		</Dialog.Content>
+	</Dialog.Root>
 </div>
-{/if}
